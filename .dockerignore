@@ -1,0 +1,12 @@
+.git
+.github
+.env
+frontend
+frontend/node_modules
+backend/.env
+backend/vendor
+backend/node_modules
+docs
+MCD_cookbooks
+MCD_recipes
+MCD_users

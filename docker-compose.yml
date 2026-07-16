@@ -1,0 +1,62 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${BACKEND_APP_NAME:-4meal Backend}
+      APP_ENV: ${BACKEND_APP_ENV:-local}
+      APP_KEY: ${BACKEND_APP_KEY:-}
+      APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
+      APP_URL: ${BACKEND_APP_URL:-http://localhost:8000}
+      LOG_CHANNEL: ${BACKEND_LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${BACKEND_LOG_LEVEL:-debug}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-4meal}
+      DB_USERNAME: ${POSTGRES_USER:-4meal}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      SESSION_DRIVER: ${BACKEND_SESSION_DRIVER:-file}
+      CACHE_STORE: ${BACKEND_CACHE_STORE:-file}
+      QUEUE_CONNECTION: ${BACKEND_QUEUE_CONNECTION:-sync}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+      - backend_storage:/var/www/html/storage
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-4meal}
+      POSTGRES_USER: ${POSTGRES_USER:-4meal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  backend_storage:
+  backend_vendor:
+  postgres_data:
+ 
