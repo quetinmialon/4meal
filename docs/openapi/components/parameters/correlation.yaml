@@ -1,0 +1,12 @@
+XCorrelationId:
+  name: X-Correlation-ID
+  in: header
+  required: false
+  description: |
+    Identifiant de corrélation optionnel fourni par le client.
+
+    Lorsqu'il est présent, l'API le réemploie dans les réponses et dans la
+    métadonnée `meta.correlation_id`.
+  schema:
+    type: string
+    minLength: 1

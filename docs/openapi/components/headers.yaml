@@ -1,0 +1,10 @@
+XCorrelationId:
+  description: |
+    Identifiant de corrélation propagé par l'API.
+
+    Si le client envoie déjà `X-Correlation-ID`, la valeur est réutilisée ;
+    sinon l'API en génère une et la renvoie dans toutes les réponses JSON.
+  required: true
+  schema:
+    type: string
+    minLength: 1

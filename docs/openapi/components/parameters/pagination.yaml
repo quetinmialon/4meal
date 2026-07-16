@@ -1,0 +1,19 @@
+Page:
+  name: page
+  in: query
+  required: false
+  description: Numéro de page à partir de 1.
+  schema:
+    type: integer
+    minimum: 1
+    default: 1
+
+PerPage:
+  name: per_page
+  in: query
+  required: false
+  description: Nombre d'éléments demandés par page.
+  schema:
+    type: integer
+    minimum: 1
+    example: 20

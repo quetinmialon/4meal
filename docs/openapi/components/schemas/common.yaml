@@ -1,0 +1,13 @@
+EnvelopeMeta:
+  type: object
+  description: Métadonnées communes injectées dans chaque enveloppe JSON.
+  required:
+    - correlation_id
+  properties:
+    correlation_id:
+      type: string
+      minLength: 1
+      description: |
+        Identifiant de corrélation également renvoyé dans l'en-tête
+        `X-Correlation-ID`.
+  additionalProperties: true

@@ -1,0 +1,61 @@
+openapi: 3.0.3
+info:
+  title: 4meal API
+  version: 0.1.0
+  license:
+    name: MIT
+    url: https://spdx.org/licenses/MIT.html
+  description: |
+    Contrat OpenAPI racine de l'API 4meal.
+
+    Cette première base documente uniquement les conventions transverses déjà
+    implémentées dans l'application :
+    - l'enveloppe JSON commune ;
+    - les schémas d'erreur ;
+    - la pagination ;
+    - l'authentification Bearer JWT.
+
+    Aucun endpoint métier n'est décrit à ce stade.
+servers:
+  - url: /api
+    description: Préfixe HTTP de l'API
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: ./components/securitySchemes.yaml#/bearerAuth
+  headers:
+    XCorrelationId:
+      $ref: ./components/headers.yaml#/XCorrelationId
+  parameters:
+    XCorrelationId:
+      $ref: ./components/parameters/correlation.yaml#/XCorrelationId
+    Page:
+      $ref: ./components/parameters/pagination.yaml#/Page
+    PerPage:
+      $ref: ./components/parameters/pagination.yaml#/PerPage
+  schemas:
+    EnvelopeMeta:
+      $ref: ./components/schemas/common.yaml#/EnvelopeMeta
+    PaginationMeta:
+      $ref: ./components/schemas/pagination.yaml#/PaginationMeta
+    PaginatedEnvelopeMeta:
+      $ref: ./components/schemas/pagination.yaml#/PaginatedEnvelopeMeta
+    ApiError:
+      $ref: ./components/schemas/errors.yaml#/ApiError
+    ApiErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/ApiErrorEnvelope
+    ValidationErrorDetails:
+      $ref: ./components/schemas/errors.yaml#/ValidationErrorDetails
+    ValidationErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/ValidationErrorEnvelope
+    AuthenticationErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/AuthenticationErrorEnvelope
+    AuthorizationErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/AuthorizationErrorEnvelope
+    NotFoundErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/NotFoundErrorEnvelope
+    HttpErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/HttpErrorEnvelope
+    ServerErrorEnvelope:
+      $ref: ./components/schemas/errors.yaml#/ServerErrorEnvelope
