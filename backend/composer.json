@@ -49,7 +49,7 @@
         ],
         "test": "vendor/bin/pest --colors=always",
         "pint": "vendor/bin/pint",
-        "analyse": "vendor/bin/phpstan analyse --ansi",
+        "analyse": "vendor/bin/phpstan analyse --ansi --memory-limit=512M",
         "quality": [
             "@pint",
             "@analyse",

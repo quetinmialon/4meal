@@ -5,7 +5,4 @@ parameters:
   level: 5
   paths:
     - app
-    - tests
   inferPrivatePropertyTypeFromConstructor: true
-  checkMissingIterableValueType: false
-  checkGenericClassInNonGenericObjectType: false
