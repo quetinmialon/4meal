@@ -11,9 +11,13 @@ mkdir -p \
   storage/framework/views \
   storage/logs
 
-if [ ! -f vendor/autoload.php ]; then
-  composer install --no-dev --no-interaction --no-scripts --prefer-dist
-fi
+# Keep the persistent vendor volume and Laravel package manifests aligned
+# with the current source tree on every container start.
+find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
+
+composer install --no-dev --no-interaction --no-scripts --prefer-dist
+
+php artisan package:discover --ansi
 
 if [ -z "${APP_KEY:-}" ]; then
   export APP_KEY="$(php artisan key:generate --show --no-interaction)"
