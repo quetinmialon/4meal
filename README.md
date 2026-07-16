@@ -78,6 +78,26 @@ Le fichier `docker-compose.yml` lit les variables racine depuis un `.env` à la 
 
 La validation CI de `docker-compose.yml` n'attend aucun secret : toutes les interpolations utilisées dans le fichier ont une valeur par défaut.
 
+## Contrat OpenAPI
+
+La structure initiale du contrat OpenAPI est définie dans [`docs/openapi/openapi.yaml`](./docs/openapi/openapi.yaml).
+
+Elle documente uniquement les conventions transverses déjà en place :
+
+- schéma racine OpenAPI ;
+- authentification Bearer JWT ;
+- schémas d'erreurs communs ;
+- conventions de pagination ;
+- corrélation via `X-Correlation-ID`.
+
+Aucun endpoint métier n'est encore décrit dans `paths`.
+
+Commande de validation du contrat :
+
+```bash
+npm --prefix frontend run openapi:validate
+```
+
 ## Démarrage local
 
 ### Backend

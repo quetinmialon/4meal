@@ -1,0 +1,57 @@
+PaginationMeta:
+  type: object
+  description: Bloc normalisé renvoyé dans `meta.pagination` pour les listes paginées.
+  required:
+    - current_page
+    - per_page
+    - total
+    - last_page
+    - from
+    - to
+    - path
+    - has_more_pages
+  properties:
+    current_page:
+      type: integer
+      minimum: 1
+      description: Numéro de page courant.
+    per_page:
+      type: integer
+      minimum: 1
+      description: Taille de page effectivement appliquée.
+    total:
+      type: integer
+      minimum: 0
+      description: Nombre total d'éléments disponibles.
+    last_page:
+      type: integer
+      minimum: 1
+      description: Numéro de la dernière page disponible.
+    from:
+      type: integer
+      nullable: true
+      minimum: 1
+      description: Index 1-based du premier élément de la page, ou `null` si la page est vide.
+    to:
+      type: integer
+      nullable: true
+      minimum: 1
+      description: Index 1-based du dernier élément de la page, ou `null` si la page est vide.
+    path:
+      type: string
+      format: uri
+      description: URL de base utilisée pour construire les liens de pagination.
+    has_more_pages:
+      type: boolean
+      description: Indique s'il reste au moins une page après la page courante.
+  additionalProperties: false
+
+PaginatedEnvelopeMeta:
+  allOf:
+    - $ref: ./common.yaml#/EnvelopeMeta
+    - type: object
+      required:
+        - pagination
+      properties:
+        pagination:
+          $ref: '#/PaginationMeta'
