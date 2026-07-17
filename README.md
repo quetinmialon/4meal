@@ -38,10 +38,10 @@ Variables principales :
 | `APP_KEY` | clé d'application Laravel | générée via `php artisan key:generate` |
 | `APP_DEBUG` | mode debug | `true` |
 | `APP_URL` | URL publique du backend | `http://localhost` |
-| `DB_CONNECTION` | driver de base de données | `sqlite`, `pgsql`, `mysql` |
-| `DB_DATABASE` | nom ou chemin de base | `database/database.sqlite`, `:memory:`, ou nom PostgreSQL |
-| `DB_HOST` / `DB_PORT` | hôte et port BDD | requis hors SQLite |
-| `DB_USERNAME` / `DB_PASSWORD` | identifiants BDD | requis hors SQLite |
+| `DB_CONNECTION` | driver de base de données | `pgsql` |
+| `DB_DATABASE` | nom de base PostgreSQL | `4meal` |
+| `DB_HOST` / `DB_PORT` | hôte et port BDD | `127.0.0.1` / `5434` |
+| `DB_USERNAME` / `DB_PASSWORD` | identifiants BDD | `4meal` / `change_me` |
 | `SESSION_DRIVER` | stockage des sessions | `database`, `file`, `array` |
 | `CACHE_STORE` | backend de cache | `database`, `file`, `array` |
 | `QUEUE_CONNECTION` | backend de queue | `database`, `sync` |
@@ -103,10 +103,12 @@ npm --prefix frontend run openapi:validate
 ### Backend
 
 ```bash
+docker compose up -d postgres
 cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
+php artisan migrate
 php artisan serve
 ```
 

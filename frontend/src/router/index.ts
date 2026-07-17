@@ -1,14 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import SetupView from '@/views/SetupView.vue';
+import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
+import RegisterView from '@/views/RegisterView.vue';
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'setup',
-      component: SetupView,
+      redirect: {
+        name: 'register',
+      },
+    },
+    {
+      path: '/inscription',
+      name: 'register',
+      component: RegisterView,
+    },
+    {
+      path: '/inscription/confirmation',
+      name: 'register-success',
+      component: RegisterSuccessView,
     },
   ],
 });

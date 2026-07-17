@@ -5,8 +5,11 @@ import { RouterView } from 'vue-router';
 <template>
   <div class="app-shell">
     <header class="hero">
-      <p class="eyebrow">Vue 3 scaffold</p>
-      <h1>Frontend ready</h1>
+      <p class="eyebrow">SUPMEAL</p>
+      <h1>Creer votre espace cuisine</h1>
+      <p class="lede">
+        Une inscription simple, claire et sans surprise, branchee sur l'API existante.
+      </p>
     </header>
 
     <RouterView />
@@ -39,8 +42,16 @@ import { RouterView } from 'vue-router';
 }
 
 h1 {
-  margin: 0;
+  margin: 0 0 0.75rem;
   font-size: clamp(2.5rem, 7vw, 4.5rem);
   line-height: 0.95;
+}
+
+.lede {
+  max-width: 36rem;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #4b5e49;
 }
 </style>
