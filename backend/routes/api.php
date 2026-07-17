@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginUserController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -14,6 +15,10 @@ Route::get('health', function () {
 Route::post('auth/register', RegisterUserController::class)
     ->middleware('throttle:auth.register')
     ->name('auth.register');
+
+Route::post('auth/login', LoginUserController::class)
+    ->middleware('throttle:auth.login')
+    ->name('auth.login');
 
 if (app()->environment('testing')) {
     Route::prefix('_test')->group(function () {
