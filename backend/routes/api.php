@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\RegisterUserController;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -9,6 +10,10 @@ use Illuminate\Validation\ValidationException;
 Route::get('health', function () {
     return response()->json(['status' => 'ok']);
 });
+
+Route::post('auth/register', RegisterUserController::class)
+    ->middleware('throttle:auth.register')
+    ->name('auth.register');
 
 if (app()->environment('testing')) {
     Route::prefix('_test')->group(function () {

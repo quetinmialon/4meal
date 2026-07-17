@@ -29,7 +29,7 @@ Principes obligatoires :
 - préserver les fonctionnalités existantes.
 
 Avant chaque implémentation :
-1. inspecte le dépôt ;
+1. inspecte le dépôt, et en particulier ProductBacklog.md;
 2. indique les fichiers que tu prévois de modifier ;
 3. propose un plan court ;
 4. signale les hypothèses ou ambiguïtés ;
