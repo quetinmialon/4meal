@@ -6,6 +6,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules\Unique;
 
 class RegisterUserRequest extends FormRequest
 {
@@ -27,7 +28,7 @@ class RegisterUserRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, ValidationRule|string>|string>
+     * @return array<string, list<ValidationRule|Password|Unique|string>|string>
      */
     public function rules(): array
     {
