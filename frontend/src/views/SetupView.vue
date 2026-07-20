@@ -8,9 +8,7 @@ const appStore = useAppStore();
 <template>
   <main class="setup-card">
     <AppStatus :label="appStore.statusLabel" />
-    <p class="summary">
-      Vue Router, Pinia, ESLint, Prettier and Vitest are wired into a strict TypeScript setup.
-    </p>
+    <p class="summary">Votre espace est pret. Vous pouvez continuer sereinement.</p>
   </main>
 </template>
 

@@ -62,7 +62,7 @@ Le fichier `docker-compose.yml` lit les variables racine depuis un `.env` à la 
 | `PROXY_PORT` | port HTTP exposé par Nginx | `8080` |
 | `BACKEND_APP_NAME` | nom applicatif backend | `4meal Backend` |
 | `BACKEND_APP_ENV` | environnement Laravel | `local` |
-| `BACKEND_APP_KEY` | clé Laravel injectée au conteneur backend | vide |
+| `BACKEND_APP_KEY` | clé Laravel injectée au conteneur backend | clé de développement intégrée |
 | `BACKEND_APP_DEBUG` | mode debug Laravel | `true` |
 | `BACKEND_APP_URL` | URL backend exposée | `http://localhost:8080` |
 | `BACKEND_SESSION_DRIVER` | driver de session backend | `file` |

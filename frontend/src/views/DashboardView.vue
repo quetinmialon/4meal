@@ -11,16 +11,14 @@ const userEmail = computed(() => authStore.user?.email ?? '');
 
 <template>
   <main class="dashboard-card">
-    <p class="kicker">Dashboard</p>
-    <h2>Session ouverte</h2>
+    <p class="kicker">Mon espace</p>
+    <h2>Connexion reussie</h2>
     <p class="message">
       <span v-if="userName">Bienvenue, {{ userName }}.</span>
-      <span v-else>Votre session est active.</span>
+      <span v-else>Vous etes bien connecte.</span>
     </p>
-    <p class="detail">
-      L'etat utilisateur est gere par Pinia a partir du jeton JWT retourne par l'API.
-    </p>
-    <p v-if="userEmail" class="meta">Session rattachee a {{ userEmail }}.</p>
+    <p class="detail">Votre espace est accessible. Vous pouvez continuer en toute simplicite.</p>
+    <p v-if="userEmail" class="meta">Compte associe : {{ userEmail }}.</p>
   </main>
 </template>
 

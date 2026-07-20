@@ -103,7 +103,7 @@ describe('LoginView', () => {
         success: false,
         error: {
           code: 'authentication_error',
-          message: 'Invalid credentials.',
+          message: 'Identifiants invalides.',
         },
       }),
     } as Response);
@@ -122,7 +122,7 @@ describe('LoginView', () => {
 
     const authStore = useAuthStore();
 
-    expect(wrapper.get('[role="alert"]').text()).toContain('Invalid credentials.');
+    expect(wrapper.get('[role="alert"]').text()).toContain('Identifiants invalides.');
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.user).toBeNull();
     expect(pushMock).not.toHaveBeenCalled();

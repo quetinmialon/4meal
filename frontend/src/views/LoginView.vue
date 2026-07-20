@@ -155,7 +155,7 @@ async function handleSubmit(): Promise<void> {
 <template>
   <main class="login-card">
     <p class="kicker">Connexion</p>
-    <h2>Acceder au dashboard</h2>
+    <h2>Acceder a votre espace</h2>
     <p class="intro">
       Connectez-vous avec votre adresse e-mail et votre mot de passe pour retrouver votre espace.
     </p>

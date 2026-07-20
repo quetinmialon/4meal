@@ -69,7 +69,7 @@ it('returns a generic error message for a wrong password', function () {
         ->assertStatus(401)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'authentication_error')
-        ->assertJsonPath('error.message', 'Invalid credentials.');
+        ->assertJsonPath('error.message', 'Identifiants invalides.');
 });
 
 it('returns the same generic error message for an unknown user', function () {
@@ -82,7 +82,7 @@ it('returns the same generic error message for an unknown user', function () {
         ->assertStatus(401)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'authentication_error')
-        ->assertJsonPath('error.message', 'Invalid credentials.');
+        ->assertJsonPath('error.message', 'Identifiants invalides.');
 });
 
 it('validates the login payload', function () {

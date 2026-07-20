@@ -28,7 +28,9 @@ if (app()->environment('testing')) {
 
         Route::get('validation', function () {
             throw ValidationException::withMessages([
-                'email' => ['The email field is required.'],
+                'email' => [__('validation.required', [
+                    'attribute' => __('validation.attributes.email'),
+                ])],
             ]);
         });
 

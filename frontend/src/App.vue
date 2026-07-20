@@ -8,8 +8,8 @@ import { RouterView } from 'vue-router';
       <p class="eyebrow">SUPMEAL</p>
       <h1>Retrouver votre espace cuisine</h1>
       <p class="lede">
-        Une connexion claire, branchee sur l'endpoint JWT existant et reliee a l'etat
-        utilisateur du frontend.
+        Connectez-vous simplement pour retrouver votre espace personnel et poursuivre en toute
+        tranquillite.
       </p>
     </header>
 

@@ -19,8 +19,7 @@ const registeredEmail = computed(() => {
       Votre compte a bien ete cree<span v-if="registeredEmail"> pour {{ registeredEmail }}</span>.
     </p>
     <p class="detail">
-      Aucune session n'a ete ouverte automatiquement. Vous pouvez maintenant continuer avec
-      l'ecran de connexion.
+      Votre compte est pret. Vous pouvez maintenant vous connecter pour acceder a votre espace.
     </p>
     <RouterLink class="back-link" :to="{ name: 'login' }">Aller a la connexion</RouterLink>
   </main>

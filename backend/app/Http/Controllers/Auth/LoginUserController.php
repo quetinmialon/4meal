@@ -31,7 +31,7 @@ class LoginUserController extends Controller
             return ApiResponse::error(
                 $request,
                 'authentication_error',
-                'Invalid credentials.',
+                __('auth.failed'),
                 SymfonyResponse::HTTP_UNAUTHORIZED,
             );
         }
