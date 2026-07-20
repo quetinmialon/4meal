@@ -27,6 +27,7 @@ Principes obligatoires :
 - ne modifier aucun fichier sans rapport avec la tâche ;
 - ne pas ajouter de fonctionnalité non demandée ;
 - préserver les fonctionnalités existantes.
+- ne décrit pas les implémentations dans le front, l'utilisateur n'est pas un developpeur
 
 Avant chaque implémentation :
 1. inspecte le dépôt, et en particulier ProductBacklog.md;

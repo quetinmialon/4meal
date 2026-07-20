@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\LoginUserController;
+use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,6 +22,16 @@ Route::post('auth/register', RegisterUserController::class)
 Route::post('auth/login', LoginUserController::class)
     ->middleware('throttle:auth.login')
     ->name('auth.login');
+
+Route::middleware(AuthenticateWithJwt::class)
+    ->prefix('auth')
+    ->group(function () {
+        Route::get('me', GetCurrentUserController::class)
+            ->name('auth.me');
+
+        Route::post('refresh', RefreshAccessTokenController::class)
+            ->name('auth.refresh');
+    });
 
 if (app()->environment('testing')) {
     Route::prefix('_test')->group(function () {
