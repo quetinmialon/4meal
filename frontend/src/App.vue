@@ -6,9 +6,10 @@ import { RouterView } from 'vue-router';
   <div class="app-shell">
     <header class="hero">
       <p class="eyebrow">SUPMEAL</p>
-      <h1>Creer votre espace cuisine</h1>
+      <h1>Retrouver votre espace cuisine</h1>
       <p class="lede">
-        Une inscription simple, claire et sans surprise, branchee sur l'API existante.
+        Connectez-vous simplement pour retrouver votre espace personnel et poursuivre en toute
+        tranquillite.
       </p>
     </header>
 

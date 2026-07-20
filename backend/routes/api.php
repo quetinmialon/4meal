@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginUserController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -15,6 +16,10 @@ Route::post('auth/register', RegisterUserController::class)
     ->middleware('throttle:auth.register')
     ->name('auth.register');
 
+Route::post('auth/login', LoginUserController::class)
+    ->middleware('throttle:auth.login')
+    ->name('auth.login');
+
 if (app()->environment('testing')) {
     Route::prefix('_test')->group(function () {
         Route::get('success', fn () => response()->json([
@@ -23,7 +28,9 @@ if (app()->environment('testing')) {
 
         Route::get('validation', function () {
             throw ValidationException::withMessages([
-                'email' => ['The email field is required.'],
+                'email' => [__('validation.required', [
+                    'attribute' => __('validation.attributes.email'),
+                ])],
             ]);
         });
 

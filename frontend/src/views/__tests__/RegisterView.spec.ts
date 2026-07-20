@@ -98,10 +98,10 @@ describe('RegisterView', () => {
         success: false,
         error: {
           code: 'validation_error',
-          message: 'The given data was invalid.',
+          message: 'Les donnees fournies sont invalides.',
           details: {
             fields: {
-              email: ['The email has already been taken.'],
+              email: ["Cette valeur pour l'adresse e-mail est deja utilisee."],
             },
           },
         },
@@ -118,8 +118,8 @@ describe('RegisterView', () => {
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('The given data was invalid.');
-    expect(wrapper.text()).toContain('The email has already been taken.');
+    expect(wrapper.text()).toContain('Les donnees fournies sont invalides.');
+    expect(wrapper.text()).toContain("Cette valeur pour l'adresse e-mail est deja utilisee.");
     expect(pushMock).not.toHaveBeenCalled();
   });
 });

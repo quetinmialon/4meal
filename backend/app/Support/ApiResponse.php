@@ -73,32 +73,32 @@ final class ApiResponse
             $exception instanceof ValidationException => self::error(
                 $request,
                 'validation_error',
-                'The given data was invalid.',
+                __('api.validation_error'),
                 $exception->status,
                 ['fields' => $exception->errors()],
             ),
             $exception instanceof AuthenticationException => self::error(
                 $request,
                 'authentication_error',
-                'Authentication is required.',
+                __('api.authentication_error'),
                 SymfonyResponse::HTTP_UNAUTHORIZED,
             ),
             $exception instanceof AuthorizationException => self::error(
                 $request,
                 'authorization_error',
-                'You are not allowed to perform this action.',
+                __('api.authorization_error'),
                 SymfonyResponse::HTTP_FORBIDDEN,
             ),
             $exception instanceof HttpExceptionInterface && $exception->getStatusCode() === SymfonyResponse::HTTP_FORBIDDEN => self::error(
                 $request,
                 'authorization_error',
-                'You are not allowed to perform this action.',
+                __('api.authorization_error'),
                 SymfonyResponse::HTTP_FORBIDDEN,
             ),
             $exception instanceof HttpExceptionInterface && $exception->getStatusCode() === SymfonyResponse::HTTP_NOT_FOUND => self::error(
                 $request,
                 'not_found',
-                'Resource not found.',
+                __('api.not_found'),
                 SymfonyResponse::HTTP_NOT_FOUND,
             ),
             $exception instanceof HttpExceptionInterface => self::error(
@@ -106,13 +106,13 @@ final class ApiResponse
                 'http_error',
                 $exception->getMessage() !== ''
                     ? $exception->getMessage()
-                    : (SymfonyResponse::$statusTexts[$exception->getStatusCode()] ?? 'HTTP error.'),
+                    : __('api.http_error'),
                 $exception->getStatusCode(),
             ),
             default => self::error(
                 $request,
                 'server_error',
-                'An unexpected error occurred.',
+                __('api.server_error'),
                 SymfonyResponse::HTTP_INTERNAL_SERVER_ERROR,
             ),
         };

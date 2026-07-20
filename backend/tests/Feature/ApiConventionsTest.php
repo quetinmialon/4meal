@@ -32,8 +32,8 @@ it('formats validation errors uniformly', function () {
         ->assertStatus(422)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'validation_error')
-        ->assertJsonPath('error.message', 'The given data was invalid.')
-        ->assertJsonPath('error.details.fields.email.0', 'The email field is required.')
+        ->assertJsonPath('error.message', 'Les donnees fournies sont invalides.')
+        ->assertJsonPath('error.details.fields.email.0', 'Le champ adresse e-mail est obligatoire.')
         ->assertJsonStructure([
             'meta' => ['correlation_id'],
         ]);
@@ -46,7 +46,7 @@ it('formats authentication errors uniformly', function () {
         ->assertStatus(401)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'authentication_error')
-        ->assertJsonPath('error.message', 'Authentication is required.')
+        ->assertJsonPath('error.message', 'Une authentification est requise.')
         ->assertJsonStructure([
             'meta' => ['correlation_id'],
         ]);
@@ -59,7 +59,7 @@ it('formats authorization errors uniformly', function () {
         ->assertStatus(403)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'authorization_error')
-        ->assertJsonPath('error.message', 'You are not allowed to perform this action.')
+        ->assertJsonPath('error.message', "Vous n'etes pas autorise a effectuer cette action.")
         ->assertJsonStructure([
             'meta' => ['correlation_id'],
         ]);
@@ -72,7 +72,7 @@ it('formats not found errors uniformly', function () {
         ->assertStatus(404)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'not_found')
-        ->assertJsonPath('error.message', 'Resource not found.')
+        ->assertJsonPath('error.message', 'Ressource introuvable.')
         ->assertJsonStructure([
             'meta' => ['correlation_id'],
         ]);
@@ -85,7 +85,7 @@ it('formats unexpected errors uniformly', function () {
         ->assertStatus(500)
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'server_error')
-        ->assertJsonPath('error.message', 'An unexpected error occurred.')
+        ->assertJsonPath('error.message', 'Une erreur inattendue est survenue.')
         ->assertJsonStructure([
             'meta' => ['correlation_id'],
         ]);

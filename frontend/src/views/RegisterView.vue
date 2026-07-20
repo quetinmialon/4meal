@@ -266,11 +266,11 @@ async function handleSubmit(): Promise<void> {
 <template>
   <main class="register-card">
     <div class="card-header">
-      <p class="kicker">AUTH-01</p>
+      <p class="kicker">Inscription</p>
       <h2>Creer un compte</h2>
       <p class="intro">
-        Renseignez vos informations pour creer votre acces. La validation locale aide a corriger
-        rapidement le formulaire, puis l'API reste la source de verite finale.
+        Renseignez vos informations pour creer votre compte. Nous vous indiquerons les champs a
+        corriger si besoin.
       </p>
     </div>
 
@@ -313,7 +313,7 @@ async function handleSubmit(): Promise<void> {
             @blur="handleBlur('email')"
             @input="handleInput('email')"
           />
-          <p id="email-hint" class="hint">Nous normaliserons automatiquement la casse de l'e-mail.</p>
+          <p id="email-hint" class="hint">Utilisez l'adresse e-mail que vous emploierez pour vous connecter.</p>
           <p v-if="visibleError('email')" id="email-error" class="error" role="alert">
             {{ visibleError('email') }}
           </p>

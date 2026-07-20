@@ -2,6 +2,6 @@ import { defineStore } from 'pinia';
 
 export const useAppStore = defineStore('app', {
   state: () => ({
-    statusLabel: 'Tooling configured',
+    statusLabel: 'Espace pret',
   }),
 });
