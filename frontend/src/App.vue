@@ -6,9 +6,10 @@ import { RouterView } from 'vue-router';
   <div class="app-shell">
     <header class="hero">
       <p class="eyebrow">SUPMEAL</p>
-      <h1>Creer votre espace cuisine</h1>
+      <h1>Retrouver votre espace cuisine</h1>
       <p class="lede">
-        Une inscription simple, claire et sans surprise, branchee sur l'API existante.
+        Une connexion claire, branchee sur l'endpoint JWT existant et reliee a l'etat
+        utilisateur du frontend.
       </p>
     </header>
 

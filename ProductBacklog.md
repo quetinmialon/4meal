@@ -3,7 +3,7 @@
 ## Authentification
 
 ### MUST
-- [ ] AUTH-01 — Création d'un compte avec email et mot de passe
+- [X] AUTH-01 — Création d'un compte avec email et mot de passe
 - [ ] AUTH-02 — Connexion avec email et mot de passe
 - [ ] AUTH-03 — Connexion via OAuth2 (Google & Microsoft)
 - [ ] AUTH-04 — Déconnexion sécurisée
