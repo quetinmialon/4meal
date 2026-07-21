@@ -5,6 +5,7 @@ import { pinia } from '@/pinia';
 import { useAuthStore } from '@/stores/auth';
 
 import DashboardView from '@/views/DashboardView.vue';
+import ChangePasswordView from '@/views/ChangePasswordView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
@@ -28,6 +29,14 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/mot-de-passe',
+    name: 'change-password',
+    component: ChangePasswordView,
     meta: {
       requiresAuth: true,
     },

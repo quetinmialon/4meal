@@ -59,6 +59,16 @@ export type LoginResult =
       fieldErrors: Partial<Record<'email' | 'password', string>>;
     };
 
+export type ChangePasswordResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+      fieldErrors: Partial<Record<'current_password' | 'password' | 'password_confirmation', string>>;
+    };
+
 type PersistedSession = {
   accessToken: string;
   tokenType: string;
@@ -136,6 +146,23 @@ function extractFieldErrors(payload: ApiErrorPayload | null): Partial<Record<'em
   return {
     email: typeof fields.email?.[0] === 'string' ? fields.email[0] : '',
     password: typeof fields.password?.[0] === 'string' ? fields.password[0] : '',
+  };
+}
+
+function extractChangePasswordFieldErrors(
+  payload: ApiErrorPayload | null,
+): Partial<Record<'current_password' | 'password' | 'password_confirmation', string>> {
+  const fields = payload?.error?.details?.fields;
+
+  if (fields === undefined) {
+    return {};
+  }
+
+  return {
+    current_password: typeof fields.current_password?.[0] === 'string' ? fields.current_password[0] : '',
+    password: typeof fields.password?.[0] === 'string' ? fields.password[0] : '',
+    password_confirmation:
+      typeof fields.password_confirmation?.[0] === 'string' ? fields.password_confirmation[0] : '',
   };
 }
 
@@ -366,6 +393,70 @@ export const useAuthStore = defineStore('auth', {
         };
       } catch {
         this.clearSession();
+
+        return {
+          ok: false,
+          message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+          fieldErrors: {},
+        };
+      }
+    },
+
+    async changePassword(
+      currentPassword: string,
+      password: string,
+      passwordConfirmation: string,
+    ): Promise<ChangePasswordResult> {
+      if (this.accessToken === '' || this.tokenType === '') {
+        return {
+          ok: false,
+          message: 'Une authentification est requise.',
+          fieldErrors: {},
+        };
+      }
+
+      this.status = 'loading';
+
+      try {
+        const response = await fetch('/api/auth/password', {
+          method: 'PUT',
+          headers: {
+            ...authHeaders({
+              accessToken: this.accessToken,
+              tokenType: this.tokenType,
+            }),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            current_password: currentPassword,
+            password,
+            password_confirmation: passwordConfirmation,
+          }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+        if (response.status === 401) {
+          this.clearSession();
+        }
+
+        if (response.ok && payload?.success !== false) {
+          this.clearSession();
+
+          return { ok: true };
+        }
+
+        if (this.status === 'loading') {
+          this.status = 'authenticated';
+        }
+
+        return {
+          ok: false,
+          message: payload?.error?.message ?? 'Une erreur est survenue pendant la modification du mot de passe.',
+          fieldErrors: extractChangePasswordFieldErrors(payload),
+        };
+      } catch {
+        this.status = 'authenticated';
 
         return {
           ok: false,
