@@ -1,13 +1,16 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RegisterView from '../RegisterView.vue';
 
 const pushMock = vi.fn();
+const replaceMock = vi.fn();
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
@@ -15,9 +18,12 @@ describe('RegisterView', () => {
   const fetchMock = vi.fn<typeof fetch>();
 
   beforeEach(() => {
+    setActivePinia(createPinia());
     pushMock.mockReset();
+    replaceMock.mockReset();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState({}, '', '/inscription');
   });
 
   it('shows ergonomic client-side validation errors before submitting', async () => {

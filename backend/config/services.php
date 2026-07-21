@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => getenv('GOOGLE_CLIENT_ID') ?: env('GOOGLE_CLIENT_ID'),
+        'client_secret' => getenv('GOOGLE_CLIENT_SECRET') ?: env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => getenv('GOOGLE_REDIRECT_URI') ?: env('GOOGLE_REDIRECT_URI', env('APP_URL').'/api/auth/google/callback'),
+        'frontend_url' => getenv('GOOGLE_FRONTEND_URL') ?: env('GOOGLE_FRONTEND_URL', env('APP_URL')),
+    ],
+
 ];

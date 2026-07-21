@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Auth\GetCurrentUserController;
+use App\Http\Controllers\Auth\GoogleOAuthCallbackController;
+use App\Http\Controllers\Auth\GoogleOAuthRedirectController;
 use App\Http\Controllers\Auth\LoginUserController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
@@ -23,6 +25,12 @@ Route::post('auth/register', RegisterUserController::class)
 Route::post('auth/login', LoginUserController::class)
     ->middleware('throttle:auth.login')
     ->name('auth.login');
+
+Route::get('auth/google/redirect', GoogleOAuthRedirectController::class)
+    ->name('auth.google.redirect');
+
+Route::get('auth/google/callback', GoogleOAuthCallbackController::class)
+    ->name('auth.google.callback');
 
 Route::middleware(AuthenticateWithJwt::class)
     ->prefix('auth')

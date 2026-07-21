@@ -7,10 +7,12 @@ import { useAuthStore } from '@/stores/auth';
 import LoginView from '../LoginView.vue';
 
 const pushMock = vi.fn();
+const replaceMock = vi.fn();
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
@@ -19,9 +21,11 @@ describe('LoginView', () => {
 
   beforeEach(() => {
     pushMock.mockReset();
+    replaceMock.mockReset();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     window.localStorage.clear();
+    window.history.replaceState({}, '', '/connexion');
     setActivePinia(createPinia());
   });
 
@@ -125,6 +129,34 @@ describe('LoginView', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('Identifiants invalides.');
     expect(authStore.isAuthenticated).toBe(false);
     expect(authStore.user).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('starts the Google OAuth flow through the backend endpoint', () => {
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [createPinia()],
+      },
+    });
+
+    const googleButton = wrapper.get('a[aria-label="Continuer avec Google"]');
+
+    expect(googleButton.attributes('href')).toBe('/api/auth/google/redirect');
+  });
+
+  it('displays an OAuth error returned by Google', async () => {
+    window.history.replaceState({}, '', '/connexion?error=access_denied');
+
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [createPinia()],
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('access_denied');
+    expect(replaceMock).toHaveBeenCalledWith({ query: {} });
     expect(pushMock).not.toHaveBeenCalled();
   });
 });

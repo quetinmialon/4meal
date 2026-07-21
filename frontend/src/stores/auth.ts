@@ -402,6 +402,56 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async completeGoogleLogin(params: URLSearchParams): Promise<LoginResult> {
+      const error = params.get('error_description') || params.get('oauth_error') || params.get('error');
+
+      if (error !== null && error !== '') {
+        this.clearSession();
+        return { ok: false, message: error, fieldErrors: {} };
+      }
+
+      const accessToken = params.get('access_token') || params.get('token');
+
+      if (accessToken === null || accessToken === '') {
+        this.clearSession();
+        return {
+          ok: false,
+          message: 'La réponse de Google est incomplète. Reessayez dans un instant.',
+          fieldErrors: {},
+        };
+      }
+
+      this.status = 'loading';
+      this.isRestored = false;
+
+      const tokenType = params.get('token_type') || 'Bearer';
+      const expiresInValue = Number(params.get('expires_in'));
+      const expiresIn = Number.isFinite(expiresInValue) && expiresInValue > 0 ? expiresInValue : 3600;
+      let user: AuthUser | null = null;
+
+      try {
+        const rawUser = params.get('user');
+        user = rawUser === null ? null : (JSON.parse(rawUser) as AuthUser);
+      } catch {
+        user = null;
+      }
+
+      if (user === null || typeof user.id !== 'number' || typeof user.email !== 'string' || typeof user.name !== 'string') {
+        this.accessToken = accessToken;
+        this.tokenType = tokenType;
+        const fetchedUser = await this.fetchCurrentUser();
+        user = fetchedUser;
+      }
+
+      if (user === null) {
+        this.clearSession();
+        return { ok: false, message: 'Impossible de finaliser la connexion avec Google.', fieldErrors: {} };
+      }
+
+      this.applySession({ accessToken, tokenType, expiresIn, user });
+      return { ok: true };
+    },
+
     async changePassword(
       currentPassword: string,
       password: string,

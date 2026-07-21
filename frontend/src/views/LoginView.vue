@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { nextTick, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
+import { handleGoogleAuthCallback } from '@/utils/googleAuth';
 
 type FieldName = 'email' | 'password';
 
@@ -150,6 +152,31 @@ async function handleSubmit(): Promise<void> {
 
   await focusFirstError();
 }
+
+async function handleGoogleCallback(): Promise<void> {
+  const callback = await handleGoogleAuthCallback(
+    new URLSearchParams(window.location.search),
+    (params) => authStore.completeGoogleLogin(params),
+  );
+
+  if (!callback.handled || callback.result === undefined) {
+    return;
+  }
+
+  await router.replace({ query: {} });
+
+  if (callback.result.ok) {
+    await router.push({ name: 'dashboard' });
+    return;
+  }
+
+  globalError.value = callback.result.message;
+  await focusFirstError();
+}
+
+onMounted(() => {
+  void handleGoogleCallback();
+});
 </script>
 
 <template>
@@ -159,6 +186,9 @@ async function handleSubmit(): Promise<void> {
     <p class="intro">
       Connectez-vous avec votre adresse e-mail et votre mot de passe pour retrouver votre espace.
     </p>
+
+    <GoogleAuthButton />
+    <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
 
     <form class="login-form" novalidate @submit.prevent="handleSubmit">
       <div
@@ -316,6 +346,23 @@ button {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.oauth-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  color: #60725d;
+  text-align: center;
+}
+
+.oauth-separator::before,
+.oauth-separator::after {
+  flex: 1;
+  height: 1px;
+  background: #d5ddce;
+  content: '';
 }
 
 button:disabled {

@@ -173,7 +173,7 @@ seed: ## Lance les seeders Laravel dans Docker
 fresh-seed: ## Recrée la base et relance les seeders dans Docker
 	$(COMPOSE) exec -T backend php artisan migrate:fresh --seed --force
 
-backend-install: env ## Installe les dépendances PHP du backend
+backend-install: ## Installe les dépendances PHP du backend
 	$(BACKEND_COMPOSER) install
 
 backend-npm-install: ## Installe les dépendances Node du backend
@@ -191,7 +191,7 @@ backend-analyse: ## Exécute PHPStan/Larastan côté backend
 backend-test: ## Exécute Pest côté backend
 	$(BACKEND_TEST_COMPOSER) test
 
-backend-quality: ## Exécute la suite qualité backend (pint, analyse, test)
+backend-quality: backend-install ## Exécute la suite qualité backend (pint, analyse, test)
 	$(BACKEND_COMPOSER) quality
 
 backend-migrate: env ## Lance les migrations Laravel en local
@@ -228,7 +228,7 @@ test: ## Lance les tests front et back
 	$(MAKE) backend-test
 	$(MAKE) frontend-test
 
-ci-backend: ## Rejoue les briques CI backend
+ci-backend: backend-install ## Rejoue les briques CI backend
 	$(MAKE) backend-pint
 	$(MAKE) backend-analyse
 	$(MAKE) backend-test
