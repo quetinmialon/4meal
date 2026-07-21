@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
+const router = useRouter();
 
 const userName = computed(() => authStore.user?.name ?? '');
 const userEmail = computed(() => authStore.user?.email ?? '');
+
+async function handleLogout(): Promise<void> {
+  authStore.clearSession();
+  await router.push({ name: 'login' });
+}
 </script>
 
 <template>
@@ -19,6 +26,10 @@ const userEmail = computed(() => authStore.user?.email ?? '');
     </p>
     <p class="detail">Votre espace est accessible. Vous pouvez continuer en toute simplicite.</p>
     <p v-if="userEmail" class="meta">Compte associe : {{ userEmail }}.</p>
+    <RouterLink class="password-link" :to="{ name: 'change-password' }">
+      Modifier mon mot de passe
+    </RouterLink>
+    <button class="logout-button" type="button" @click="handleLogout">Deconnexion</button>
   </main>
 </template>
 
@@ -64,5 +75,29 @@ h2 {
   margin: 1.5rem 0 0;
   color: #395330;
   font-weight: 700;
+}
+
+.password-link {
+  display: inline-flex;
+  margin-top: 1.5rem;
+  color: #2f4520;
+  font-weight: 700;
+}
+
+.logout-button {
+  display: block;
+  margin-top: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8f1e1e;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logout-button:focus-visible {
+  outline: 3px solid rgba(185, 72, 72, 0.28);
+  outline-offset: 3px;
 }
 </style>

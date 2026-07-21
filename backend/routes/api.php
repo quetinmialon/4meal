@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\LoginUserController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
@@ -31,6 +32,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::post('refresh', RefreshAccessTokenController::class)
             ->name('auth.refresh');
+
+        Route::put('password', ChangePasswordController::class)
+            ->name('auth.password.update');
     });
 
 if (app()->environment('testing')) {
