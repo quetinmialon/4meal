@@ -10,10 +10,34 @@ COMPOSE = docker compose --env-file $(DOCKER_ENV_FILE) -f $(DOCKER_COMPOSE_FILE)
 BACKEND_DIR := backend
 FRONTEND_DIR := frontend
 
+## By default use the dockerized composer so Windows users don't need a local
+## composer install. To force using a host-installed composer, run make with
+## `HOST_COMPOSER=1 make ...`.
+ifdef HOST_COMPOSER
 BACKEND_COMPOSER = composer --working-dir=$(BACKEND_DIR)
+else
+BACKEND_COMPOSER = $(COMPOSE) run --rm -w /var/www/html backend composer --working-dir=/var/www/html
+# note: backend files are mounted at /var/www/html inside the container
+endif
 BACKEND_ARTISAN = php $(BACKEND_DIR)/artisan
 BACKEND_NPM = npm --prefix $(BACKEND_DIR)
+
+# Run frontend npm commands inside the `frontend` container by default so that
+# developers don't need node/npm installed locally. Use `HOST_NPM=1` to force
+# local execution.
+ifdef HOST_NPM
 FRONTEND_NPM = npm --prefix $(FRONTEND_DIR)
+else
+FRONTEND_NPM = $(COMPOSE) run --rm -w /app frontend npm --prefix /app
+endif
+
+# Command used specifically for running tests: ensure the container runs with
+# the same env as GitHub Actions (testing, sqlite in-memory, array stores).
+ifdef HOST_COMPOSER
+BACKEND_TEST_COMPOSER = $(BACKEND_COMPOSER)
+else
+BACKEND_TEST_COMPOSER = $(COMPOSE) run --rm -e APP_ENV=testing -e DB_CONNECTION=sqlite -e DB_DATABASE=":memory:" -e CACHE_STORE=array -e SESSION_DRIVER=array -e QUEUE_CONNECTION=sync -e MAIL_MAILER=array -w /var/www/html backend composer --working-dir=/var/www/html
+endif
 
 .PHONY: \
 	help env backend-env \
@@ -165,7 +189,7 @@ backend-analyse: ## Exécute PHPStan/Larastan côté backend
 	$(BACKEND_COMPOSER) analyse
 
 backend-test: ## Exécute Pest côté backend
-	$(BACKEND_COMPOSER) test
+	$(BACKEND_TEST_COMPOSER) test
 
 backend-quality: ## Exécute la suite qualité backend (pint, analyse, test)
 	$(BACKEND_COMPOSER) quality

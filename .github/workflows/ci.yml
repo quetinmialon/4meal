@@ -45,6 +45,16 @@ jobs:
       - name: Generate application key
         run: php artisan key:generate --ansi
 
+      - name: Ensure JWT secret is configured
+        run: |
+          # If APP_KEY was generated, copy it to JWT_SECRET so tests using JWT work
+          APP_KEY=$(grep '^APP_KEY=' .env | cut -d'=' -f2-)
+          if [ -z "$APP_KEY" ]; then
+            php artisan key:generate --ansi
+            APP_KEY=$(grep '^APP_KEY=' .env | cut -d'=' -f2-)
+          fi
+          echo "JWT_SECRET=$APP_KEY" >> .env
+
       - name: Run Pint
         run: composer pint
 

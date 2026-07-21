@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 
 const AUTH_STORAGE_KEY = '4meal.auth.session';
 
-type AuthStatus = 'idle' | 'loading' | 'authenticated';
+type AuthStatus = 'idle' | 'loading' | 'restoring' | 'authenticated';
 
 export type AuthUser = {
   id: number;
@@ -33,6 +33,11 @@ type LoginSuccessPayload = {
   };
 };
 
+type CurrentUserSuccessPayload = {
+  success: true;
+  data: AuthUser;
+};
+
 type ApiErrorPayload = {
   success: false;
   error?: {
@@ -60,6 +65,8 @@ type PersistedSession = {
   expiresIn: number;
   user: AuthUser;
 };
+
+let restoreSessionPromise: Promise<void> | null = null;
 
 function isAuthUser(value: unknown): value is AuthUser {
   return (
@@ -132,6 +139,13 @@ function extractFieldErrors(payload: ApiErrorPayload | null): Partial<Record<'em
   };
 }
 
+function authHeaders(session: Pick<AuthSession, 'accessToken' | 'tokenType'>): HeadersInit {
+  return {
+    Accept: 'application/json',
+    Authorization: `${session.tokenType} ${session.accessToken}`,
+  };
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => {
     const session = readPersistedSession();
@@ -141,12 +155,14 @@ export const useAuthStore = defineStore('auth', {
       tokenType: session?.tokenType ?? '',
       expiresIn: session?.expiresIn ?? 0,
       user: session?.user ?? null,
-      status: (session === null ? 'idle' : 'authenticated') as AuthStatus,
+      status: (session === null ? 'idle' : 'restoring') as AuthStatus,
+      isRestored: session === null,
     };
   },
 
   getters: {
-    isAuthenticated: (state) => state.user !== null && state.accessToken !== '',
+    isAuthenticated: (state) =>
+      state.isRestored && state.status === 'authenticated' && state.user !== null && state.accessToken !== '',
   },
 
   actions: {
@@ -156,6 +172,7 @@ export const useAuthStore = defineStore('auth', {
       this.expiresIn = session.expiresIn;
       this.user = session.user;
       this.status = 'authenticated';
+      this.isRestored = true;
 
       persistSession({
         accessToken: session.accessToken,
@@ -171,11 +188,140 @@ export const useAuthStore = defineStore('auth', {
       this.expiresIn = 0;
       this.user = null;
       this.status = 'idle';
+      this.isRestored = true;
 
       persistSession(null);
     },
 
+    async refreshSession(): Promise<AuthSession | null> {
+      if (this.accessToken === '' || this.tokenType === '') {
+        return null;
+      }
+
+      try {
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: authHeaders({
+            accessToken: this.accessToken,
+            tokenType: this.tokenType,
+          }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | LoginSuccessPayload
+          | ApiErrorPayload
+          | null;
+
+        if (response.status === 401) {
+          this.clearSession();
+
+          return null;
+        }
+
+        if (!response.ok || payload?.success !== true) {
+          return null;
+        }
+
+        return {
+          accessToken: payload.data.access_token,
+          tokenType: payload.data.token_type,
+          expiresIn: payload.data.expires_in,
+          user: payload.data.user,
+        };
+      } catch {
+        return null;
+      }
+    },
+
+    async fetchCurrentUser(): Promise<AuthUser | null> {
+      if (this.accessToken === '' || this.tokenType === '') {
+        return null;
+      }
+
+      try {
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+          headers: authHeaders({
+            accessToken: this.accessToken,
+            tokenType: this.tokenType,
+          }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | CurrentUserSuccessPayload
+          | ApiErrorPayload
+          | null;
+
+        if (response.status === 401) {
+          this.clearSession();
+
+          return null;
+        }
+
+        if (!response.ok || payload?.success !== true) {
+          return null;
+        }
+
+        return payload.data;
+      } catch {
+        return null;
+      }
+    },
+
+    async restoreSession(): Promise<void> {
+      if (this.isRestored) {
+        return;
+      }
+
+      if (this.accessToken === '' || this.tokenType === '') {
+        this.clearSession();
+
+        return;
+      }
+
+      if (restoreSessionPromise !== null) {
+        return restoreSessionPromise;
+      }
+
+      this.status = 'restoring';
+
+      restoreSessionPromise = (async () => {
+        const refreshedSession = await this.refreshSession();
+
+        if (refreshedSession === null) {
+          this.clearSession();
+
+          return;
+        }
+
+        this.applySession(refreshedSession);
+
+        const currentUser = await this.fetchCurrentUser();
+
+        if (currentUser === null) {
+          this.clearSession();
+
+          return;
+        }
+
+        this.applySession({
+          ...refreshedSession,
+          user: currentUser,
+        });
+      })().finally(() => {
+        restoreSessionPromise = null;
+        this.isRestored = true;
+
+        if (this.status === 'restoring') {
+          this.status = this.user === null ? 'idle' : 'authenticated';
+        }
+      });
+
+      return restoreSessionPromise;
+    },
+
     async login(credentials: LoginCredentials): Promise<LoginResult> {
+      this.isRestored = false;
       this.status = 'loading';
 
       try {
