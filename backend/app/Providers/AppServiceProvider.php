@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\Auth\GoogleOAuthProvider;
+use App\Services\Auth\GoogleOAuthClient;
 use App\Support\ApiResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -17,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(GoogleOAuthProvider::class, GoogleOAuthClient::class);
     }
 
     /**

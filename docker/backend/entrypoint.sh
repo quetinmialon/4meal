@@ -19,6 +19,10 @@ composer install --no-dev --no-interaction --no-scripts --prefer-dist
 
 php artisan package:discover --ansi
 
+# Freeze the configuration after Docker has injected its environment variables.
+# The generated cache is ignored by Git and is rebuilt on every container start.
+php artisan config:cache --no-interaction
+
 if [ -z "${APP_KEY:-}" ]; then
   export APP_KEY="$(php artisan key:generate --show --no-interaction)"
 fi

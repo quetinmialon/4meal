@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { nextTick, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+
+import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
+import { useAuthStore } from '@/stores/auth';
+import { handleGoogleAuthCallback } from '@/utils/googleAuth';
 
 type FieldName = 'name' | 'email' | 'password' | 'passwordConfirmation';
 
@@ -16,6 +20,7 @@ type RegisterErrorPayload = {
 };
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const fieldOrder: FieldName[] = ['name', 'email', 'password', 'passwordConfirmation'];
 
@@ -261,6 +266,31 @@ async function handleSubmit(): Promise<void> {
     isSubmitting.value = false;
   }
 }
+
+async function handleGoogleCallback(): Promise<void> {
+  const callback = await handleGoogleAuthCallback(
+    new URLSearchParams(window.location.search),
+    (params) => authStore.completeGoogleLogin(params),
+  );
+
+  if (!callback.handled || callback.result === undefined) {
+    return;
+  }
+
+  await router.replace({ query: {} });
+
+  if (callback.result.ok) {
+    await router.push({ name: 'dashboard' });
+    return;
+  }
+
+  globalError.value = callback.result.message;
+  await focusFirstError();
+}
+
+onMounted(() => {
+  void handleGoogleCallback();
+});
 </script>
 
 <template>
@@ -272,10 +302,12 @@ async function handleSubmit(): Promise<void> {
         Renseignez vos informations pour creer votre compte. Nous vous indiquerons les champs a
         corriger si besoin.
       </p>
+      <GoogleAuthButton />
+      <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
     </div>
 
-    <form class="register-form" novalidate :aria-busy="isSubmitting" @submit.prevent="handleSubmit">
-      <fieldset :disabled="isSubmitting">
+    <form class="register-form" novalidate :aria-busy="isSubmitting || authStore.status === 'loading'" @submit.prevent="handleSubmit">
+      <fieldset :disabled="isSubmitting || authStore.status === 'loading'">
         <div v-if="globalError" ref="formErrorSummary" class="form-alert" role="alert" tabindex="-1">
           {{ globalError }}
         </div>
@@ -409,6 +441,23 @@ h2 {
   max-width: 34rem;
   color: #50634d;
   line-height: 1.6;
+}
+
+.oauth-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  color: #60725d;
+  text-align: center;
+}
+
+.oauth-separator::before,
+.oauth-separator::after {
+  flex: 1;
+  height: 1px;
+  background: #d5ddce;
+  content: '';
 }
 
 .register-form fieldset {
