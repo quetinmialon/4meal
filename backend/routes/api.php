@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\LoginUserController;
+use App\Http\Controllers\Auth\LogoutUserController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use App\Http\Middleware\AuthenticateWithJwt;
@@ -22,6 +23,9 @@ Route::post('auth/register', RegisterUserController::class)
 Route::post('auth/login', LoginUserController::class)
     ->middleware('throttle:auth.login')
     ->name('auth.login');
+
+Route::post('auth/logout', LogoutUserController::class)
+    ->name('auth.logout');
 
 Route::middleware(AuthenticateWithJwt::class)
     ->prefix('auth')

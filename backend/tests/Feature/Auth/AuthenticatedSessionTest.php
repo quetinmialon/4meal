@@ -138,3 +138,43 @@ it('refreshes a token and invalidates the previous one', function () {
         Carbon::setTestNow();
     }
 });
+
+it('logs out and invalidates the access token for protected routes', function () {
+    $user = User::factory()->create([
+        'email' => 'jane.doe@example.com',
+        'password' => 'password123',
+    ]);
+
+    $token = authenticateUser($user);
+
+    $this->withToken($token)
+        ->postJson('/api/auth/logout')
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data', null);
+
+    $this->withToken($token)
+        ->getJson('/api/auth/me')
+        ->assertStatus(401)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('error.code', 'authentication_error');
+});
+
+it('allows logging out with the same token more than once', function () {
+    $user = User::factory()->create([
+        'email' => 'jane.doe@example.com',
+        'password' => 'password123',
+    ]);
+
+    $token = authenticateUser($user);
+
+    $this->withToken($token)
+        ->postJson('/api/auth/logout')
+        ->assertOk();
+
+    $this->withToken($token)
+        ->postJson('/api/auth/logout')
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data', null);
+});
