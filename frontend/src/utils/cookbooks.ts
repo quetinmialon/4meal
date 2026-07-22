@@ -53,6 +53,10 @@ export type CreateCookbookResult =
   | { ok: true; cookbook: Cookbook }
   | { ok: false; message: string; fieldErrors: { name?: string } };
 
+export type UpdateCookbookResult =
+  | { ok: true; cookbook: Cookbook }
+  | { ok: false; message: string; fieldErrors: { name?: string } };
+
 export type ListResult<T> =
   | { ok: true; data: T[]; pagination: Pagination }
   | { ok: false; message: string };
@@ -132,6 +136,46 @@ export async function fetchCookbook(
     };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function updateCookbook(
+  id: string,
+  name: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<UpdateCookbookResult> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `${tokenType} ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as CreateCookbookPayload | ApiErrorPayload | null;
+
+    if (response.ok && payload?.success === true) {
+      return { ok: true, cookbook: payload.data };
+    }
+
+    const fields = payload?.success === false ? payload.error?.details?.fields : undefined;
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de modifier le cookbook.')
+        : 'Impossible de modifier le cookbook.',
+      fieldErrors: typeof fields?.name?.[0] === 'string' ? { name: fields.name[0] } : {},
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+      fieldErrors: {},
+    };
   }
 }
 

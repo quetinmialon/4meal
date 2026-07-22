@@ -13,6 +13,7 @@ use App\Http\Controllers\Cookbook\CreateCookbookController;
 use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
+use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -54,6 +55,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks/{cookbook}/recipes', ListCookbookRecipesController::class)
             ->name('cookbooks.recipes.index');
+
+        Route::patch('cookbooks/{cookbook}', UpdateCookbookController::class)
+            ->name('cookbooks.update');
 
         Route::get('cookbooks/{cookbook}', ShowCookbookController::class)
             ->name('cookbooks.show');

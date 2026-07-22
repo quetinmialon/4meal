@@ -16,4 +16,12 @@ class CookbookPolicy
     {
         return $cookbook->members()->whereKey($user->getKey())->exists();
     }
+
+    public function update(User $user, Cookbook $cookbook): bool
+    {
+        return $cookbook->members()
+            ->whereKey($user->getKey())
+            ->wherePivotIn('role', ['owner', 'editor'])
+            ->exists();
+    }
 }

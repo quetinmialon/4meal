@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook, Pagination, Recipe } from '@/utils/cookbooks';
-import { fetchCookbook, fetchCookbookRecipes } from '@/utils/cookbooks';
+import { fetchCookbook, fetchCookbookRecipes, updateCookbook } from '@/utils/cookbooks';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -14,6 +14,54 @@ const recipes = ref<Recipe[]>([]);
 const recipesPagination = ref<Pagination | null>(null);
 const recipesError = ref('');
 const recipesLoading = ref(true);
+const isEditingName = ref(false);
+const isSavingName = ref(false);
+const editName = reactive({ value: '' });
+const editNameError = ref('');
+const editGlobalError = ref('');
+const canEditName = computed(() => cookbook.value?.member_role === 'owner' || cookbook.value?.member_role === 'editor');
+
+function startEditingName(): void {
+  if (!cookbook.value || !canEditName.value) return;
+  editName.value = cookbook.value.name;
+  editNameError.value = '';
+  editGlobalError.value = '';
+  isEditingName.value = true;
+}
+
+function cancelEditingName(): void {
+  isEditingName.value = false;
+  editNameError.value = '';
+  editGlobalError.value = '';
+}
+
+async function saveName(): Promise<void> {
+  editNameError.value = '';
+  editGlobalError.value = '';
+
+  if (editName.value.trim() === '') {
+    editNameError.value = 'Le nom du cookbook est requis.';
+    return;
+  }
+
+  if (!cookbook.value) return;
+  isSavingName.value = true;
+  const result = await updateCookbook(
+    cookbook.value.id,
+    editName.value,
+    authStore.tokenType,
+    authStore.accessToken,
+  );
+
+  if (result.ok) {
+    cookbook.value = result.cookbook;
+    isEditingName.value = false;
+  } else {
+    editGlobalError.value = result.message;
+    editNameError.value = result.fieldErrors.name ?? '';
+  }
+  isSavingName.value = false;
+}
 
 async function loadRecipes(page = 1): Promise<void> {
   recipesLoading.value = true;
@@ -53,7 +101,28 @@ onMounted(async () => {
     <p v-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
     <template v-else-if="cookbook">
       <p class="kicker">Cookbook</p>
-      <h2>{{ cookbook.name }}</h2>
+      <div v-if="!isEditingName" class="name-heading">
+        <h2>{{ cookbook.name }}</h2>
+        <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
+          Modifier le nom
+        </button>
+      </div>
+      <form v-else class="edit-name-form" novalidate @submit.prevent="saveName">
+        <label for="cookbook-name-edit-input">Nom du cookbook</label>
+        <input
+          id="cookbook-name-edit-input"
+          v-model="editName.value"
+          maxlength="255"
+          :aria-invalid="editNameError ? 'true' : 'false'"
+          :aria-describedby="editNameError ? 'cookbook-name-edit-error' : undefined"
+        />
+        <p v-if="editNameError" id="cookbook-name-edit-error" class="field-error" role="alert">{{ editNameError }}</p>
+        <p v-if="editGlobalError" class="error-summary" role="alert">{{ editGlobalError }}</p>
+        <div class="edit-actions">
+          <button type="submit" :disabled="isSavingName">{{ isSavingName ? 'Enregistrement...' : 'Enregistrer' }}</button>
+          <button type="button" class="cancel-button" :disabled="isSavingName" @click="cancelEditingName">Annuler</button>
+        </div>
+      </form>
       <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
       <section class="recipes-section" aria-labelledby="recipes-title">
@@ -89,6 +158,17 @@ onMounted(async () => {
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .detail, .loading { margin-top: 1rem; color: #50634d; }
 .error-summary { margin-top: 2rem; color: #8f1e1e; }
+.name-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.name-heading h2 { margin: 0; }
+.edit-button, .edit-actions button { padding: 0.55rem 0.75rem; border: 1px solid #395330; border-radius: 0.5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.edit-name-form { display: grid; gap: 0.6rem; }
+.edit-name-form label { font-weight: 700; }
+.edit-name-form input { padding: 0.7rem; border: 1px solid #b9c5af; border-radius: 0.5rem; font: inherit; }
+.field-error { margin: 0; color: #8f1e1e; }
+.edit-name-form .error-summary { margin: 0; }
+.edit-actions { display: flex; gap: 0.6rem; }
+.edit-actions button:disabled { cursor: wait; opacity: 0.6; }
+.edit-actions .cancel-button { background: transparent; color: #395330; }
 .role-line { margin-top: 0.5rem; color: #395330; }
 .recipes-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 h3 { margin: 0 0 1rem; font-size: 1.5rem; }
