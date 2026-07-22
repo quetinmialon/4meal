@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -52,6 +53,18 @@ class User extends Authenticatable
     public function oauthAccounts(): HasMany
     {
         return $this->hasMany(OAuthAccount::class);
+    }
+
+    public function ownedCookbooks(): HasMany
+    {
+        return $this->hasMany(Cookbook::class, 'owner_id');
+    }
+
+    public function cookbooks(): BelongsToMany
+    {
+        return $this->belongsToMany(Cookbook::class, 'cookbook_members')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     protected function email(): Attribute

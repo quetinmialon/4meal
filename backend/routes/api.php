@@ -9,6 +9,8 @@ use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Controllers\Cookbook\CreateCookbookController;
+use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -39,6 +41,15 @@ Route::get('auth/microsoft/redirect', MicrosoftOAuthRedirectController::class)
 
 Route::get('auth/microsoft/callback', MicrosoftOAuthCallbackController::class)
     ->name('auth.microsoft.callback');
+
+Route::middleware(AuthenticateWithJwt::class)
+    ->group(function () {
+        Route::post('cookbooks', CreateCookbookController::class)
+            ->name('cookbooks.store');
+
+        Route::get('cookbooks/{cookbook}', ShowCookbookController::class)
+            ->name('cookbooks.show');
+    });
 
 Route::middleware(AuthenticateWithJwt::class)
     ->prefix('auth')
