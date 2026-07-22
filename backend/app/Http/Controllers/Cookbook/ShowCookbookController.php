@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cookbook;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CookbookResource;
 use App\Models\Cookbook;
+use App\Models\CookbookMember;
 use App\Models\User;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,14 @@ class ShowCookbookController extends Controller
         /** @var User $user */
         $user = $request->user();
         Gate::forUser($user)->authorize('view', $cookbook);
+
+        $cookbook->setAttribute(
+            'member_role',
+            CookbookMember::query()
+                ->where('cookbook_id', $cookbook->getKey())
+                ->where('user_id', $user->getKey())
+                ->value('role'),
+        );
 
         return ApiResponse::success(
             $request,

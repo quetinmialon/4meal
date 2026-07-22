@@ -18,6 +18,7 @@ class CreateCookbookController extends Controller
         /** @var User $owner */
         $owner = $request->user();
         $cookbook = $action->execute($owner, $request->safe()->only(['name']));
+        $cookbook->setAttribute('member_role', 'owner');
 
         Gate::forUser($owner)->authorize('view', $cookbook);
 

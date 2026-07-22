@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Cookbook extends Model
@@ -39,5 +40,10 @@ class Cookbook extends Model
         return $this->belongsToMany(User::class, 'cookbook_members')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class);
     }
 }
