@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Cookbook;
+use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -71,4 +72,55 @@ it('allows a member to access a cookbook and denies unrelated users', function (
         ->getJson('/api/cookbooks/'.$cookbook->public_id)
         ->assertForbidden()
         ->assertJsonPath('error.code', 'authorization_error');
+});
+
+it('lists only cookbooks accessible to the authenticated user with their role', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+    $memberCookbook = Cookbook::query()->create(['name' => 'Accessible', 'owner_id' => $user->id]);
+    $memberCookbook->members()->attach($user, ['role' => 'editor']);
+    $otherCookbook = Cookbook::query()->create(['name' => 'Private', 'owner_id' => User::factory()->create()->id]);
+
+    $response = $this->withToken(cookbookToken($user))
+        ->getJson('/api/cookbooks?per_page=10');
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('meta.pagination.per_page', 10)
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $memberCookbook->public_id)
+        ->assertJsonPath('data.0.member_role', 'editor');
+
+    expect($response->json('data.0.id'))->not->toBe($otherCookbook->public_id);
+});
+
+it('returns the authenticated member role when viewing a cookbook', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Accessible', 'owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'viewer']);
+
+    $this->withToken(cookbookToken($user))
+        ->getJson('/api/cookbooks/'.$cookbook->public_id)
+        ->assertOk()
+        ->assertJsonPath('data.member_role', 'viewer');
+});
+
+it('paginates recipes without exposing recipes from another cookbook', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Accessible', 'owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'owner']);
+    $otherCookbook = Cookbook::query()->create([
+        'name' => 'Other',
+        'owner_id' => User::factory()->create()->id,
+    ]);
+    Recipe::query()->create(['cookbook_id' => $cookbook->id, 'name' => 'Visible']);
+    Recipe::query()->create(['cookbook_id' => $cookbook->id, 'name' => 'Visible too']);
+    Recipe::query()->create(['cookbook_id' => $otherCookbook->id, 'name' => 'Hidden']);
+
+    $this->withToken(cookbookToken($user))
+        ->getJson('/api/cookbooks/'.$cookbook->public_id.'/recipes?per_page=1')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('meta.pagination.total', 2)
+        ->assertJsonPath('meta.pagination.per_page', 1)
+        ->assertJsonMissing(['name' => 'Hidden']);
 });

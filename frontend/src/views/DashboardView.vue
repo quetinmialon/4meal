@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 
 import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
 import { useAuthStore } from '@/stores/auth';
+import type { Cookbook, Pagination } from '@/utils/cookbooks';
+import { fetchCookbooks } from '@/utils/cookbooks';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -11,6 +13,31 @@ const router = useRouter();
 const userName = computed(() => authStore.user?.name ?? '');
 const userEmail = computed(() => authStore.user?.email ?? '');
 const isCreateFormVisible = ref(false);
+const cookbooks = ref<Cookbook[]>([]);
+const pagination = ref<Pagination | null>(null);
+const isLoading = ref(true);
+const errorMessage = ref('');
+
+async function loadCookbooks(page = 1): Promise<void> {
+  isLoading.value = true;
+  errorMessage.value = '';
+  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken, page);
+
+  if (result.ok) {
+    cookbooks.value = result.data;
+    pagination.value = result.pagination;
+  } else {
+    errorMessage.value = result.message;
+  }
+  isLoading.value = false;
+}
+
+async function goToPage(page: number): Promise<void> {
+  if (pagination.value === null || page < 1 || page > pagination.value.last_page) return;
+  await loadCookbooks(page);
+}
+
+onMounted(() => loadCookbooks());
 
 async function handleLogout(): Promise<void> {
   authStore.clearSession();
@@ -38,9 +65,34 @@ async function handleLogout(): Promise<void> {
           {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
         </button>
       </div>
-      <div v-if="!isCreateFormVisible" class="empty-state">
+      <p v-if="isLoading" class="loading" role="status">Chargement des cookbooks...</p>
+      <p v-else-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
+      <div v-else-if="cookbooks.length === 0 && !isCreateFormVisible" class="empty-state">
         <p>Vous n’avez encore aucun cookbook.</p>
         <p>Créez votre premier espace pour organiser vos recettes.</p>
+      </div>
+      <div v-else-if="!isCreateFormVisible" class="cookbook-list">
+        <RouterLink
+          v-for="cookbook in cookbooks"
+          :key="cookbook.id"
+          class="cookbook-item"
+          :to="{ name: 'cookbook', params: { id: cookbook.id } }"
+        >
+          <span>
+            <strong>{{ cookbook.name }}</strong>
+            <small>{{ cookbook.owner.name }}</small>
+          </span>
+          <span class="role-badge">{{ cookbook.member_role ?? 'membre' }}</span>
+        </RouterLink>
+        <nav v-if="pagination && pagination.last_page > 1" class="pagination" aria-label="Pagination des cookbooks">
+          <button type="button" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">
+            Precedent
+          </button>
+          <span>Page {{ pagination.current_page }} / {{ pagination.last_page }}</span>
+          <button type="button" :disabled="!pagination.has_more_pages" @click="goToPage(pagination.current_page + 1)">
+            Suivant
+          </button>
+        </nav>
       </div>
       <CookbookCreateForm v-else />
     </section>
@@ -110,6 +162,17 @@ h3 { margin: 0; font-size: 1.5rem; }
 .empty-state { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #b9c5af; border-radius: 0.8rem; color: #50634d; line-height: 1.5; }
 .empty-state p { margin: 0; }
 .empty-state p + p { margin-top: 0.35rem; }
+.loading, .error-summary { margin-top: 1rem; }
+.error-summary { color: #8f1e1e; }
+.cookbook-list { display: grid; gap: 0.7rem; margin-top: 1rem; }
+.cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; color: #243127; text-decoration: none; }
+.cookbook-item:hover { border-color: #6b7b57; background: #f7fbf3; }
+.cookbook-item strong, .cookbook-item small { display: block; }
+.cookbook-item small { margin-top: 0.25rem; color: #50634d; }
+.role-badge { padding: 0.35rem 0.6rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.5rem; color: #50634d; font-size: 0.9rem; }
+.pagination button { padding: 0.5rem 0.7rem; border: 1px solid #b9c5af; border-radius: 0.5rem; background: transparent; color: #395330; cursor: pointer; }
+.pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .logout-button {
   display: block;
