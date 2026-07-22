@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\GoogleOAuthCallbackController;
 use App\Http\Controllers\Auth\GoogleOAuthRedirectController;
 use App\Http\Controllers\Auth\LoginUserController;
+use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
+use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use App\Http\Middleware\AuthenticateWithJwt;
@@ -31,6 +33,12 @@ Route::get('auth/google/redirect', GoogleOAuthRedirectController::class)
 
 Route::get('auth/google/callback', GoogleOAuthCallbackController::class)
     ->name('auth.google.callback');
+
+Route::get('auth/microsoft/redirect', MicrosoftOAuthRedirectController::class)
+    ->name('auth.microsoft.redirect');
+
+Route::get('auth/microsoft/callback', MicrosoftOAuthCallbackController::class)
+    ->name('auth.microsoft.callback');
 
 Route::middleware(AuthenticateWithJwt::class)
     ->prefix('auth')

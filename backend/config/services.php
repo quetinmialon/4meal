@@ -42,4 +42,12 @@ return [
         'frontend_url' => getenv('GOOGLE_FRONTEND_URL') ?: env('GOOGLE_FRONTEND_URL', env('APP_URL')),
     ],
 
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'tenant' => env('MICROSOFT_TENANT', 'common'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI', env('APP_URL').'/api/auth/microsoft/callback'),
+        'frontend_url' => env('MICROSOFT_FRONTEND_URL', env('APP_URL')),
+    ],
+
 ];

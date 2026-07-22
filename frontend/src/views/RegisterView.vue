@@ -3,8 +3,9 @@ import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
+import MicrosoftAuthButton from '@/components/MicrosoftAuthButton.vue';
 import { useAuthStore } from '@/stores/auth';
-import { handleGoogleAuthCallback } from '@/utils/googleAuth';
+import { handleOAuthCallback } from '@/utils/oauth';
 
 type FieldName = 'name' | 'email' | 'password' | 'passwordConfirmation';
 
@@ -267,10 +268,10 @@ async function handleSubmit(): Promise<void> {
   }
 }
 
-async function handleGoogleCallback(): Promise<void> {
-  const callback = await handleGoogleAuthCallback(
+async function handleOAuthCallbackFromUrl(): Promise<void> {
+  const callback = await handleOAuthCallback(
     new URLSearchParams(window.location.search),
-    (params) => authStore.completeGoogleLogin(params),
+    (params) => authStore.completeOAuthLogin(params, 'OAuth'),
   );
 
   if (!callback.handled || callback.result === undefined) {
@@ -289,7 +290,7 @@ async function handleGoogleCallback(): Promise<void> {
 }
 
 onMounted(() => {
-  void handleGoogleCallback();
+  void handleOAuthCallbackFromUrl();
 });
 </script>
 
@@ -303,6 +304,7 @@ onMounted(() => {
         corriger si besoin.
       </p>
       <GoogleAuthButton />
+      <MicrosoftAuthButton />
       <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
     </div>
 
