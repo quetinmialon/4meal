@@ -402,7 +402,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async completeGoogleLogin(params: URLSearchParams): Promise<LoginResult> {
+    async completeOAuthLogin(params: URLSearchParams, provider: 'Google' | 'Microsoft' | 'OAuth'): Promise<LoginResult> {
       const error = params.get('error_description') || params.get('oauth_error') || params.get('error');
 
       if (error !== null && error !== '') {
@@ -445,11 +445,19 @@ export const useAuthStore = defineStore('auth', {
 
       if (user === null) {
         this.clearSession();
-        return { ok: false, message: 'Impossible de finaliser la connexion avec Google.', fieldErrors: {} };
+        return { ok: false, message: `Impossible de finaliser la connexion avec ${provider}.`, fieldErrors: {} };
       }
 
       this.applySession({ accessToken, tokenType, expiresIn, user });
       return { ok: true };
+    },
+
+    async completeGoogleLogin(params: URLSearchParams): Promise<LoginResult> {
+      return this.completeOAuthLogin(params, 'Google');
+    },
+
+    async completeMicrosoftLogin(params: URLSearchParams): Promise<LoginResult> {
+      return this.completeOAuthLogin(params, 'Microsoft');
     },
 
     async changePassword(

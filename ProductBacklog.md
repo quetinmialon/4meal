@@ -4,11 +4,11 @@
 
 ### MUST
 - [X] AUTH-01 — Création d'un compte avec email et mot de passe
-- [ ] AUTH-02 — Connexion avec email et mot de passe
+- [X] AUTH-02 — Connexion avec email et mot de passe
 - [ ] AUTH-03 — Connexion via OAuth2 (Google & Microsoft)
-- [ ] AUTH-04 — Déconnexion sécurisée
-- [ ] AUTH-05 — Gestion des sessions avec JWT
-- [ ] AUTH-06 — Modification du mot de passe
+- [X] AUTH-04 — Déconnexion sécurisée
+- [X] AUTH-05 — Gestion des sessions avec JWT
+- [X] AUTH-06 — Modification du mot de passe
 
 ### SHOULD
 - [ ] AUTH-07 — Association de plusieurs comptes OAuth

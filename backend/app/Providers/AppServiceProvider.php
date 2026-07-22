@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Contracts\Auth\GoogleOAuthProvider;
+use App\Contracts\Auth\MicrosoftOAuthProvider;
 use App\Services\Auth\GoogleOAuthClient;
+use App\Services\Auth\MicrosoftOAuthClient;
 use App\Support\ApiResponse;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(GoogleOAuthProvider::class, GoogleOAuthClient::class);
+        $this->app->bind(MicrosoftOAuthProvider::class, MicrosoftOAuthClient::class);
     }
 
     /**

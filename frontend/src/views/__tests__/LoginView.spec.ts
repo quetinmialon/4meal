@@ -144,6 +144,18 @@ describe('LoginView', () => {
     expect(googleButton.attributes('href')).toBe('/api/auth/google/redirect');
   });
 
+  it('starts the Microsoft OAuth flow through the backend endpoint', () => {
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [createPinia()],
+      },
+    });
+
+    const microsoftButton = wrapper.get('a[aria-label="Continuer avec Microsoft"]');
+
+    expect(microsoftButton.attributes('href')).toBe('/api/auth/microsoft/redirect');
+  });
+
   it('displays an OAuth error returned by Google', async () => {
     window.history.replaceState({}, '', '/connexion?error=access_denied');
 
@@ -156,6 +168,22 @@ describe('LoginView', () => {
     await flushPromises();
 
     expect(wrapper.get('[role="alert"]').text()).toContain('access_denied');
+    expect(replaceMock).toHaveBeenCalledWith({ query: {} });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('displays an OAuth error returned by Microsoft', async () => {
+    window.history.replaceState({}, '', '/connexion?oauth_error=La%20connexion%20Microsoft%20a%20%C3%A9chou%C3%A9.');
+
+    const wrapper = mount(LoginView, {
+      global: {
+        plugins: [createPinia()],
+      },
+    });
+
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('La connexion Microsoft a échoué.');
     expect(replaceMock).toHaveBeenCalledWith({ query: {} });
     expect(pushMock).not.toHaveBeenCalled();
   });

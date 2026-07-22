@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
-import { handleGoogleAuthCallback } from '@/utils/googleAuth';
+import MicrosoftAuthButton from '@/components/MicrosoftAuthButton.vue';
+import { handleOAuthCallback } from '@/utils/oauth';
 
 type FieldName = 'email' | 'password';
 
@@ -153,10 +154,10 @@ async function handleSubmit(): Promise<void> {
   await focusFirstError();
 }
 
-async function handleGoogleCallback(): Promise<void> {
-  const callback = await handleGoogleAuthCallback(
+async function handleOAuthCallbackFromUrl(): Promise<void> {
+  const callback = await handleOAuthCallback(
     new URLSearchParams(window.location.search),
-    (params) => authStore.completeGoogleLogin(params),
+    (params) => authStore.completeOAuthLogin(params, 'OAuth'),
   );
 
   if (!callback.handled || callback.result === undefined) {
@@ -175,7 +176,7 @@ async function handleGoogleCallback(): Promise<void> {
 }
 
 onMounted(() => {
-  void handleGoogleCallback();
+  void handleOAuthCallbackFromUrl();
 });
 </script>
 
@@ -188,6 +189,7 @@ onMounted(() => {
     </p>
 
     <GoogleAuthButton />
+    <MicrosoftAuthButton />
     <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
 
     <form class="login-form" novalidate @submit.prevent="handleSubmit">

@@ -97,6 +97,14 @@ describe('RegisterView', () => {
     });
   });
 
+  it('renders the Microsoft OAuth entry point', () => {
+    const wrapper = mount(RegisterView);
+
+    expect(wrapper.get('a[aria-label="Continuer avec Microsoft"]').attributes('href')).toBe(
+      '/api/auth/microsoft/redirect',
+    );
+  });
+
   it('renders API validation errors returned by the backend', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
