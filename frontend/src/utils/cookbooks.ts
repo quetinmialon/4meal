@@ -33,6 +33,17 @@ export type Recipe = {
   created_at: string | null;
 };
 
+export type CookbookMember = {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  role: string;
+  joined_at: string | null;
+  status: string;
+};
+
 export type Pagination = {
   current_page: number;
   per_page: number;
@@ -442,6 +453,115 @@ export function fetchCookbookRecipes(
 ): Promise<ListResult<Recipe>> {
   return fetchPaginated(
     `/api/cookbooks/${encodeURIComponent(id)}/recipes?page=${page}`,
+    tokenType,
+    accessToken,
+  );
+}
+
+export function fetchCookbookMembers(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+  page = 1,
+): Promise<ListResult<CookbookMember>> {
+  return fetchPaginated(
+    `/api/cookbooks/${encodeURIComponent(id)}/members?page=${page}`,
+    tokenType,
+    accessToken,
+  );
+}
+
+export type UpdateCookbookMemberRoleResult =
+  | { ok: true; member: CookbookMember }
+  | { ok: false; message: string };
+
+export async function updateCookbookMemberRole(
+  cookbookId: string,
+  memberId: number,
+  role: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<UpdateCookbookMemberRoleResult> {
+  try {
+    const response = await fetch(
+      `/api/cookbooks/${encodeURIComponent(cookbookId)}/members/${encodeURIComponent(memberId)}/role`,
+      {
+        method: 'PATCH',
+        headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      },
+    );
+    const payload = (await response.json().catch(() => null)) as
+      | { success: true; data: CookbookMember }
+      | ApiErrorPayload
+      | null;
+
+    if (response.ok && payload?.success === true) {
+      return { ok: true, member: payload.data };
+    }
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de modifier le rôle du membre.')
+        : 'Impossible de modifier le rôle du membre.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export type CookbookMemberActionResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+async function deleteCookbookMemberAction(
+  url: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<CookbookMemberActionResult> {
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: apiHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+    if (response.status === 204 || (response.ok && payload?.success !== false)) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de modifier les membres du cookbook.')
+        : 'Impossible de modifier les membres du cookbook.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export function leaveCookbook(
+  cookbookId: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<CookbookMemberActionResult> {
+  return deleteCookbookMemberAction(
+    `/api/cookbooks/${encodeURIComponent(cookbookId)}/members/me`,
+    tokenType,
+    accessToken,
+  );
+}
+
+export function removeCookbookMember(
+  cookbookId: string,
+  memberId: number,
+  tokenType: string,
+  accessToken: string,
+): Promise<CookbookMemberActionResult> {
+  return deleteCookbookMemberAction(
+    `/api/cookbooks/${encodeURIComponent(cookbookId)}/members/${encodeURIComponent(memberId)}`,
     tokenType,
     accessToken,
   );

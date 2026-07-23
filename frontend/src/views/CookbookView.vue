@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
-import type { Cookbook, Pagination, Recipe } from '@/utils/cookbooks';
-import { deleteCookbook, fetchCookbook, fetchCookbookRecipes, updateCookbook } from '@/utils/cookbooks';
+import type { Cookbook, CookbookMember, Pagination, Recipe } from '@/utils/cookbooks';
+import { deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
 
 const route = useRoute();
 const router = useRouter();
@@ -16,6 +16,19 @@ const recipes = ref<Recipe[]>([]);
 const recipesPagination = ref<Pagination | null>(null);
 const recipesError = ref('');
 const recipesLoading = ref(true);
+const members = ref<CookbookMember[]>([]);
+const membersPagination = ref<Pagination | null>(null);
+const membersError = ref('');
+const membersLoading = ref(true);
+const roleDrafts = reactive<Record<number, string>>({});
+const pendingRoleChange = ref<{ member: CookbookMember; role: string } | null>(null);
+const roleUpdateLoading = ref(false);
+const roleUpdateError = ref('');
+const roleDialog = ref<HTMLElement | null>(null);
+const pendingMemberAction = ref<{ type: 'leave' | 'remove'; member: CookbookMember } | null>(null);
+const memberActionLoading = ref(false);
+const memberActionError = ref('');
+const memberActionDialog = ref<HTMLElement | null>(null);
 const isEditingName = ref(false);
 const isSavingName = ref(false);
 const editName = reactive({ value: '', slug: '', description: '', image: null as File | null });
@@ -26,6 +39,7 @@ const editImageError = ref('');
 const editGlobalError = ref('');
 const canEditName = computed(() => cookbook.value?.member_role === 'owner' || cookbook.value?.member_role === 'editor');
 const canDelete = computed(() => cookbook.value?.member_role === 'owner');
+const canManageRoles = computed(() => cookbook.value?.member_role === 'owner');
 const isDeleteConfirmationVisible = ref(false);
 const isDeleting = ref(false);
 const deleteConfirmation = ref('');
@@ -173,12 +187,143 @@ async function goToRecipePage(page: number): Promise<void> {
   await loadRecipes(page);
 }
 
+async function loadMembers(page = 1): Promise<void> {
+  membersLoading.value = true;
+  membersError.value = '';
+  const result = await fetchCookbookMembers(String(route.params.id), authStore.tokenType, authStore.accessToken, page);
+
+  if (result.ok) {
+    members.value = result.data;
+    membersPagination.value = result.pagination;
+    result.data.forEach((member) => { roleDrafts[member.user.id] = member.role; });
+  } else {
+    membersError.value = result.message;
+  }
+  membersLoading.value = false;
+}
+
+async function goToMemberPage(page: number): Promise<void> {
+  if (membersPagination.value === null || page < 1 || page > membersPagination.value.last_page) return;
+  await loadMembers(page);
+}
+
+function isCurrentMember(member: CookbookMember): boolean {
+  return member.user.id === authStore.user?.id;
+}
+
+function isProtectedOwner(member: CookbookMember): boolean {
+  return cookbook.value?.owner.id === member.user.id;
+}
+
+function roleLabel(role: string): string {
+  return {
+    owner: 'Propriétaire',
+    editor: 'Éditeur',
+    reader: 'Lecteur',
+    commenter: 'Commentateur',
+  }[role] ?? role;
+}
+
+async function requestRoleChange(member: CookbookMember): Promise<void> {
+  const role = roleDrafts[member.user.id] ?? member.role;
+  if (role === member.role) return;
+
+  roleUpdateError.value = '';
+  pendingRoleChange.value = { member, role };
+  await nextTick();
+  roleDialog.value?.focus();
+}
+
+function cancelRoleChange(): void {
+  if (roleUpdateLoading.value) return;
+  if (pendingRoleChange.value) {
+    roleDrafts[pendingRoleChange.value.member.user.id] = pendingRoleChange.value.member.role;
+  }
+  pendingRoleChange.value = null;
+  roleUpdateError.value = '';
+}
+
+async function confirmRoleChange(): Promise<void> {
+  if (!pendingRoleChange.value || !cookbook.value) return;
+
+  roleUpdateLoading.value = true;
+  roleUpdateError.value = '';
+  const { member, role } = pendingRoleChange.value;
+  const result = await updateCookbookMemberRole(
+    cookbook.value.id,
+    member.user.id,
+    role,
+    authStore.tokenType,
+    authStore.accessToken,
+  );
+
+  if (result.ok) {
+    const page = membersPagination.value?.current_page ?? 1;
+    pendingRoleChange.value = null;
+    await loadMembers(page);
+    const refreshedCookbook = await fetchCookbook(String(route.params.id), authStore.tokenType, authStore.accessToken);
+    if (refreshedCookbook.ok) cookbook.value = refreshedCookbook.cookbook;
+  } else {
+    roleUpdateError.value = result.message;
+  }
+  roleUpdateLoading.value = false;
+}
+
+function canLeaveMember(member: CookbookMember): boolean {
+  return isCurrentMember(member) && cookbook.value?.member_role !== 'owner';
+}
+
+function canRemoveMember(member: CookbookMember): boolean {
+  return canManageRoles.value && !isCurrentMember(member) && !isProtectedOwner(member);
+}
+
+async function requestMemberAction(type: 'leave' | 'remove', member: CookbookMember): Promise<void> {
+  if ((type === 'leave' && !canLeaveMember(member)) || (type === 'remove' && !canRemoveMember(member))) return;
+
+  memberActionError.value = '';
+  pendingMemberAction.value = { type, member };
+  await nextTick();
+  memberActionDialog.value?.focus();
+}
+
+function cancelMemberAction(): void {
+  if (memberActionLoading.value) return;
+  pendingMemberAction.value = null;
+  memberActionError.value = '';
+}
+
+async function confirmMemberAction(): Promise<void> {
+  if (!pendingMemberAction.value || !cookbook.value) return;
+
+  memberActionLoading.value = true;
+  memberActionError.value = '';
+  const { type, member } = pendingMemberAction.value;
+  const result = type === 'leave'
+    ? await leaveCookbook(cookbook.value.id, authStore.tokenType, authStore.accessToken)
+    : await removeCookbookMember(cookbook.value.id, member.user.id, authStore.tokenType, authStore.accessToken);
+
+  if (result.ok) {
+    if (type === 'leave') {
+      await router.push({ name: 'dashboard' });
+      return;
+    }
+
+    const page = membersPagination.value?.current_page ?? 1;
+    pendingMemberAction.value = null;
+    await loadMembers(page);
+  } else {
+    memberActionError.value = result.message;
+  }
+  memberActionLoading.value = false;
+}
+
 onMounted(async () => {
   const result = await fetchCookbook(String(route.params.id), authStore.tokenType, authStore.accessToken);
 
   if (result.ok) {
     cookbook.value = result.cookbook;
     await loadRecipes();
+    await loadMembers();
     return;
   }
 
@@ -233,6 +378,120 @@ onMounted(async () => {
       <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
       <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
+      <section class="members-section" aria-labelledby="members-title">
+        <div class="section-heading">
+          <h3 id="members-title">Membres</h3>
+          <span v-if="membersPagination" class="section-count">{{ membersPagination.total }} membre<span v-if="membersPagination.total !== 1">s</span></span>
+        </div>
+        <p v-if="membersLoading" role="status">Chargement des membres...</p>
+        <p v-else-if="membersError" class="error-summary" role="alert">{{ membersError }}</p>
+        <p v-else-if="members.length === 0" class="empty-state">Aucun membre dans ce cookbook.</p>
+        <div v-else class="member-list">
+          <article v-for="member in members" :key="member.user.id" class="member-item">
+            <div class="member-identity">
+              <strong>{{ member.user.name }}</strong>
+              <span v-if="member.user.email" class="member-email">{{ member.user.email }}</span>
+            </div>
+            <span class="role-badge">{{ roleLabel(member.role) }}</span>
+            <div class="member-actions" aria-label="Actions disponibles">
+              <span v-if="isProtectedOwner(member)" class="member-no-action">Propriétaire protégé</span>
+              <button v-else-if="canLeaveMember(member)" type="button" class="member-action-button member-leave-button" @click="requestMemberAction('leave', member)">
+                Quitter
+              </button>
+              <span v-else-if="isCurrentMember(member)" class="member-self">Vous</span>
+              <template v-else-if="canRemoveMember(member)">
+                <button type="button" class="member-action-button member-remove-button" @click="requestMemberAction('remove', member)">
+                  Retirer
+                </button>
+                <form class="member-role-form" @submit.prevent="requestRoleChange(member)">
+                  <label class="sr-only" :for="`member-role-${member.user.id}`">Rôle de {{ member.user.name }}</label>
+                  <select :id="`member-role-${member.user.id}`" v-model="roleDrafts[member.user.id]" :disabled="roleUpdateLoading">
+                    <option v-for="role in ['owner', 'editor', 'reader', 'commenter']" :key="role" :value="role">
+                      {{ roleLabel(role) }}
+                    </option>
+                  </select>
+                  <button type="submit" :disabled="roleUpdateLoading || roleDrafts[member.user.id] === member.role">
+                    Modifier le rôle
+                  </button>
+                </form>
+              </template>
+              <form v-else-if="canManageRoles" class="member-role-form" @submit.prevent="requestRoleChange(member)">
+                <label class="sr-only" :for="`member-role-${member.user.id}`">Rôle de {{ member.user.name }}</label>
+                <select :id="`member-role-${member.user.id}`" v-model="roleDrafts[member.user.id]" :disabled="roleUpdateLoading">
+                  <option v-for="role in ['owner', 'editor', 'reader', 'commenter']" :key="role" :value="role">
+                    {{ roleLabel(role) }}
+                  </option>
+                </select>
+                <button type="submit" :disabled="roleUpdateLoading || roleDrafts[member.user.id] === member.role">
+                  Modifier le rôle
+                </button>
+              </form>
+              <span v-else class="member-no-action">Aucune action</span>
+            </div>
+          </article>
+          <nav v-if="membersPagination && membersPagination.last_page > 1" class="pagination" aria-label="Pagination des membres">
+            <button type="button" :disabled="membersPagination.current_page === 1 || membersLoading" @click="goToMemberPage(membersPagination.current_page - 1)">
+              Précédent
+            </button>
+            <span>Page {{ membersPagination.current_page }} / {{ membersPagination.last_page }}</span>
+            <button type="button" :disabled="!membersPagination.has_more_pages || membersLoading" @click="goToMemberPage(membersPagination.current_page + 1)">
+              Suivant
+            </button>
+          </nav>
+        </div>
+      </section>
+      <div v-if="pendingRoleChange" class="role-dialog-backdrop" @click.self="cancelRoleChange">
+        <section
+          ref="roleDialog"
+          class="role-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="role-dialog-title"
+          aria-describedby="role-dialog-description"
+          tabindex="-1"
+          @keydown.esc="cancelRoleChange"
+        >
+          <h3 id="role-dialog-title">Confirmer le changement de rôle</h3>
+          <p id="role-dialog-description">
+            Modifier le rôle de {{ pendingRoleChange.member.user.name }} en {{ roleLabel(pendingRoleChange.role) }} ?
+          </p>
+          <p v-if="roleUpdateError" class="error-summary" role="alert">{{ roleUpdateError }}</p>
+          <div class="role-dialog-actions">
+            <button type="button" class="edit-button" :disabled="roleUpdateLoading" @click="confirmRoleChange">
+              {{ roleUpdateLoading ? 'Enregistrement...' : 'Confirmer' }}
+            </button>
+            <button type="button" class="cancel-button" :disabled="roleUpdateLoading" @click="cancelRoleChange">Annuler</button>
+          </div>
+        </section>
+      </div>
+      <div v-if="pendingMemberAction" class="role-dialog-backdrop" @click.self="cancelMemberAction">
+        <section
+          ref="memberActionDialog"
+          class="role-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="member-action-dialog-title"
+          aria-describedby="member-action-dialog-description"
+          tabindex="-1"
+          @keydown.esc="cancelMemberAction"
+        >
+          <h3 id="member-action-dialog-title">
+            {{ pendingMemberAction.type === 'leave' ? 'Confirmer votre départ' : 'Confirmer le retrait' }}
+          </h3>
+          <p id="member-action-dialog-description">
+            {{ pendingMemberAction.type === 'leave'
+              ? 'Vous ne pourrez plus accéder à ce cookbook après votre départ.'
+              : `Retirer ${pendingMemberAction.member.user.name} de ce cookbook ?` }}
+          </p>
+          <p v-if="memberActionError" class="error-summary" role="alert">{{ memberActionError }}</p>
+          <div class="role-dialog-actions">
+            <button type="button" class="edit-button" :disabled="memberActionLoading" @click="confirmMemberAction">
+              {{ memberActionLoading ? 'Traitement...' : 'Confirmer' }}
+            </button>
+            <button type="button" class="cancel-button" :disabled="memberActionLoading" @click="cancelMemberAction">Annuler</button>
+          </div>
+        </section>
+      </div>
       <section v-if="canDelete" class="danger-section" aria-labelledby="delete-title">
         <h3 id="delete-title">Zone dangereuse</h3>
         <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" @click="openDeleteConfirmation">
@@ -317,6 +576,29 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .delete-actions button:disabled { cursor: wait; opacity: 0.6; }
 .delete-actions .cancel-button { padding: 0.6rem 0.8rem; border: 1px solid #395330; border-radius: 0.5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .role-line { margin-top: 0.5rem; color: #395330; }
+.members-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.section-count { color: #50634d; font-size: 0.9rem; }
+.member-list { display: grid; gap: 0.7rem; }
+.member-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
+.member-identity { display: grid; gap: 0.25rem; min-width: 0; }
+.member-email { overflow: hidden; color: #50634d; text-overflow: ellipsis; white-space: nowrap; }
+.role-badge, .member-self { padding: 0.3rem 0.55rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
+.member-actions { color: #50634d; font-size: 0.85rem; text-align: right; }
+.member-no-action { white-space: nowrap; }
+.member-role-form { display: flex; align-items: center; gap: 0.45rem; }
+.member-role-form select { padding: 0.35rem; border: 1px solid #b9c5af; border-radius: 0.45rem; background: #fffdf8; color: #395330; font: inherit; }
+.member-role-form button { padding: 0.4rem 0.55rem; border: 1px solid #395330; border-radius: 0.45rem; background: transparent; color: #395330; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.member-role-form button:disabled { cursor: not-allowed; opacity: 0.45; }
+.member-action-button { padding: 0.4rem 0.55rem; border: 1px solid #395330; border-radius: 0.45rem; background: transparent; color: #395330; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.member-action-button:focus-visible, .member-role-form button:focus-visible, .role-dialog button:focus-visible { outline: 3px solid #d98b35; outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.role-dialog-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 1rem; background: rgba(29, 39, 24, 0.45); }
+.role-dialog { width: min(100%, 28rem); padding: 1.5rem; border: 1px solid rgba(86, 112, 79, 0.25); border-radius: 1rem; background: #fffdf8; box-shadow: 0 20px 60px rgba(54, 68, 35, 0.2); }
+.role-dialog h3 { margin-top: 0; }
+.role-dialog-actions { display: flex; gap: 0.6rem; margin-top: 1rem; }
+.role-dialog .cancel-button { padding: 0.55rem 0.75rem; border: 1px solid #395330; border-radius: 0.5rem; background: transparent; color: #395330; font: inherit; cursor: pointer; }
+.role-dialog button:disabled { cursor: wait; opacity: 0.6; }
 .recipes-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 h3 { margin: 0 0 1rem; font-size: 1.5rem; }
 .empty-state { color: #50634d; }
@@ -327,4 +609,9 @@ h3 { margin: 0 0 1rem; font-size: 1.5rem; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; color: #50634d; font-size: 0.9rem; }
 .pagination button { padding: 0.5rem 0.7rem; border: 1px solid #b9c5af; border-radius: 0.5rem; background: transparent; color: #395330; cursor: pointer; }
 .pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
+@media (max-width: 36rem) {
+  .member-item { grid-template-columns: 1fr auto; }
+  .member-actions { grid-column: 1 / -1; text-align: left; }
+  .member-role-form { flex-wrap: wrap; }
+}
 </style>

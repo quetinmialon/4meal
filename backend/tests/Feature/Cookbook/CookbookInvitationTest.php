@@ -62,7 +62,7 @@ it('rejects inviting an already active member', function () {
     $owner = User::factory()->create(['password' => 'password123']);
     $member = User::factory()->create(['email' => 'member@example.test']);
     $cookbook = Cookbook::query()->create(['name' => 'Famille', 'owner_id' => $owner->id]);
-    $cookbook->members()->attach([$owner->id => ['role' => 'owner'], $member->id => ['role' => 'viewer']]);
+    $cookbook->members()->attach([$owner->id => ['role' => 'owner'], $member->id => ['role' => 'reader']]);
 
     $this->withToken(invitationAuthToken($owner))
         ->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
@@ -79,13 +79,13 @@ it('allows consulting a valid invitation without authentication', function () {
     $cookbook = Cookbook::query()->create(['name' => 'Famille', 'owner_id' => $owner->id]);
     $cookbook->members()->attach($owner, ['role' => 'owner']);
     $this->withToken(invitationAuthToken($owner))->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
-        'email' => 'invite@example.test', 'role' => 'viewer',
+        'email' => 'invite@example.test', 'role' => 'reader',
     ])->assertCreated();
 
     $this->getJson('/api/invitations/'.invitationToken())
         ->assertOk()
         ->assertJsonPath('data.cookbook.name', 'Famille')
-        ->assertJsonPath('data.role', 'viewer');
+        ->assertJsonPath('data.role', 'reader');
 });
 
 it('accepts an invitation once for the invited account and creates active membership', function () {
@@ -96,14 +96,14 @@ it('accepts an invitation once for the invited account and creates active member
     $cookbook = Cookbook::query()->create(['name' => 'Famille', 'owner_id' => $owner->id]);
     $cookbook->members()->attach($owner, ['role' => 'owner']);
     $this->withToken(invitationAuthToken($owner))->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
-        'email' => $invitee->email, 'role' => 'viewer',
+        'email' => $invitee->email, 'role' => 'reader',
     ])->assertCreated();
     $token = invitationToken();
 
     $this->withToken(invitationAuthToken($invitee))->postJson('/api/invitations/token/'.$token.'/accept')
-        ->assertOk()->assertJsonPath('data.cookbook.role', 'viewer');
+        ->assertOk()->assertJsonPath('data.cookbook.role', 'reader');
     $this->assertDatabaseHas('cookbook_members', [
-        'cookbook_id' => $cookbook->id, 'user_id' => $invitee->id, 'role' => 'viewer',
+        'cookbook_id' => $cookbook->id, 'user_id' => $invitee->id, 'role' => 'reader',
     ]);
     $this->assertDatabaseHas('cookbook_invitations', ['accepted_by' => $invitee->id]);
 
@@ -119,7 +119,7 @@ it('rejects expired invitations and a different email account', function () {
     $cookbook = Cookbook::query()->create(['name' => 'Famille', 'owner_id' => $owner->id]);
     $cookbook->members()->attach($owner, ['role' => 'owner']);
     $this->withToken(invitationAuthToken($owner))->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
-        'email' => $invitee->email, 'role' => 'viewer',
+        'email' => $invitee->email, 'role' => 'reader',
     ])->assertCreated();
     $token = invitationToken();
 
@@ -138,7 +138,7 @@ it('lists only pending invitations for the authenticated email', function () {
     $cookbook->members()->attach($owner, ['role' => 'owner']);
 
     $create = fn (string $email) => $this->withToken(invitationAuthToken($owner))->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
-        'email' => $email, 'role' => 'viewer',
+        'email' => $email, 'role' => 'reader',
     ])->assertCreated();
     $create($invitee->email);
     $create($other->email);
@@ -166,7 +166,7 @@ it('accepts and declines listed invitations by id without exposing the raw token
     $this->assertDatabaseHas('cookbook_members', ['cookbook_id' => $cookbook->id, 'user_id' => $invitee->id, 'role' => 'editor']);
 
     $this->withToken(invitationAuthToken($owner))->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
-        'email' => $secondInvitee->email, 'role' => 'viewer',
+        'email' => $secondInvitee->email, 'role' => 'reader',
     ])->assertCreated();
     $second = CookbookInvitation::query()->latest('id')->firstOrFail();
     $this->withToken(invitationAuthToken($secondInvitee))->postJson('/api/invitations/'.$second->id.'/decline')

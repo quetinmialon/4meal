@@ -128,12 +128,55 @@ it('lists only cookbooks accessible to the authenticated user with their role', 
 it('returns the authenticated member role when viewing a cookbook', function () {
     $user = User::factory()->create(['password' => 'password123']);
     $cookbook = Cookbook::query()->create(['name' => 'Accessible', 'owner_id' => $user->id]);
-    $cookbook->members()->attach($user, ['role' => 'viewer']);
+    $cookbook->members()->attach($user, ['role' => 'reader']);
 
     $this->withToken(cookbookToken($user))
         ->getJson('/api/cookbooks/'.$cookbook->public_id)
         ->assertOk()
-        ->assertJsonPath('data.member_role', 'viewer');
+        ->assertJsonPath('data.member_role', 'reader');
+});
+
+it('lists paginated cookbook members with their role, arrival date and active status', function () {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $member = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Equipe', 'owner_id' => $owner->id]);
+    $ownerJoinedAt = now()->subDays(2);
+    $memberJoinedAt = now()->subDay();
+    $cookbook->members()->attach($owner, ['role' => 'owner', 'joined_at' => $ownerJoinedAt]);
+    $cookbook->members()->attach($member, ['role' => 'reader', 'joined_at' => $memberJoinedAt]);
+
+    $response = $this->withToken(cookbookToken($owner))
+        ->getJson('/api/cookbooks/'.$cookbook->public_id.'/members?per_page=1&page=2');
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('meta.pagination.current_page', 2)
+        ->assertJsonPath('meta.pagination.per_page', 1)
+        ->assertJsonPath('meta.pagination.total', 2)
+        ->assertJsonPath('data.0.user.id', $member->id)
+        ->assertJsonPath('data.0.user.email', $member->email)
+        ->assertJsonPath('data.0.role', 'reader')
+        ->assertJsonPath('data.0.joined_at', $memberJoinedAt->copy()->startOfSecond()->toJSON())
+        ->assertJsonPath('data.0.status', 'active');
+});
+
+it('allows only cookbook members to list its members', function () {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $member = User::factory()->create(['password' => 'password123']);
+    $external = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Privé', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner', 'joined_at' => now()]);
+    $cookbook->members()->attach($member, ['role' => 'reader', 'joined_at' => now()]);
+
+    $this->withToken(cookbookToken($member))
+        ->getJson('/api/cookbooks/'.$cookbook->public_id.'/members')
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+
+    $this->withToken(cookbookToken($external))
+        ->getJson('/api/cookbooks/'.$cookbook->public_id.'/members')
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'authorization_error');
 });
 
 it('paginates recipes without exposing recipes from another cookbook', function () {
@@ -190,7 +233,7 @@ it('rejects a reader from renaming a cookbook', function () {
     $reader = User::factory()->create(['password' => 'password123']);
     $cookbook = Cookbook::query()->create(['name' => 'Ancien nom', 'owner_id' => $owner->id]);
     $cookbook->members()->attach($owner, ['role' => 'owner']);
-    $cookbook->members()->attach($reader, ['role' => 'viewer']);
+    $cookbook->members()->attach($reader, ['role' => 'reader']);
 
     $this->withToken(cookbookToken($reader))
         ->patchJson('/api/cookbooks/'.$cookbook->public_id, ['name' => 'Interdit'])
@@ -255,7 +298,7 @@ it('rejects a reader and an external user from deleting a cookbook', function ()
     $external = User::factory()->create(['password' => 'password123']);
     $cookbook = Cookbook::query()->create(['name' => 'Protégé', 'owner_id' => $owner->id]);
     $cookbook->members()->attach($owner, ['role' => 'owner']);
-    $cookbook->members()->attach($reader, ['role' => 'viewer']);
+    $cookbook->members()->attach($reader, ['role' => 'reader']);
 
     foreach ([$reader, $external] as $user) {
         $this->withToken(cookbookToken($user))

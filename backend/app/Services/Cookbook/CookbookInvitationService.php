@@ -7,6 +7,7 @@ use App\Models\Cookbook;
 use App\Models\CookbookInvitation;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -79,8 +80,8 @@ class CookbookInvitationService
         });
     }
 
-    /** @return \Illuminate\Support\Collection<int, CookbookInvitation> */
-    public function pendingFor(User $user): \Illuminate\Support\Collection
+    /** @return Collection<int, CookbookInvitation> */
+    public function pendingFor(User $user): Collection
     {
         return CookbookInvitation::query()
             ->with('cookbook')
@@ -103,6 +104,7 @@ class CookbookInvitationService
             }
             $invitation->update(['accepted_at' => now(), 'accepted_by' => $user->id]);
             $cookbook->members()->attach($user, ['role' => $invitation->role, 'joined_at' => now()]);
+
             return $invitation->fresh(['cookbook']);
         });
     }
@@ -113,6 +115,7 @@ class CookbookInvitationService
             $invitation = CookbookInvitation::query()->whereKey($invitation->id)->lockForUpdate()->firstOrFail();
             $this->assertActionableForUser($invitation, $user);
             $invitation->update(['declined_at' => now(), 'declined_by' => $user->id]);
+
             return $invitation->fresh(['cookbook']);
         });
     }
