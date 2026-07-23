@@ -102,15 +102,16 @@ describe('CookbookView', () => {
     await wrapper.get('.edit-name-form').trigger('submit.prevent');
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/cookbooks/cookbook-id', {
-      method: 'PATCH',
-      headers: {
-        Accept: 'application/json',
-        Authorization: 'Bearer jwt-token',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: 'Nouveau nom' }),
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const updateRequest = fetchMock.mock.calls[2]?.[1];
+    expect(updateRequest?.method).toBe('POST');
+    expect(updateRequest?.headers).toEqual({
+      Accept: 'application/json',
+      Authorization: 'Bearer jwt-token',
     });
+    expect(updateRequest?.body).toBeInstanceOf(FormData);
+    expect((updateRequest?.body as FormData).get('_method')).toBe('PATCH');
+    expect((updateRequest?.body as FormData).get('name')).toBe('Nouveau nom');
     expect(wrapper.text()).toContain('Nouveau nom');
     expect(wrapper.find('.edit-name-form').exists()).toBe(false);
   });

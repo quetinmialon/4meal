@@ -173,19 +173,26 @@ export async function fetchCookbook(
 
 export async function updateCookbook(
   id: string,
-  name: string,
+  input: CookbookInput,
   tokenType: string,
   accessToken: string,
 ): Promise<UpdateCookbookResult> {
   try {
     const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name: name.trim() }),
+      body: (() => {
+        const formData = new FormData();
+        formData.append('_method', 'PATCH');
+        formData.append('name', input.name.trim());
+        if (input.slug?.trim()) formData.append('slug', input.slug.trim());
+        if (input.description?.trim()) formData.append('description', input.description.trim());
+        if (input.image instanceof File) formData.append('image', input.image);
+        return formData;
+      })(),
     });
     const payload = (await response.json().catch(() => null)) as CreateCookbookPayload | ApiErrorPayload | null;
 
@@ -200,7 +207,12 @@ export async function updateCookbook(
       message: payload?.success === false
         ? (payload.error?.message ?? 'Impossible de modifier le cookbook.')
         : 'Impossible de modifier le cookbook.',
-      fieldErrors: typeof fields?.name?.[0] === 'string' ? { name: fields.name[0] } : {},
+      fieldErrors: {
+        ...(typeof fields?.name?.[0] === 'string' ? { name: fields.name[0] } : {}),
+        ...(typeof fields?.slug?.[0] === 'string' ? { slug: fields.slug[0] } : {}),
+        ...(typeof fields?.description?.[0] === 'string' ? { description: fields.description[0] } : {}),
+        ...(typeof fields?.image?.[0] === 'string' ? { image: fields.image[0] } : {}),
+      },
     };
   } catch {
     return {

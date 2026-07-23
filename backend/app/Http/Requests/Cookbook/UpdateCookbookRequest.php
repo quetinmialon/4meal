@@ -20,8 +20,10 @@ class UpdateCookbookRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if (is_string($this->input('name'))) {
-            $this->merge(['name' => trim($this->string('name')->toString())]);
+        foreach (['name', 'slug', 'description'] as $field) {
+            if (is_string($this->input($field))) {
+                $this->merge([$field => trim($this->string($field)->toString())]);
+            }
         }
     }
 
@@ -37,7 +39,7 @@ class UpdateCookbookRequest extends FormRequest
                 Rule::unique('cookbooks', 'slug')->ignore($this->route('cookbook')),
             ],
             'description' => ['nullable', 'string'],
-            'image_path' => ['nullable', 'string', 'max:2048'],
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
         ];
     }
 }

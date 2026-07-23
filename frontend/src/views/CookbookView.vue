@@ -17,8 +17,11 @@ const recipesError = ref('');
 const recipesLoading = ref(true);
 const isEditingName = ref(false);
 const isSavingName = ref(false);
-const editName = reactive({ value: '' });
+const editName = reactive({ value: '', slug: '', description: '', image: null as File | null });
 const editNameError = ref('');
+const editSlugError = ref('');
+const editDescriptionError = ref('');
+const editImageError = ref('');
 const editGlobalError = ref('');
 const canEditName = computed(() => cookbook.value?.member_role === 'owner' || cookbook.value?.member_role === 'editor');
 const canDelete = computed(() => cookbook.value?.member_role === 'owner');
@@ -75,7 +78,13 @@ async function confirmDelete(): Promise<void> {
 function startEditingName(): void {
   if (!cookbook.value || !canEditName.value) return;
   editName.value = cookbook.value.name;
+  editName.slug = cookbook.value.slug ?? '';
+  editName.description = cookbook.value.description ?? '';
+  editName.image = null;
   editNameError.value = '';
+  editSlugError.value = '';
+  editDescriptionError.value = '';
+  editImageError.value = '';
   editGlobalError.value = '';
   isEditingName.value = true;
 }
@@ -83,6 +92,9 @@ function startEditingName(): void {
 function cancelEditingName(): void {
   isEditingName.value = false;
   editNameError.value = '';
+  editSlugError.value = '';
+  editDescriptionError.value = '';
+  editImageError.value = '';
   editGlobalError.value = '';
 }
 
@@ -99,7 +111,12 @@ async function saveName(): Promise<void> {
   isSavingName.value = true;
   const result = await updateCookbook(
     cookbook.value.id,
-    editName.value,
+    {
+      name: editName.value,
+      slug: editName.slug,
+      description: editName.description,
+      image: editName.image,
+    },
     authStore.tokenType,
     authStore.accessToken,
   );
@@ -110,8 +127,30 @@ async function saveName(): Promise<void> {
   } else {
     editGlobalError.value = result.message;
     editNameError.value = result.fieldErrors.name ?? '';
+    editSlugError.value = result.fieldErrors.slug ?? '';
+    editDescriptionError.value = result.fieldErrors.description ?? '';
+    editImageError.value = result.fieldErrors.image ?? '';
   }
   isSavingName.value = false;
+}
+
+function handleEditImageChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  editName.image = file;
+  editImageError.value = '';
+
+  if (file === null) return;
+
+  if (!['image/png', 'image/jpeg'].includes(file.type)) {
+    editImageError.value = 'Le fichier doit être au format PNG ou JPEG.';
+    input.value = '';
+    editName.image = null;
+  } else if (file.size > 5 * 1024 * 1024) {
+    editImageError.value = 'L’image ne doit pas dépasser 5 Mo.';
+    input.value = '';
+    editName.image = null;
+  }
 }
 
 async function loadRecipes(page = 1): Promise<void> {
@@ -161,7 +200,7 @@ onMounted(async () => {
       <div v-if="!isEditingName" class="name-heading">
         <h2>{{ cookbook.name }}</h2>
         <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
-          Modifier le nom
+          Modifier le cookbook
         </button>
       </div>
       <form v-else class="edit-name-form" novalidate @submit.prevent="saveName">
@@ -174,6 +213,15 @@ onMounted(async () => {
           :aria-describedby="editNameError ? 'cookbook-name-edit-error' : undefined"
         />
         <p v-if="editNameError" id="cookbook-name-edit-error" class="field-error" role="alert">{{ editNameError }}</p>
+        <label for="cookbook-slug-edit-input">Slug</label>
+        <input id="cookbook-slug-edit-input" v-model="editName.slug" maxlength="255" />
+        <p v-if="editSlugError" class="field-error" role="alert">{{ editSlugError }}</p>
+        <label for="cookbook-description-edit-input">Description</label>
+        <textarea id="cookbook-description-edit-input" v-model="editName.description" rows="4" />
+        <p v-if="editDescriptionError" class="field-error" role="alert">{{ editDescriptionError }}</p>
+        <label for="cookbook-image-edit-input">Nouvelle image (PNG/JPEG, 5 Mo maximum)</label>
+        <input id="cookbook-image-edit-input" type="file" accept="image/png,image/jpeg" @change="handleEditImageChange" />
+        <p v-if="editImageError" class="field-error" role="alert">{{ editImageError }}</p>
         <p v-if="editGlobalError" class="error-summary" role="alert">{{ editGlobalError }}</p>
         <div class="edit-actions">
           <button type="submit" :disabled="isSavingName">{{ isSavingName ? 'Enregistrement...' : 'Enregistrer' }}</button>
