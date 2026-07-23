@@ -124,3 +124,60 @@ it('paginates recipes without exposing recipes from another cookbook', function 
         ->assertJsonPath('meta.pagination.per_page', 1)
         ->assertJsonMissing(['name' => 'Hidden']);
 });
+
+it('allows the owner to rename a cookbook', function () {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Ancien nom', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+
+    $this->withToken(cookbookToken($owner))
+        ->patchJson('/api/cookbooks/'.$cookbook->public_id, ['name' => 'Nouveau nom'])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Nouveau nom')
+        ->assertJsonPath('data.member_role', 'owner');
+
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id, 'name' => 'Nouveau nom']);
+});
+
+it('allows an editor to rename a cookbook', function () {
+    $owner = User::factory()->create();
+    $editor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Ancien nom', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($editor, ['role' => 'editor']);
+
+    $this->withToken(cookbookToken($editor))
+        ->patchJson('/api/cookbooks/'.$cookbook->public_id, ['name' => 'Nom edite'])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Nom edite')
+        ->assertJsonPath('data.member_role', 'editor');
+});
+
+it('rejects a reader from renaming a cookbook', function () {
+    $owner = User::factory()->create();
+    $reader = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Ancien nom', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($reader, ['role' => 'viewer']);
+
+    $this->withToken(cookbookToken($reader))
+        ->patchJson('/api/cookbooks/'.$cookbook->public_id, ['name' => 'Interdit'])
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'authorization_error');
+
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id, 'name' => 'Ancien nom']);
+});
+
+it('rejects an external user from renaming a cookbook', function () {
+    $owner = User::factory()->create();
+    $external = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Ancien nom', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+
+    $this->withToken(cookbookToken($external))
+        ->patchJson('/api/cookbooks/'.$cookbook->public_id, ['name' => 'Interdit'])
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'authorization_error');
+
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id, 'name' => 'Ancien nom']);
+});

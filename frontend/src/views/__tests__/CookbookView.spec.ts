@@ -59,4 +59,72 @@ describe('CookbookView', () => {
       headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
   });
+
+  it('allows an editor to rename the cookbook and updates the displayed name', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: {
+          id: 'cookbook-id', name: 'Ancien nom',
+          owner: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+          member_role: 'editor', created_at: null,
+        } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: [], meta: { pagination: {
+          current_page: 1, per_page: 15, total: 0, last_page: 1, from: null, to: null, has_more_pages: false,
+        } } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: {
+          id: 'cookbook-id', name: 'Nouveau nom',
+          owner: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+          member_role: 'editor', created_at: null,
+        } }),
+      } as Response);
+
+    const wrapper = mount(CookbookView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.edit-button').trigger('click');
+    await wrapper.get('#cookbook-name-edit-input').setValue('Nouveau nom');
+    await wrapper.get('.edit-name-form').trigger('submit.prevent');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/cookbooks/cookbook-id', {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        Authorization: 'Bearer jwt-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'Nouveau nom' }),
+    });
+    expect(wrapper.text()).toContain('Nouveau nom');
+    expect(wrapper.find('.edit-name-form').exists()).toBe(false);
+  });
+
+  it('hides the rename action for a viewer', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: {
+          id: 'cookbook-id', name: 'Lecture seule',
+          owner: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+          member_role: 'viewer', created_at: null,
+        } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: [], meta: { pagination: {
+          current_page: 1, per_page: 15, total: 0, last_page: 1, from: null, to: null, has_more_pages: false,
+        } } }),
+      } as Response);
+
+    const wrapper = mount(CookbookView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+
+    expect(wrapper.find('.edit-button').exists()).toBe(false);
+  });
 });
