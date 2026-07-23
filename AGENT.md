@@ -35,6 +35,7 @@ Avant chaque implémentation :
 3. propose un plan court ;
 4. signale les hypothèses ou ambiguïtés ;
 5. attends mon accord avant de coder.
+6. vérifie la structure des entités implémentées via les dossiers MCD
 
 Après implémentation :
 1. exécute les linters et tests concernés ;

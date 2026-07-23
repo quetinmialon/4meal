@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
+use App\Http\Controllers\Cookbook\DeleteCookbookController;
 use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
@@ -58,6 +59,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::patch('cookbooks/{cookbook}', UpdateCookbookController::class)
             ->name('cookbooks.update');
+
+        Route::delete('cookbooks/{cookbook}', DeleteCookbookController::class)
+            ->name('cookbooks.destroy');
 
         Route::get('cookbooks/{cookbook}', ShowCookbookController::class)
             ->name('cookbooks.show');
