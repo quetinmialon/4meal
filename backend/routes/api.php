@@ -9,18 +9,22 @@ use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
-use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
+use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
 use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
-use App\Http\Controllers\Cookbook\DeleteCookbookController;
 use App\Http\Controllers\Cookbook\DeclineCookbookInvitationController;
-use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
+use App\Http\Controllers\Cookbook\DeleteCookbookController;
+use App\Http\Controllers\Cookbook\LeaveCookbookController;
 use App\Http\Controllers\Cookbook\ListCookbookInvitationsController;
+use App\Http\Controllers\Cookbook\ListCookbookMembersController;
+use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
+use App\Http\Controllers\Cookbook\RemoveCookbookMemberController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
+use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -62,6 +66,18 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks/{cookbook}/recipes', ListCookbookRecipesController::class)
             ->name('cookbooks.recipes.index');
+
+        Route::get('cookbooks/{cookbook}/members', ListCookbookMembersController::class)
+            ->name('cookbooks.members.index');
+
+        Route::delete('cookbooks/{cookbook}/members/me', LeaveCookbookController::class)
+            ->name('cookbooks.members.leave');
+
+        Route::delete('cookbooks/{cookbook}/members/{member}', RemoveCookbookMemberController::class)
+            ->name('cookbooks.members.destroy');
+
+        Route::patch('cookbooks/{cookbook}/members/{member}/role', UpdateCookbookMemberRoleController::class)
+            ->name('cookbooks.members.role.update');
 
         Route::patch('cookbooks/{cookbook}', UpdateCookbookController::class)
             ->name('cookbooks.update');

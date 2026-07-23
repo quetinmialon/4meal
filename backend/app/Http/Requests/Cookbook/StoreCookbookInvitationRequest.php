@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Cookbook;
 
 use App\Models\Cookbook;
+use App\Support\CookbookPermissions;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -13,7 +14,7 @@ class StoreCookbookInvitationRequest extends FormRequest
     {
         $cookbook = $this->route('cookbook');
 
-        return $cookbook instanceof Cookbook && Gate::forUser($this->user())->allows('update', $cookbook);
+        return $cookbook instanceof Cookbook && Gate::forUser($this->user())->allows(CookbookPermissions::INVITE_MEMBERS, $cookbook);
     }
 
     protected function prepareForValidation(): void
@@ -27,7 +28,7 @@ class StoreCookbookInvitationRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email', 'max:255'],
-            'role' => ['required', 'string', Rule::in(['editor', 'viewer'])],
+            'role' => ['required', 'string', Rule::in([CookbookPermissions::EDITOR, CookbookPermissions::READER, CookbookPermissions::COMMENTER])],
         ];
     }
 }
