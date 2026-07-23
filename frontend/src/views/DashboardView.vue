@@ -4,8 +4,8 @@ import { RouterLink, useRouter } from 'vue-router';
 
 import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
 import { useAuthStore } from '@/stores/auth';
-import type { Cookbook, Pagination } from '@/utils/cookbooks';
-import { fetchCookbooks } from '@/utils/cookbooks';
+import type { Cookbook, CookbookInvitation, Pagination } from '@/utils/cookbooks';
+import { acceptCookbookInvitationById, declineCookbookInvitation, fetchCookbookInvitations, fetchCookbooks } from '@/utils/cookbooks';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -17,6 +17,12 @@ const cookbooks = ref<Cookbook[]>([]);
 const pagination = ref<Pagination | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
+const invitations = ref<CookbookInvitation[]>([]);
+const invitationsLoading = ref(true);
+const invitationsError = ref('');
+const invitationActionError = ref('');
+const acceptingInvitationId = ref<number | null>(null);
+const decliningInvitationId = ref<number | null>(null);
 
 async function loadCookbooks(page = 1): Promise<void> {
   isLoading.value = true;
@@ -37,7 +43,36 @@ async function goToPage(page: number): Promise<void> {
   await loadCookbooks(page);
 }
 
-onMounted(() => loadCookbooks());
+async function loadInvitations(): Promise<void> {
+  invitationsLoading.value = true;
+  invitationsError.value = '';
+  const result = await fetchCookbookInvitations(authStore.tokenType, authStore.accessToken);
+  if (result.ok) invitations.value = result.invitations;
+  else invitationsError.value = result.message;
+  invitationsLoading.value = false;
+}
+
+async function acceptInvitation(invitation: CookbookInvitation): Promise<void> {
+  acceptingInvitationId.value = invitation.id;
+  invitationActionError.value = '';
+  const result = await acceptCookbookInvitationById(invitation.id, authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    invitations.value = invitations.value.filter((item) => item.id !== invitation.id);
+    await loadCookbooks();
+  } else invitationActionError.value = result.message;
+  acceptingInvitationId.value = null;
+}
+
+async function declineInvitation(invitation: CookbookInvitation): Promise<void> {
+  decliningInvitationId.value = invitation.id;
+  invitationActionError.value = '';
+  const result = await declineCookbookInvitation(invitation.id, authStore.tokenType, authStore.accessToken);
+  if (result.ok) invitations.value = invitations.value.filter((item) => item.id !== invitation.id);
+  else invitationActionError.value = result.message;
+  decliningInvitationId.value = null;
+}
+
+onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
 
 async function handleLogout(): Promise<void> {
   authStore.clearSession();
@@ -55,6 +90,38 @@ async function handleLogout(): Promise<void> {
     </p>
     <p class="detail">Votre espace est accessible. Vous pouvez continuer en toute simplicite.</p>
     <p v-if="userEmail" class="meta">Compte associe : {{ userEmail }}.</p>
+    <section class="invitations-section" aria-labelledby="invitations-title">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">À traiter</p>
+          <h3 id="invitations-title">Invitations reçues</h3>
+        </div>
+        <span v-if="invitations.length" class="invitation-count">{{ invitations.length }}</span>
+      </div>
+      <p v-if="invitationsLoading" class="loading" role="status">Chargement des invitations...</p>
+      <p v-else-if="invitationsError" class="error-summary" role="alert">{{ invitationsError }}</p>
+      <p v-else-if="invitations.length === 0" class="empty-state invitation-empty">Aucune invitation en attente.</p>
+      <div v-else class="invitation-list">
+        <article v-for="invitation in invitations" :key="invitation.id" class="invitation-item">
+          <div>
+            <strong>{{ invitation.cookbook.name }}</strong>
+            <small>Rôle proposé : {{ invitation.role === 'editor' ? 'éditeur' : 'lecteur' }}</small>
+            <small :class="{ expired: new Date(invitation.expires_at).getTime() <= Date.now() }">
+              {{ new Date(invitation.expires_at).getTime() <= Date.now() ? 'Invitation expirée' : `Expire le ${new Date(invitation.expires_at).toLocaleDateString('fr-FR')}` }}
+            </small>
+          </div>
+          <div v-if="new Date(invitation.expires_at).getTime() > Date.now()" class="invitation-actions">
+            <button type="button" class="accept-button" :disabled="acceptingInvitationId !== null || decliningInvitationId !== null" @click="acceptInvitation(invitation)">
+              {{ acceptingInvitationId === invitation.id ? 'Acceptation...' : 'Accepter' }}
+            </button>
+            <button type="button" class="decline-button" :disabled="acceptingInvitationId !== null || decliningInvitationId !== null" @click="declineInvitation(invitation)">
+              {{ decliningInvitationId === invitation.id ? 'Refus...' : 'Refuser' }}
+            </button>
+          </div>
+        </article>
+      </div>
+      <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
+    </section>
     <section class="cookbooks-section" aria-labelledby="cookbooks-title">
       <div class="section-heading">
         <div>
@@ -153,6 +220,20 @@ h2 {
   color: #2f4520;
   font-weight: 700;
 }
+
+.invitations-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.invitation-count { min-width: 1.7rem; padding: 0.25rem 0.5rem; border-radius: 999px; background: #e6a84e; color: #fffdf8; text-align: center; font-weight: 700; }
+.invitation-empty { margin-top: 1rem; }
+.invitation-list { display: grid; gap: 0.7rem; margin-top: 1rem; }
+.invitation-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
+.invitation-item strong, .invitation-item small { display: block; }
+.invitation-item small { margin-top: 0.25rem; color: #50634d; }
+.invitation-item .expired { color: #8f1e1e; font-weight: 700; }
+.invitation-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.accept-button, .decline-button { padding: 0.5rem 0.7rem; border-radius: 0.5rem; font: inherit; font-weight: 700; cursor: pointer; }
+.accept-button { border: 1px solid #395330; background: #395330; color: #fffdf8; }
+.decline-button { border: 1px solid #8f1e1e; background: transparent; color: #8f1e1e; }
+.accept-button:disabled, .decline-button:disabled { cursor: wait; opacity: 0.55; }
 
 .cookbooks-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }

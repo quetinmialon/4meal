@@ -71,4 +71,43 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('Mes recettes');
     expect(wrapper.get('.role-badge').text()).toBe('editor');
   });
+
+  it('lists pending invitations and accepts one', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input) === '/api/invitations') {
+        return { ok: true, json: async () => ({ success: true, data: [{ id: 12, email: 'jane@example.com', role: 'viewer', expires_at: '2099-01-01T00:00:00Z', accepted_at: null, cookbook: { id: 'book', name: 'Chez nous' } }] }) } as Response;
+      }
+      if (String(input) === '/api/invitations/12/accept') {
+        return { ok: true, json: async () => ({ success: true, data: { invitation: { id: 12, accepted_at: '2026-07-23T00:00:00Z' }, cookbook: { id: 'book', name: 'Chez nous', role: 'viewer' } } }) } as Response;
+      }
+      return { ok: true, json: async () => paginated([]) } as Response;
+    });
+
+    const wrapper = mount(DashboardView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Chez nous');
+    await wrapper.get('.accept-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/invitations/12/accept', expect.objectContaining({ method: 'POST' }));
+    expect(wrapper.text()).toContain('Aucune invitation en attente.');
+  });
+
+  it('removes an invitation after refusing it', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input) === '/api/invitations') {
+        return { ok: true, json: async () => ({ success: true, data: [{ id: 13, email: 'jane@example.com', role: 'editor', expires_at: '2099-01-01T00:00:00Z', accepted_at: null, cookbook: { id: 'book', name: 'À refuser' } }] }) } as Response;
+      }
+      if (String(input) === '/api/invitations/13/decline') return { ok: true, json: async () => ({ success: true, data: {} }) } as Response;
+      return { ok: true, json: async () => paginated([]) } as Response;
+    });
+
+    const wrapper = mount(DashboardView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.decline-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/invitations/13/decline', expect.objectContaining({ method: 'POST' }));
+    expect(wrapper.text()).toContain('Aucune invitation en attente.');
+  });
 });

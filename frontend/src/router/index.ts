@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import DashboardView from '@/views/DashboardView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
+import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
@@ -41,6 +42,11 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
     },
+  },
+  {
+    path: '/invitations/:token',
+    name: 'cookbook-invitation',
+    component: CookbookInvitationView,
   },
   {
     path: '/mot-de-passe',

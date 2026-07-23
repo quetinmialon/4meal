@@ -9,11 +9,17 @@ use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
+use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
+use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
 use App\Http\Controllers\Cookbook\DeleteCookbookController;
+use App\Http\Controllers\Cookbook\DeclineCookbookInvitationController;
 use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
+use App\Http\Controllers\Cookbook\ListCookbookInvitationsController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
+use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -65,7 +71,25 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks/{cookbook}', ShowCookbookController::class)
             ->name('cookbooks.show');
+
+        Route::post('cookbooks/{cookbook}/invitations', CreateCookbookInvitationController::class)
+            ->name('cookbooks.invitations.store');
+
+        Route::post('invitations/token/{token}/accept', AcceptCookbookInvitationController::class)
+            ->name('invitations.accept');
+
+        Route::get('invitations', ListCookbookInvitationsController::class)
+            ->name('invitations.index');
+
+        Route::post('invitations/{cookbookInvitation}/accept', AcceptCookbookInvitationByIdController::class)
+            ->name('invitations.accept-by-id');
+
+        Route::post('invitations/{cookbookInvitation}/decline', DeclineCookbookInvitationController::class)
+            ->name('invitations.decline');
     });
+
+Route::get('invitations/{token}', ShowCookbookInvitationController::class)
+    ->name('invitations.show');
 
 Route::middleware(AuthenticateWithJwt::class)
     ->prefix('auth')

@@ -57,12 +57,150 @@ type CreateCookbookPayload = {
 type ApiErrorPayload = {
   success: false;
   error?: {
+    code?: string;
     message?: string;
     details?: {
       fields?: Record<string, string[]>;
     };
   };
 };
+
+export type CookbookInvitation = {
+  id: number;
+  email: string;
+  role: 'editor' | 'viewer';
+  expires_at: string;
+  accepted_at: string | null;
+  cookbook: { id: string; name: string };
+};
+
+type InvitationPayload = { success: true; data: CookbookInvitation };
+type AcceptedInvitationPayload = {
+  success: true;
+  data: { invitation: { id: number; accepted_at: string }; cookbook: { id: string; name: string; role: 'editor' | 'viewer' } };
+};
+
+export type InvitationResult =
+  | { ok: true; invitation: CookbookInvitation }
+  | { ok: false; message: string; fieldErrors: { email?: string; role?: string }; expired?: boolean };
+
+export type AcceptInvitationResult =
+  | { ok: true; cookbook: { id: string; name: string; role: 'editor' | 'viewer' }; acceptedAt: string }
+  | { ok: false; message: string; expired?: boolean; unauthorized?: boolean };
+
+export type InvitationListResult =
+  | { ok: true; invitations: CookbookInvitation[] }
+  | { ok: false; message: string };
+
+function isCookbookInvitation(value: unknown): value is CookbookInvitation {
+  if (typeof value !== 'object' || value === null) return false;
+  const invitation = value as Partial<CookbookInvitation>;
+  return typeof invitation.id === 'number'
+    && typeof invitation.email === 'string'
+    && (invitation.role === 'editor' || invitation.role === 'viewer')
+    && typeof invitation.expires_at === 'string'
+    && typeof invitation.cookbook?.id === 'string'
+    && typeof invitation.cookbook.name === 'string';
+}
+
+function invitationError(response: Response, payload: ApiErrorPayload | null, fallback: string) {
+  const fields = payload?.success === false ? payload.error?.details?.fields : undefined;
+  return {
+    message: payload?.success === false ? (payload.error?.message ?? fallback) : fallback,
+    fieldErrors: {
+      ...(typeof fields?.email?.[0] === 'string' ? { email: fields.email[0] } : {}),
+      ...(typeof fields?.role?.[0] === 'string' ? { role: fields.role[0] } : {}),
+    },
+    ...(response.status === 410 ? { expired: true } : {}),
+  };
+}
+
+export async function createCookbookInvitation(
+  cookbookId: string, email: string, role: 'editor' | 'viewer', tokenType: string, accessToken: string,
+): Promise<InvitationResult> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/invitations`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), role }),
+    });
+    const payload = (await response.json().catch(() => null)) as InvitationPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, invitation: payload.data };
+    return { ok: false, ...invitationError(response, payload?.success === false ? payload : null, 'Impossible d’envoyer l’invitation.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.', fieldErrors: {} };
+  }
+}
+
+export async function fetchCookbookInvitation(token: string): Promise<InvitationResult> {
+  try {
+    const response = await fetch(`/api/invitations/${encodeURIComponent(token)}`, { headers: { Accept: 'application/json' } });
+    const payload = (await response.json().catch(() => null)) as InvitationPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, invitation: payload.data };
+    return { ok: false, ...invitationError(response, payload?.success === false ? payload : null, 'Impossible de charger cette invitation.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.', fieldErrors: {} };
+  }
+}
+
+export async function fetchCookbookInvitations(tokenType: string, accessToken: string): Promise<InvitationListResult> {
+  try {
+    const response = await fetch('/api/invitations', { headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` } });
+    const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookInvitation[] } | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, invitations: payload.data.filter(isCookbookInvitation) };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de charger les invitations.') : 'Impossible de charger les invitations.' };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function acceptCookbookInvitationById(
+  id: number, tokenType: string, accessToken: string,
+): Promise<AcceptInvitationResult> {
+  try {
+    const response = await fetch(`/api/invitations/${id}/accept`, {
+      method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
+    });
+    const payload = (await response.json().catch(() => null)) as AcceptedInvitationPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, cookbook: payload.data.cookbook, acceptedAt: payload.data.invitation.accepted_at };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible d’accepter l’invitation.') : 'Impossible d’accepter l’invitation.', ...(response.status === 410 ? { expired: true } : {}) };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function declineCookbookInvitation(id: number, tokenType: string, accessToken: string): Promise<{ ok: true } | { ok: false; message: string; expired?: boolean }> {
+  try {
+    const response = await fetch(`/api/invitations/${id}/decline`, {
+      method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
+    });
+    const payload = (await response.json().catch(() => null)) as { success: true } | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de refuser l’invitation.') : 'Impossible de refuser l’invitation.', ...(response.status === 410 ? { expired: true } : {}) };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function acceptCookbookInvitation(
+  token: string, tokenType: string, accessToken: string,
+): Promise<AcceptInvitationResult> {
+  try {
+    const response = await fetch(`/api/invitations/token/${encodeURIComponent(token)}/accept`, {
+      method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
+    });
+    const payload = (await response.json().catch(() => null)) as AcceptedInvitationPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, cookbook: payload.data.cookbook, acceptedAt: payload.data.invitation.accepted_at };
+    return {
+      ok: false,
+      message: payload?.success === false ? (payload.error?.message ?? 'Impossible d’accepter l’invitation.') : 'Impossible d’accepter l’invitation.',
+      ...(response.status === 410 ? { expired: true } : {}),
+      ...(response.status === 401 ? { unauthorized: true } : {}),
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
 
 export type CreateCookbookResult =
   | { ok: true; cookbook: Cookbook }
