@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
 import type { Cookbook, Pagination, Recipe } from '@/utils/cookbooks';
 import { deleteCookbook, fetchCookbook, fetchCookbookRecipes, updateCookbook } from '@/utils/cookbooks';
 
@@ -231,6 +232,7 @@ onMounted(async () => {
       <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
       <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
+      <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
       <section v-if="canDelete" class="danger-section" aria-labelledby="delete-title">
         <h3 id="delete-title">Zone dangereuse</h3>
         <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" @click="openDeleteConfirmation">
