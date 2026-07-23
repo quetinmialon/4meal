@@ -181,3 +181,56 @@ it('rejects an external user from renaming a cookbook', function () {
 
     $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id, 'name' => 'Ancien nom']);
 });
+
+it('allows only the owner to delete a cookbook after explicit confirmation', function () {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $editor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'A supprimer', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($editor, ['role' => 'editor']);
+    $recipe = Recipe::query()->create(['cookbook_id' => $cookbook->id, 'name' => 'Recette liée']);
+
+    $this->withToken(cookbookToken($editor))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id, ['confirmation' => $cookbook->name])
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'authorization_error');
+
+    $this->withToken(cookbookToken($owner))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id, ['confirmation' => $cookbook->name])
+        ->assertNoContent();
+
+    $this->assertDatabaseMissing('cookbooks', ['id' => $cookbook->id]);
+    $this->assertDatabaseMissing('cookbook_members', ['cookbook_id' => $cookbook->id]);
+    $this->assertDatabaseMissing('recipes', ['id' => $recipe->id]);
+});
+
+it('rejects deletion without the exact cookbook name confirmation', function () {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Confirmation requise', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+
+    $this->withToken(cookbookToken($owner))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id, ['confirmation' => 'mauvais nom'])
+        ->assertStatus(422)
+        ->assertJsonPath('error.code', 'validation_error');
+
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id]);
+});
+
+it('rejects a reader and an external user from deleting a cookbook', function () {
+    $owner = User::factory()->create();
+    $reader = User::factory()->create(['password' => 'password123']);
+    $external = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Protégé', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($reader, ['role' => 'viewer']);
+
+    foreach ([$reader, $external] as $user) {
+        $this->withToken(cookbookToken($user))
+            ->deleteJson('/api/cookbooks/'.$cookbook->public_id, ['confirmation' => $cookbook->name])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'authorization_error');
+    }
+
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id]);
+});

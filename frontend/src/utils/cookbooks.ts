@@ -57,6 +57,10 @@ export type UpdateCookbookResult =
   | { ok: true; cookbook: Cookbook }
   | { ok: false; message: string; fieldErrors: { name?: string } };
 
+export type DeleteCookbookResult =
+  | { ok: true }
+  | { ok: false; message: string; fieldErrors: { confirmation?: string } };
+
 export type ListResult<T> =
   | { ok: true; data: T[]; pagination: Pagination }
   | { ok: false; message: string };
@@ -169,6 +173,48 @@ export async function updateCookbook(
         ? (payload.error?.message ?? 'Impossible de modifier le cookbook.')
         : 'Impossible de modifier le cookbook.',
       fieldErrors: typeof fields?.name?.[0] === 'string' ? { name: fields.name[0] } : {},
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+      fieldErrors: {},
+    };
+  }
+}
+
+export async function deleteCookbook(
+  id: string,
+  confirmation: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<DeleteCookbookResult> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `${tokenType} ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ confirmation: confirmation.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+    if (response.status === 204 || (response.ok && payload?.success !== false)) {
+      return { ok: true };
+    }
+
+    const fields = payload?.success === false ? payload.error?.details?.fields : undefined;
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de supprimer le cookbook.')
+        : 'Impossible de supprimer le cookbook.',
+      fieldErrors: typeof fields?.confirmation?.[0] === 'string'
+        ? { confirmation: fields.confirmation[0] }
+        : {},
     };
   } catch {
     return {

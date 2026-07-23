@@ -24,4 +24,9 @@ class CookbookPolicy
             ->wherePivotIn('role', ['owner', 'editor'])
             ->exists();
     }
+
+    public function delete(User $user, Cookbook $cookbook): bool
+    {
+        return (int) $cookbook->owner_id === (int) $user->getKey();
+    }
 }
