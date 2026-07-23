@@ -69,6 +69,21 @@ class User extends Authenticatable
         return $this->hasMany(Cookbook::class, 'owner_id');
     }
 
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class);
+    }
+
+    public function authoredRecipes(): HasMany
+    {
+        return $this->hasMany(Recipe::class, 'author_id');
+    }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
+
     public function cookbooks(): BelongsToMany
     {
         return $this->belongsToMany(Cookbook::class, 'cookbook_members')

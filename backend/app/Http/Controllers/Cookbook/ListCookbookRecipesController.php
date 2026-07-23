@@ -20,6 +20,7 @@ class ListCookbookRecipesController extends Controller
 
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $recipes = $cookbook->recipes()
+            ->with(['ingredients', 'steps', 'tags', 'author'])
             ->orderByDesc('recipes.created_at')
             ->paginate($perPage)
             ->withQueryString();

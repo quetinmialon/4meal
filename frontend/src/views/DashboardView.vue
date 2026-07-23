@@ -128,9 +128,13 @@ async function handleLogout(): Promise<void> {
           <p class="kicker">Mes recettes</p>
           <h3 id="cookbooks-title">Mes cookbooks</h3>
         </div>
-        <button class="create-button" type="button" @click="isCreateFormVisible = !isCreateFormVisible">
-          {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
-        </button>
+        <div class="dashboard-actions">
+          <RouterLink class="create-button" :to="{ name: 'recipes' }">Mes recettes</RouterLink>
+          <RouterLink class="create-button" :to="{ name: 'recipe-create' }">Nouvelle recette</RouterLink>
+          <button class="create-button" type="button" @click="isCreateFormVisible = !isCreateFormVisible">
+            {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
+          </button>
+        </div>
       </div>
       <p v-if="isLoading" class="loading" role="status">Chargement des cookbooks...</p>
       <p v-else-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
@@ -237,9 +241,10 @@ h2 {
 
 .cookbooks-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.dashboard-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
 .section-heading .kicker { margin-bottom: 0.35rem; }
 h3 { margin: 0; font-size: 1.5rem; }
-.create-button { padding: 0.7rem 0.9rem; border: 1px solid #395330; border-radius: 0.65rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.create-button { padding: 0.7rem 0.9rem; border: 1px solid #395330; border-radius: 0.65rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
 .empty-state { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #b9c5af; border-radius: 0.8rem; color: #50634d; line-height: 1.5; }
 .empty-state p { margin: 0; }
 .empty-state p + p { margin-top: 0.35rem; }

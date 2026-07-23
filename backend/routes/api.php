@@ -25,6 +25,9 @@ use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
+use App\Http\Controllers\Recipe\CreateRecipeController;
+use App\Http\Controllers\Recipe\ListRecipesController;
+use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -60,6 +63,15 @@ Route::middleware(AuthenticateWithJwt::class)
     ->group(function () {
         Route::get('cookbooks', ListCookbooksController::class)
             ->name('cookbooks.index');
+
+        Route::post('recipes', CreateRecipeController::class)
+            ->name('recipes.store');
+
+        Route::get('recipes', ListRecipesController::class)
+            ->name('recipes.index');
+
+        Route::get('recipes/{recipe}', ShowRecipeController::class)
+            ->name('recipes.show');
 
         Route::post('cookbooks', CreateCookbookController::class)
             ->name('cookbooks.store');

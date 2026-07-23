@@ -1,0 +1,38 @@
+<script setup lang="ts">
+import { RouterLink } from 'vue-router';
+
+import type { Recipe } from '@/utils/recipes';
+
+defineProps<{ recipe: Recipe }>();
+</script>
+
+<template>
+  <article class="recipe-card">
+    <div>
+      <p class="recipe-kicker">Recette</p>
+      <h3>{{ recipe.title }}</h3>
+      <p v-if="recipe.description" class="description">{{ recipe.description }}</p>
+      <div class="recipe-meta">
+        <span v-if="recipe.prep_time_minutes !== null">Préparation : {{ recipe.prep_time_minutes }} min</span>
+        <span v-if="recipe.cook_time_minutes !== null">Cuisson : {{ recipe.cook_time_minutes }} min</span>
+        <span v-if="recipe.servings !== null">{{ recipe.servings }} portion<span v-if="recipe.servings > 1">s</span></span>
+      </div>
+      <div v-if="recipe.tags?.length" class="tags" aria-label="Tags">
+        <span v-for="tag in recipe.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
+      </div>
+    </div>
+    <RouterLink class="details-link" :to="{ name: 'recipe-detail', params: { id: recipe.id } }">Voir la recette</RouterLink>
+  </article>
+</template>
+
+<style scoped>
+.recipe-card { display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.2rem; border: 1px solid rgba(86,112,79,.2); border-radius: 1rem; background: rgba(255,253,248,.92); box-shadow: 0 10px 30px rgba(54,68,35,.06); }
+.recipe-kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h3 { margin: 0; color: #243127; font-size: 1.3rem; }
+.description { color: #50634d; line-height: 1.5; }
+.recipe-meta { display: flex; flex-wrap: wrap; gap: .45rem .8rem; color: #50634d; font-size: .9rem; }
+.tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+.tag { padding: .25rem .5rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: .8rem; }
+.details-link { width: fit-content; color: #395330; font-weight: 700; text-decoration: none; }
+.details-link:hover { text-decoration: underline; }
+</style>
