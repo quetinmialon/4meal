@@ -11,7 +11,15 @@ class CookbookMember extends Model
         'cookbook_id',
         'user_id',
         'role',
+        'joined_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'joined_at' => 'datetime',
+        ];
+    }
 
     public function cookbook(): BelongsTo
     {

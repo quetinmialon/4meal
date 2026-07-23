@@ -45,6 +45,8 @@ describe('auth navigation guards', () => {
         id: 7,
         name: 'Jane Doe',
         email: 'jane.doe@example.com',
+        avatar_path: null,
+        last_login_at: null,
         created_at: '2026-07-17T10:00:00Z',
       },
     });

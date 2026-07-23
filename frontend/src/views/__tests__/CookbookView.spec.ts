@@ -28,7 +28,9 @@ describe('CookbookView', () => {
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
       expiresIn: 900,
-      user: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+      user: {
+        id: 7, name: 'Jane Doe', email: 'jane@example.com', avatar_path: null, last_login_at: null, created_at: null,
+      },
     });
   });
 
@@ -48,7 +50,11 @@ describe('CookbookView', () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: [{ id: 'recipe-id', name: 'Pates', description: 'Rapide', created_at: null }],
+          data: [{
+            id: 'recipe-id', title: 'Pates', slug: 'pates', description: 'Rapide',
+            prep_time_minutes: null, cook_time_minutes: null, rest_time_minutes: null,
+            servings: null, image_path: null, visibility: null, difficulty: null, notes: null, created_at: null,
+          }],
           meta: { pagination: { current_page: 1, per_page: 1, total: 2, last_page: 2, from: 1, to: 1, has_more_pages: true } },
         }),
       } as Response);

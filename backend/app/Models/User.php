@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -24,7 +26,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
+        'password', // API/application alias for password_hash.
+        'password_hash',
+        'avatar_path',
+        'last_login_at',
+        'remember_token_hash',
     ];
 
     /**
@@ -34,7 +40,9 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'password_hash',
         'remember_token',
+        'remember_token_hash',
     ];
 
     /**
@@ -46,7 +54,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password_hash' => 'hashed',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -63,7 +72,7 @@ class User extends Authenticatable
     public function cookbooks(): BelongsToMany
     {
         return $this->belongsToMany(Cookbook::class, 'cookbook_members')
-            ->withPivot('role')
+            ->withPivot('role', 'joined_at')
             ->withTimestamps();
     }
 
@@ -72,5 +81,27 @@ class User extends Authenticatable
         return Attribute::make(
             set: fn (?string $value) => is_string($value) ? mb_strtolower($value) : $value,
         );
+    }
+
+    protected function password(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value, array $attributes): ?string => $attributes['password_hash'] ?? null,
+            set: fn (?string $value): array => [
+                'password_hash' => is_string($value) && Hash::needsRehash($value)
+                    ? Hash::make($value)
+                    : $value,
+            ],
+        );
+    }
+
+    public function getAuthPasswordName(): string
+    {
+        return 'password_hash';
+    }
+
+    public function getRememberTokenName(): string
+    {
+        return 'remember_token_hash';
     }
 }

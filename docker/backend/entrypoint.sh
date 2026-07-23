@@ -9,6 +9,7 @@ mkdir -p \
   storage/framework/sessions \
   storage/framework/testing \
   storage/framework/views \
+  storage/app/public/cookbooks \
   storage/logs
 
 # Keep the persistent vendor volume and Laravel package manifests aligned
@@ -18,6 +19,7 @@ find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
 composer install --no-dev --no-interaction --no-scripts --prefer-dist
 
 php artisan package:discover --ansi
+php artisan storage:link --force --no-interaction
 
 # Freeze the configuration after Docker has injected its environment variables.
 # The generated cache is ignored by Git and is rebuilt on every container start.

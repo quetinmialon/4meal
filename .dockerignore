@@ -6,6 +6,7 @@ frontend/node_modules
 backend/.env
 backend/vendor
 backend/node_modules
+backend/public/storage
 docs
 MCD_cookbooks
 MCD_recipes

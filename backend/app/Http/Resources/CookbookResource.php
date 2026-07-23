@@ -6,6 +6,7 @@ use App\Models\Cookbook;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin Cookbook
@@ -30,6 +31,12 @@ class CookbookResource extends JsonResource
         return [
             'id' => $cookbook->public_id,
             'name' => $cookbook->name,
+            'slug' => $cookbook->slug,
+            'description' => $cookbook->description,
+            'image_path' => $cookbook->image_path,
+            'image_url' => is_string($cookbook->image_path)
+                ? Storage::disk('public')->url($cookbook->image_path)
+                : null,
             'owner' => UserResource::make($cookbook->owner)->resolve($request),
             'member_role' => $memberRole,
             'created_at' => $cookbook->created_at?->toJSON(),

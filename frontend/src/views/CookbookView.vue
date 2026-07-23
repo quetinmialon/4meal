@@ -152,6 +152,12 @@ onMounted(async () => {
     <p v-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
     <template v-else-if="cookbook">
       <p class="kicker">Cookbook</p>
+      <img
+        v-if="cookbook.image_url"
+        class="cookbook-image"
+        :src="cookbook.image_url"
+        :alt="`Image de ${cookbook.name}`"
+      />
       <div v-if="!isEditingName" class="name-heading">
         <h2>{{ cookbook.name }}</h2>
         <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
@@ -175,6 +181,7 @@ onMounted(async () => {
         </div>
       </form>
       <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
+      <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
       <section v-if="canDelete" class="danger-section" aria-labelledby="delete-title">
         <h3 id="delete-title">Zone dangereuse</h3>
@@ -210,7 +217,7 @@ onMounted(async () => {
         <p v-else-if="recipes.length === 0" class="empty-state">Aucune recette dans ce cookbook.</p>
         <div v-else class="recipe-list">
           <article v-for="recipe in recipes" :key="recipe.id" class="recipe-item">
-            <h4>{{ recipe.name }}</h4>
+            <h4>{{ recipe.title }}</h4>
             <p v-if="recipe.description">{{ recipe.description }}</p>
           </article>
           <nav v-if="recipesPagination && recipesPagination.last_page > 1" class="pagination" aria-label="Pagination des recettes">
@@ -231,6 +238,7 @@ onMounted(async () => {
 
 <style scoped>
 .cookbook-card { margin: 0 auto; max-width: 42rem; padding: 2rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.92); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
+.cookbook-image { display: block; width: 100%; max-height: 15rem; margin: 1rem 0; object-fit: cover; border-radius: 0.8rem; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }

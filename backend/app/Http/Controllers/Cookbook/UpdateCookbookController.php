@@ -20,7 +20,9 @@ class UpdateCookbookController extends Controller
         $user = $request->user();
         Gate::forUser($user)->authorize('update', $cookbook);
 
-        $cookbook->update($request->safe()->only(['name']));
+        $cookbook->update($request->safe()->only([
+            'name', 'slug', 'description', 'image_path',
+        ]));
         $cookbook->load('owner');
         $cookbook->setAttribute(
             'member_role',

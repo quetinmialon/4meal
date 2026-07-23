@@ -4,6 +4,8 @@ use App\Models\Cookbook;
 use App\Models\Recipe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -44,6 +46,36 @@ it('creates a cookbook with its owner membership in one operation', function () 
         'cookbook_id' => Cookbook::query()->where('public_id', $publicId)->value('id'),
         'user_id' => $user->id,
         'role' => 'owner',
+    ]);
+});
+
+it('creates cookbooks with the MCD attributes and unique generated slugs', function () {
+    Storage::fake('public');
+    $user = User::factory()->create(['password' => 'password123']);
+    $token = cookbookToken($user);
+    $payload = [
+        'name' => 'Cuisine du soir',
+        'description' => 'Mes recettes du quotidien',
+    ];
+
+    $first = $this->withToken($token)->post('/api/cookbooks', [
+        ...$payload,
+        'image' => UploadedFile::fake()->create('cuisine.jpg', 100, 'image/jpeg'),
+    ])->assertCreated();
+    $second = $this->withToken($token)->post('/api/cookbooks', [
+        ...$payload,
+        'image' => UploadedFile::fake()->create('cuisine-2.jpg', 100, 'image/jpeg'),
+    ])->assertCreated();
+
+    expect($first->json('data.slug'))->toBe('cuisine-du-soir')
+        ->and($second->json('data.slug'))->toBe('cuisine-du-soir-2')
+        ->and($first->json('data.image_path'))->toStartWith('cookbooks/');
+
+    Storage::disk('public')->assertExists($first->json('data.image_path'));
+
+    $this->assertDatabaseHas('cookbooks', [
+        'name' => $payload['name'],
+        'description' => $payload['description'],
     ]);
 });
 

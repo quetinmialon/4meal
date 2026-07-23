@@ -27,7 +27,9 @@ describe('DashboardView', () => {
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
       expiresIn: 900,
-      user: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+      user: {
+        id: 7, name: 'Jane Doe', email: 'jane@example.com', avatar_path: null, last_login_at: null, created_at: null,
+      },
     });
   });
 

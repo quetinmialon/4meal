@@ -6,6 +6,7 @@ use App\Models\Cookbook;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class UpdateCookbookRequest extends FormRequest
 {
@@ -31,6 +32,12 @@ class UpdateCookbookRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:1', 'max:255'],
+            'slug' => [
+                'nullable', 'string', 'min:1', 'max:255',
+                Rule::unique('cookbooks', 'slug')->ignore($this->route('cookbook')),
+            ],
+            'description' => ['nullable', 'string'],
+            'image_path' => ['nullable', 'string', 'max:2048'],
         ];
     }
 }

@@ -7,19 +7,23 @@ import { createCookbook } from '@/utils/cookbooks';
 
 const router = useRouter();
 const authStore = useAuthStore();
-const form = reactive({ name: '' });
+const form = reactive<{ name: string; slug: string; description: string; image: File | null }>({
+  name: '', slug: '', description: '', image: null,
+});
 const nameError = ref('');
+const imageError = ref('');
 const globalError = ref('');
 const isSubmitting = ref(false);
 const errorSummary = ref<HTMLElement | null>(null);
 
 function validate(): boolean {
   nameError.value = form.name.trim() === '' ? 'Le nom du cookbook est requis.' : '';
-  return nameError.value === '';
+  return nameError.value === '' && imageError.value === '';
 }
 
 function clearErrors(): void {
   nameError.value = '';
+  imageError.value = '';
   globalError.value = '';
 }
 
@@ -34,11 +38,12 @@ async function handleSubmit(): Promise<void> {
 
   isSubmitting.value = true;
 
-  const result = await createCookbook(form.name, authStore.tokenType, authStore.accessToken);
+  const result = await createCookbook(form, authStore.tokenType, authStore.accessToken);
 
   if (!result.ok) {
     globalError.value = result.message;
     nameError.value = result.fieldErrors.name ?? '';
+    imageError.value = result.fieldErrors.image ?? '';
     isSubmitting.value = false;
     await nextTick();
     errorSummary.value?.focus();
@@ -50,6 +55,25 @@ async function handleSubmit(): Promise<void> {
 
 function handleInput(): void {
   clearErrors();
+}
+
+function handleImageChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  form.image = file;
+  imageError.value = '';
+
+  if (file === null) return;
+
+  if (!['image/png', 'image/jpeg'].includes(file.type)) {
+    imageError.value = 'Le fichier doit être au format PNG ou JPEG.';
+    input.value = '';
+    form.image = null;
+  } else if (file.size > 5 * 1024 * 1024) {
+    imageError.value = 'L’image ne doit pas dépasser 5 Mo.';
+    input.value = '';
+    form.image = null;
+  }
 }
 </script>
 
@@ -83,6 +107,34 @@ function handleInput(): void {
         {{ nameError }}
       </p>
 
+      <label for="cookbook-slug-input">Slug</label>
+      <input
+        id="cookbook-slug-input"
+        v-model="form.slug"
+        name="slug"
+        type="text"
+        autocomplete="off"
+        maxlength="255"
+      />
+
+      <label for="cookbook-description-input">Description</label>
+      <textarea
+        id="cookbook-description-input"
+        v-model="form.description"
+        name="description"
+        rows="4"
+      />
+
+      <label for="cookbook-image-input">Image du cookbook</label>
+      <input
+        id="cookbook-image-input"
+        name="image"
+        type="file"
+        accept="image/png,image/jpeg"
+        @change="handleImageChange"
+      />
+      <p v-if="imageError" id="cookbook-image-error" class="field-error" role="alert">{{ imageError }}</p>
+
       <button type="submit">
         {{ isSubmitting ? 'Creation...' : 'Creer le cookbook' }}
       </button>
@@ -94,7 +146,7 @@ function handleInput(): void {
 .cookbook-form { margin-top: 1.5rem; }
 fieldset { display: grid; gap: 0.65rem; padding: 0; border: 0; }
 label { font-weight: 700; }
-input { padding: 0.8rem 0.9rem; border: 1px solid #b9c5af; border-radius: 0.65rem; background: #fffdf8; font: inherit; }
+input, textarea { padding: 0.8rem 0.9rem; border: 1px solid #b9c5af; border-radius: 0.65rem; background: #fffdf8; font: inherit; }
 button { width: fit-content; margin-top: 0.5rem; padding: 0.8rem 1.1rem; border: 0; border-radius: 0.65rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: wait; opacity: 0.65; }
 .error-summary, .field-error { color: #8f1e1e; }

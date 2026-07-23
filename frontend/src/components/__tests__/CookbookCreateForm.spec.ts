@@ -27,7 +27,9 @@ describe('CookbookCreateForm', () => {
       accessToken: 'jwt-token',
       tokenType: 'Bearer',
       expiresIn: 900,
-      user: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+      user: {
+        id: 7, name: 'Jane Doe', email: 'jane@example.com', avatar_path: null, last_login_at: null, created_at: null,
+      },
     });
   });
 
@@ -60,15 +62,18 @@ describe('CookbookCreateForm', () => {
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/cookbooks', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        Authorization: 'Bearer jwt-token',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: 'Mes recettes' }),
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const request = fetchMock.mock.calls[0]?.[1];
+    expect(request?.method).toBe('POST');
+    expect(request?.headers).toEqual({
+      Accept: 'application/json',
+      Authorization: 'Bearer jwt-token',
     });
+    expect(request?.body).toBeInstanceOf(FormData);
+    expect((request?.body as FormData).get('name')).toBe('Mes recettes');
+    expect((request?.body as FormData).get('slug')).toBeNull();
+    expect((request?.body as FormData).get('description')).toBeNull();
+    expect((request?.body as FormData).get('image')).toBeNull();
     expect(pushMock).toHaveBeenCalledWith({ name: 'cookbook', params: { id: '6e3a1d7b-4f48-4b30-9d6e-8cbe91b1bc30' } });
   });
 

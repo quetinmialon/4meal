@@ -27,7 +27,7 @@ class ChangePasswordController extends Controller
             throw new AuthenticationException;
         }
 
-        if (! Hash::check($request->string('current_password')->toString(), $user->password)) {
+        if (! Hash::check($request->string('current_password')->toString(), $user->getAttribute('password_hash'))) {
             throw ValidationException::withMessages([
                 'current_password' => [__('auth.password')],
             ]);

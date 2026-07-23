@@ -1,10 +1,16 @@
 export type Cookbook = {
   id: string;
   name: string;
+  slug: string | null;
+  description: string | null;
+  image_path: string | null;
+  image_url: string | null;
   owner: {
     id: number;
     name: string;
     email: string;
+    avatar_path: string | null;
+    last_login_at: string | null;
     created_at: string | null;
   };
   created_at: string | null;
@@ -13,8 +19,17 @@ export type Cookbook = {
 
 export type Recipe = {
   id: string;
-  name: string;
+  title: string;
+  slug: string | null;
   description: string | null;
+  prep_time_minutes: number | null;
+  cook_time_minutes: number | null;
+  rest_time_minutes: number | null;
+  servings: number | null;
+  image_path: string | null;
+  visibility: string | null;
+  difficulty: string | null;
+  notes: string | null;
   created_at: string | null;
 };
 
@@ -51,11 +66,11 @@ type ApiErrorPayload = {
 
 export type CreateCookbookResult =
   | { ok: true; cookbook: Cookbook }
-  | { ok: false; message: string; fieldErrors: { name?: string } };
+  | { ok: false; message: string; fieldErrors: { name?: string; slug?: string; description?: string; image?: string } };
 
 export type UpdateCookbookResult =
   | { ok: true; cookbook: Cookbook }
-  | { ok: false; message: string; fieldErrors: { name?: string } };
+  | { ok: false; message: string; fieldErrors: { name?: string; slug?: string; description?: string; image?: string } };
 
 export type DeleteCookbookResult =
   | { ok: true }
@@ -65,8 +80,15 @@ export type ListResult<T> =
   | { ok: true; data: T[]; pagination: Pagination }
   | { ok: false; message: string };
 
+export type CookbookInput = {
+  name: string;
+  slug?: string | null;
+  description?: string | null;
+  image?: File | null;
+};
+
 export async function createCookbook(
-  name: string,
+  input: CookbookInput,
   tokenType: string,
   accessToken: string,
 ): Promise<CreateCookbookResult> {
@@ -76,9 +98,15 @@ export async function createCookbook(
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name: name.trim() }),
+      body: (() => {
+        const formData = new FormData();
+        formData.append('name', input.name.trim());
+        if (input.slug?.trim()) formData.append('slug', input.slug.trim());
+        if (input.description?.trim()) formData.append('description', input.description.trim());
+        if (input.image instanceof File) formData.append('image', input.image);
+        return formData;
+      })(),
     });
 
     const payload = (await response.json().catch(() => null)) as

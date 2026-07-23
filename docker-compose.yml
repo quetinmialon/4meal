@@ -36,6 +36,7 @@ services:
       - ./.env:/var/www/html/.env:ro
       - backend_vendor:/var/www/html/vendor
       - backend_storage:/var/www/html/storage
+      - cookbook_images:/var/www/html/storage/app/public/cookbooks
     restart: unless-stopped
 
   frontend:
@@ -103,4 +104,5 @@ volumes:
   backend_vendor:
   frontend_node_modules:
   postgres_data:
+  cookbook_images:
  

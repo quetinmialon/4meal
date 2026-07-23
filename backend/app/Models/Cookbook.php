@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Cookbook extends Model
@@ -15,6 +16,9 @@ class Cookbook extends Model
 
     protected $fillable = [
         'name',
+        'slug',
+        'description',
+        'image_path',
         'owner_id',
     ];
 
@@ -22,6 +26,25 @@ class Cookbook extends Model
     {
         static::creating(function (Cookbook $cookbook): void {
             $cookbook->public_id ??= (string) Str::uuid();
+
+            if ($cookbook->slug === null || $cookbook->slug === '') {
+                $baseSlug = Str::slug($cookbook->name);
+                $slug = $baseSlug;
+                $suffix = 2;
+
+                while (static::query()->where('slug', $slug)->exists()) {
+                    $slug = $baseSlug.'-'.$suffix;
+                    $suffix++;
+                }
+
+                $cookbook->slug = $slug;
+            }
+        });
+
+        static::deleting(function (Cookbook $cookbook): void {
+            if (is_string($cookbook->image_path)) {
+                Storage::disk('public')->delete($cookbook->image_path);
+            }
         });
     }
 
@@ -38,7 +61,7 @@ class Cookbook extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'cookbook_members')
-            ->withPivot('role')
+            ->withPivot('role', 'joined_at')
             ->withTimestamps();
     }
 

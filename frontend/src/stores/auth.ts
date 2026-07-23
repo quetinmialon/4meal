@@ -8,6 +8,8 @@ export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  avatar_path: string | null;
+  last_login_at: string | null;
   created_at: string | null;
 };
 
@@ -85,6 +87,12 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof (value as AuthUser).id === 'number' &&
     typeof (value as AuthUser).name === 'string' &&
     typeof (value as AuthUser).email === 'string' &&
+    ((value as AuthUser).avatar_path === undefined ||
+      (value as AuthUser).avatar_path === null ||
+      typeof (value as AuthUser).avatar_path === 'string') &&
+    ((value as AuthUser).last_login_at === undefined ||
+      (value as AuthUser).last_login_at === null ||
+      typeof (value as AuthUser).last_login_at === 'string') &&
     (((value as AuthUser).created_at === null) || typeof (value as AuthUser).created_at === 'string')
   );
 }
@@ -436,7 +444,12 @@ export const useAuthStore = defineStore('auth', {
         user = null;
       }
 
-      if (user === null || typeof user.id !== 'number' || typeof user.email !== 'string' || typeof user.name !== 'string') {
+      if (
+        user === null ||
+        typeof user.id !== 'number' ||
+        typeof user.email !== 'string' ||
+        typeof user.name !== 'string'
+      ) {
         this.accessToken = accessToken;
         this.tokenType = tokenType;
         const fetchedUser = await this.fetchCurrentUser();

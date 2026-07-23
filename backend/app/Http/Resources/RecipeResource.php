@@ -21,8 +21,18 @@ class RecipeResource extends JsonResource
 
         return [
             'id' => $recipe->public_id,
-            'name' => $recipe->name,
+            'name' => $recipe->getAttribute('title'),
+            'title' => $recipe->title,
+            'slug' => $recipe->slug,
             'description' => $recipe->description,
+            'prep_time_minutes' => $recipe->prep_time_minutes,
+            'cook_time_minutes' => $recipe->cook_time_minutes,
+            'rest_time_minutes' => $recipe->rest_time_minutes,
+            'servings' => $recipe->servings,
+            'image_path' => $recipe->image_path,
+            'visibility' => $recipe->visibility,
+            'difficulty' => $recipe->difficulty,
+            'notes' => $recipe->notes,
             'created_at' => $recipe->created_at?->toJSON(),
         ];
     }
