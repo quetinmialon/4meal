@@ -16,6 +16,7 @@ import RecipeDetailView from '@/views/RecipeDetailView.vue';
 import RecipeEditView from '@/views/RecipeEditView.vue';
 import PublicRecipesView from '@/views/PublicRecipesView.vue';
 import RecipesView from '@/views/RecipesView.vue';
+import SearchView from '@/views/SearchView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -68,6 +69,14 @@ const routes: RouteRecordRaw[] = [
     path: '/recettes',
     name: 'recipes',
     component: RecipesView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recherche',
+    name: 'search',
+    component: SearchView,
     meta: {
       requiresAuth: true,
     },

@@ -17,3 +17,13 @@ PerPage:
     type: integer
     minimum: 1
     example: 20
+
+Search:
+  name: q
+  in: query
+  required: false
+  description: Recherche plein texte dans le titre, les ingrédients, les tags et les instructions d'étapes.
+  schema:
+    type: string
+    minLength: 1
+    maxLength: 255
