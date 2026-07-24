@@ -22,9 +22,10 @@ class ListRecipesController extends Controller
         Gate::forUser($user)->authorize('viewAny', Recipe::class);
 
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
+        $scope = $request->string('scope', 'accessible')->toString();
 
         return RecipeResource::collection(
-            $recipesQuery->for($user)->paginate($perPage)->withQueryString(),
+            $recipesQuery->for($user, $scope)->paginate($perPage)->withQueryString(),
         );
     }
 }

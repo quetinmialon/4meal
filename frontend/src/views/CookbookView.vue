@@ -5,7 +5,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
 import type { Cookbook, CookbookMember, Pagination, Recipe } from '@/utils/cookbooks';
-import { deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
+import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
+import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
 
 const route = useRoute();
 const router = useRouter();
@@ -16,6 +17,12 @@ const recipes = ref<Recipe[]>([]);
 const recipesPagination = ref<Pagination | null>(null);
 const recipesError = ref('');
 const recipesLoading = ref(true);
+const publicRecipes = ref<PublicRecipe[]>([]);
+const isAddRecipeVisible = ref(false);
+const selectedRecipeId = ref('');
+const addRecipeError = ref('');
+const isAddingRecipe = ref(false);
+const removingRecipeId = ref<string | null>(null);
 const members = ref<CookbookMember[]>([]);
 const membersPagination = ref<Pagination | null>(null);
 const membersError = ref('');
@@ -185,6 +192,42 @@ async function loadRecipes(page = 1): Promise<void> {
 async function goToRecipePage(page: number): Promise<void> {
   if (recipesPagination.value === null || page < 1 || page > recipesPagination.value.last_page) return;
   await loadRecipes(page);
+}
+
+async function openAddRecipeForm(): Promise<void> {
+  isAddRecipeVisible.value = true;
+  if (publicRecipes.value.length > 0) return;
+
+  const result = await fetchRecipes(authStore.tokenType, authStore.accessToken);
+  if (result.ok) publicRecipes.value = result.recipes;
+  else addRecipeError.value = result.message;
+}
+
+async function addSelectedRecipe(): Promise<void> {
+  if (!cookbook.value || selectedRecipeId.value === '') return;
+  isAddingRecipe.value = true;
+  addRecipeError.value = '';
+  const result = await addRecipeToCookbook(cookbook.value.id, selectedRecipeId.value, authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    selectedRecipeId.value = '';
+    await loadRecipes(recipesPagination.value?.current_page ?? 1);
+  } else {
+    addRecipeError.value = result.message;
+  }
+  isAddingRecipe.value = false;
+}
+
+async function removeRecipe(recipeId: string): Promise<void> {
+  if (!cookbook.value || removingRecipeId.value !== null) return;
+  removingRecipeId.value = recipeId;
+  addRecipeError.value = '';
+  const result = await removeRecipeFromCookbook(cookbook.value.id, recipeId, authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    await loadRecipes(recipesPagination.value?.current_page ?? 1);
+  } else {
+    addRecipeError.value = result.message;
+  }
+  removingRecipeId.value = null;
 }
 
 async function loadMembers(page = 1): Promise<void> {
@@ -521,13 +564,28 @@ onMounted(async () => {
       </section>
       <section class="recipes-section" aria-labelledby="recipes-title">
         <h3 id="recipes-title">Recettes</h3>
+        <button v-if="canEditName && !isAddRecipeVisible" type="button" class="add-recipe-button" @click="openAddRecipeForm">
+          Ajouter une recette existante
+        </button>
+        <form v-if="canEditName && isAddRecipeVisible" class="add-recipe-form" @submit.prevent="addSelectedRecipe">
+          <label for="recipe-to-add">Ajouter une recette existante</label>
+          <select id="recipe-to-add" v-model="selectedRecipeId" :disabled="isAddingRecipe">
+            <option value="">Choisir une recette</option>
+            <option v-for="recipe in publicRecipes" :key="recipe.id" :value="recipe.id">{{ recipe.title }}</option>
+          </select>
+          <button type="submit" :disabled="isAddingRecipe || selectedRecipeId === ''">Ajouter</button>
+          <p v-if="addRecipeError" class="error-summary" role="alert">{{ addRecipeError }}</p>
+        </form>
         <p v-if="recipesLoading" role="status">Chargement des recettes...</p>
         <p v-else-if="recipesError" class="error-summary" role="alert">{{ recipesError }}</p>
         <p v-else-if="recipes.length === 0" class="empty-state">Aucune recette dans ce cookbook.</p>
         <div v-else class="recipe-list">
           <article v-for="recipe in recipes" :key="recipe.id" class="recipe-item">
-            <h4>{{ recipe.title }}</h4>
+            <h4><RouterLink :to="{ name: 'recipe-detail', params: { id: recipe.id } }">{{ recipe.title }}</RouterLink></h4>
             <p v-if="recipe.description">{{ recipe.description }}</p>
+            <button v-if="canEditName" type="button" class="remove-recipe-button" :disabled="removingRecipeId !== null" @click="removeRecipe(recipe.id)">
+              {{ removingRecipeId === recipe.id ? 'Retrait...' : 'Retirer du cookbook' }}
+            </button>
           </article>
           <nav v-if="recipesPagination && recipesPagination.last_page > 1" class="pagination" aria-label="Pagination des recettes">
             <button type="button" :disabled="recipesPagination.current_page === 1" @click="goToRecipePage(recipesPagination.current_page - 1)">
@@ -552,6 +610,12 @@ onMounted(async () => {
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .detail, .loading { margin-top: 1rem; color: #50634d; }
+.add-recipe-form { display: grid; gap: .5rem; margin: 1rem 0; padding: 1rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: .7rem; }
+.add-recipe-button { margin: 1rem 0; padding: .5rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.remove-recipe-button { margin-top: .45rem; padding: .4rem .6rem; border: 1px solid #8f1e1e; border-radius: .45rem; background: transparent; color: #8f1e1e; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.add-recipe-form label { font-weight: 700; }
+.add-recipe-form select, .add-recipe-form button { width: fit-content; padding: .5rem .7rem; border: 1px solid #395330; border-radius: .5rem; font: inherit; }
+.add-recipe-form button { background: #395330; color: #fffdf8; font-weight: 700; cursor: pointer; }
 .error-summary { margin-top: 2rem; color: #8f1e1e; }
 .name-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .name-heading h2 { margin: 0; }

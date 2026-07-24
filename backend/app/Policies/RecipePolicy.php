@@ -16,7 +16,9 @@ class RecipePolicy
 
     public function view(User $user, Recipe $recipe): bool
     {
-        return $this->ownsPersonally($user, $recipe) || $this->canInCookbook($user, $recipe, CookbookPermissions::VIEW);
+        return $this->isPersonal($recipe)
+            || $this->ownsPersonally($user, $recipe)
+            || $this->canInCookbook($user, $recipe, CookbookPermissions::VIEW);
     }
 
     public function create(User $user, ?Cookbook $cookbook = null): bool
@@ -39,6 +41,11 @@ class RecipePolicy
     private function ownsPersonally(User $user, Recipe $recipe): bool
     {
         return $recipe->cookbook_id === null && (int) $recipe->user_id === (int) $user->getKey();
+    }
+
+    private function isPersonal(Recipe $recipe): bool
+    {
+        return $recipe->cookbook_id === null && $recipe->user_id !== null;
     }
 
     private function canInCookbook(User $user, Recipe $recipe, string $permission): bool

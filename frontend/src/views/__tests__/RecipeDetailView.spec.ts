@@ -68,6 +68,33 @@ describe('RecipeDetailView', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('Accès refusé');
   });
+
+  it('adds the recipe to a selected cookbook from the detail view', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Tarte', is_favorite: false, author: null, ingredients: [], steps: [], tags: [] } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: [{ id: 'cookbook-id', name: 'Mes desserts' }], meta: { pagination: { current_page: 1, per_page: 15, total: 1, last_page: 1, from: 1, to: 1, has_more_pages: false } } }),
+      } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 204, json: async () => null } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.cookbook-button').trigger('click');
+    await flushPromises();
+    await wrapper.get('#recipe-cookbook').setValue('cookbook-id');
+    await wrapper.get('.cookbook-picker').trigger('submit');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/cookbooks/cookbook-id/recipes/recipe-id', {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+    });
+    expect(wrapper.find('.cookbook-picker').exists()).toBe(false);
+  });
   it('requires confirmation, deletes the recipe and redirects to the list', async () => {
     fetchMock
       .mockResolvedValueOnce({

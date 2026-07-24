@@ -91,6 +91,11 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function favoriteRecipes(): BelongsToMany
+    {
+        return $this->belongsToMany(Recipe::class, 'recipe_favorites')->withTimestamps();
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(

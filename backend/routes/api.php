@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
+use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
 use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
 use App\Http\Controllers\Cookbook\DeclineCookbookInvitationController;
@@ -21,13 +22,16 @@ use App\Http\Controllers\Cookbook\ListCookbookMembersController;
 use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
 use App\Http\Controllers\Cookbook\RemoveCookbookMemberController;
+use App\Http\Controllers\Cookbook\RemoveCookbookRecipeController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
+use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
 use App\Http\Controllers\Recipe\ListRecipesController;
+use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
 use App\Http\Middleware\AuthenticateWithJwt;
@@ -75,6 +79,12 @@ Route::middleware(AuthenticateWithJwt::class)
         Route::get('recipes/{recipe}', ShowRecipeController::class)
             ->name('recipes.show');
 
+        Route::post('recipes/{recipe}/favorite', AddRecipeFavoriteController::class)
+            ->name('recipes.favorite.store');
+
+        Route::delete('recipes/{recipe}/favorite', RemoveRecipeFavoriteController::class)
+            ->name('recipes.favorite.destroy');
+
         Route::patch('recipes/{recipe}', UpdateRecipeController::class)
             ->name('recipes.update');
 
@@ -86,6 +96,12 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks/{cookbook}/recipes', ListCookbookRecipesController::class)
             ->name('cookbooks.recipes.index');
+
+        Route::post('cookbooks/{cookbook}/recipes/{recipe}', AddCookbookRecipeController::class)
+            ->name('cookbooks.recipes.store');
+
+        Route::delete('cookbooks/{cookbook}/recipes/{recipe}', RemoveCookbookRecipeController::class)
+            ->name('cookbooks.recipes.destroy');
 
         Route::get('cookbooks/{cookbook}/members', ListCookbookMembersController::class)
             ->name('cookbooks.members.index');
