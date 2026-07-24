@@ -11,6 +11,10 @@ import CookbookView from '@/views/CookbookView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
+import RecipeCreateView from '@/views/RecipeCreateView.vue';
+import RecipeDetailView from '@/views/RecipeDetailView.vue';
+import RecipeEditView from '@/views/RecipeEditView.vue';
+import RecipesView from '@/views/RecipesView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -39,6 +43,38 @@ const routes: RouteRecordRaw[] = [
     path: '/cookbooks/:id',
     name: 'cookbook',
     component: CookbookView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes/nouvelle',
+    name: 'recipe-create',
+    component: RecipeCreateView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes',
+    name: 'recipes',
+    component: RecipesView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes/:id',
+    name: 'recipe-detail',
+    component: RecipeDetailView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes/:id/modifier',
+    name: 'recipe-edit',
+    component: RecipeEditView,
     meta: {
       requiresAuth: true,
     },

@@ -33,6 +33,13 @@ class RecipeResource extends JsonResource
             'visibility' => $recipe->visibility,
             'difficulty' => $recipe->difficulty,
             'notes' => $recipe->notes,
+            'source' => $recipe->source,
+            'author' => $this->whenLoaded('author', fn (): ?array => $recipe->author === null
+                ? null
+                : UserResource::make($recipe->author)->resolve($request)),
+            'ingredients' => RecipeIngredientResource::collection($this->whenLoaded('ingredients')),
+            'steps' => RecipeStepResource::collection($this->whenLoaded('steps')),
+            'tags' => TagResource::collection($this->whenLoaded('tags')),
             'created_at' => $recipe->created_at?->toJSON(),
         ];
     }
