@@ -66,6 +66,7 @@ export type Recipe = {
   servings: number | null;
   notes?: string | null;
   source: string | null;
+  is_favorite?: boolean;
   image_path?: string | null;
   image_url?: string | null;
   created_at: string | null;
@@ -165,9 +166,10 @@ export async function fetchRecipes(
   tokenType: string,
   accessToken: string,
   page = 1,
+  scope: 'all' | 'mine' | 'public' = 'all',
 ): Promise<RecipeListResult> {
   try {
-    const response = await fetch(`/api/recipes?page=${page}`, { headers: recipeReadHeaders(tokenType, accessToken) });
+    const response = await fetch(`/api/recipes?page=${page}${scope === 'all' ? '' : `&scope=${scope}`}`, { headers: recipeReadHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as RecipeListPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) {
       return { ok: true, recipes: payload.data, pagination: payload.meta.pagination };
@@ -316,6 +318,39 @@ export async function deleteRecipe(
       message: payload?.success === false
         ? (payload.error?.message ?? 'Impossible de supprimer la recette.')
         : 'Impossible de supprimer la recette.',
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+    };
+  }
+}
+
+export type RecipeFavoriteResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function setRecipeFavorite(
+  id: string,
+  isFavorite: boolean,
+  tokenType: string,
+  accessToken: string,
+): Promise<RecipeFavoriteResult> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/favorite`, {
+      method: isFavorite ? 'POST' : 'DELETE',
+      headers: recipeReadHeaders(tokenType, accessToken),
+    });
+
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.status === 204 || (response.ok && payload?.success !== false)) return { ok: true };
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de modifier les favoris.')
+        : 'Impossible de modifier les favoris.',
     };
   } catch {
     return {

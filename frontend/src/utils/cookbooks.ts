@@ -459,6 +459,58 @@ export function fetchCookbookRecipes(
   );
 }
 
+export type CookbookRecipeActionResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function addRecipeToCookbook(
+  cookbookId: string,
+  recipeId: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<CookbookRecipeActionResult> {
+  try {
+    const response = await fetch(
+      `/api/cookbooks/${encodeURIComponent(cookbookId)}/recipes/${encodeURIComponent(recipeId)}`,
+      { method: 'POST', headers: apiHeaders(tokenType, accessToken) },
+    );
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.status === 204 || (response.ok && payload?.success !== false)) return { ok: true };
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible d’ajouter la recette.')
+        : 'Impossible d’ajouter la recette.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function removeRecipeFromCookbook(
+  cookbookId: string,
+  recipeId: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<CookbookRecipeActionResult> {
+  try {
+    const response = await fetch(
+      `/api/cookbooks/${encodeURIComponent(cookbookId)}/recipes/${encodeURIComponent(recipeId)}`,
+      { method: 'DELETE', headers: apiHeaders(tokenType, accessToken) },
+    );
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.status === 204 || (response.ok && payload?.success !== false)) return { ok: true };
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de retirer la recette.')
+        : 'Impossible de retirer la recette.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
 export function fetchCookbookMembers(
   id: string,
   tokenType: string,

@@ -14,6 +14,7 @@ import RegisterView from '@/views/RegisterView.vue';
 import RecipeCreateView from '@/views/RecipeCreateView.vue';
 import RecipeDetailView from '@/views/RecipeDetailView.vue';
 import RecipeEditView from '@/views/RecipeEditView.vue';
+import PublicRecipesView from '@/views/PublicRecipesView.vue';
 import RecipesView from '@/views/RecipesView.vue';
 
 const routes: RouteRecordRaw[] = [
@@ -51,6 +52,14 @@ const routes: RouteRecordRaw[] = [
     path: '/recettes/nouvelle',
     name: 'recipe-create',
     component: RecipeCreateView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/decouvrir/recettes',
+    name: 'public-recipes',
+    component: PublicRecipesView,
     meta: {
       requiresAuth: true,
     },

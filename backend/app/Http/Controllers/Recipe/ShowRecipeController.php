@@ -19,6 +19,9 @@ class ShowRecipeController extends Controller
         $user = $request->user();
         Gate::forUser($user)->authorize('view', $recipe);
 
+        $recipe->loadExists([
+            'favoritedBy as is_favorite' => fn ($query) => $query->whereKey($user->getKey()),
+        ]);
         $recipe->load(['ingredients', 'steps', 'tags', 'author']);
 
         return ApiResponse::success(

@@ -5,20 +5,19 @@ namespace App\Http\Controllers\Recipe;
 use App\Http\Controllers\Controller;
 use App\Models\Recipe;
 use App\Models\User;
-use App\Services\Recipe\DeleteRecipeAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
-class DeleteRecipeController extends Controller
+class RemoveRecipeFavoriteController extends Controller
 {
-    public function __invoke(Request $request, Recipe $recipe, DeleteRecipeAction $action): Response
+    public function __invoke(Request $request, Recipe $recipe): Response
     {
         /** @var User $user */
         $user = $request->user();
-        Gate::forUser($user)->authorize('delete', $recipe);
+        Gate::forUser($user)->authorize('view', $recipe);
 
-        $action->execute($recipe);
+        $user->favoriteRecipes()->detach($recipe->getKey());
 
         return response()->noContent();
     }

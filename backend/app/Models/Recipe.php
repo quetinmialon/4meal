@@ -87,6 +87,11 @@ class Recipe extends Model
         return $this->belongsTo(Cookbook::class);
     }
 
+    public function cookbooks(): BelongsToMany
+    {
+        return $this->belongsToMany(Cookbook::class, 'cookbook_recipe')->withTimestamps();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -110,5 +115,10 @@ class Recipe extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'recipe_tag')->withTimestamps();
+    }
+
+    public function favoritedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'recipe_favorites')->withTimestamps();
     }
 }

@@ -2,7 +2,9 @@
 import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
+import RecipeFavoriteButton from '@/components/RecipeFavoriteButton.vue';
 import { useAuthStore } from '@/stores/auth';
+import { addRecipeToCookbook, fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { deleteRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
 
 const route = useRoute();
@@ -14,6 +16,43 @@ const errorMessage = ref('');
 const isDeleteConfirmationVisible = ref(false);
 const isDeleting = ref(false);
 const deleteError = ref('');
+const isCookbookPickerVisible = ref(false);
+const cookbooks = ref<Cookbook[]>([]);
+const selectedCookbookId = ref('');
+const isLoadingCookbooks = ref(false);
+const isAddingToCookbook = ref(false);
+const cookbookError = ref('');
+
+async function openCookbookPicker(): Promise<void> {
+  isCookbookPickerVisible.value = true;
+  cookbookError.value = '';
+  if (cookbooks.value.length > 0) return;
+
+  isLoadingCookbooks.value = true;
+  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  if (result.ok) cookbooks.value = result.data;
+  else cookbookError.value = result.message;
+  isLoadingCookbooks.value = false;
+}
+
+async function addToSelectedCookbook(): Promise<void> {
+  if (!recipe.value || selectedCookbookId.value === '') return;
+  isAddingToCookbook.value = true;
+  cookbookError.value = '';
+  const result = await addRecipeToCookbook(
+    selectedCookbookId.value,
+    recipe.value.id,
+    authStore.tokenType,
+    authStore.accessToken,
+  );
+  if (result.ok) {
+    selectedCookbookId.value = '';
+    isCookbookPickerVisible.value = false;
+  } else {
+    cookbookError.value = result.message;
+  }
+  isAddingToCookbook.value = false;
+}
 
 async function loadRecipe(): Promise<void> {
   isLoading.value = true;
@@ -69,6 +108,25 @@ async function confirmDelete(): Promise<void> {
     <article v-else-if="recipe" class="recipe-detail">
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
+      <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
+      <button v-if="!isCookbookPickerVisible" type="button" class="cookbook-button" @click="openCookbookPicker">
+        Ajouter à un cookbook
+      </button>
+      <form v-else class="cookbook-picker" @submit.prevent="addToSelectedCookbook">
+        <label for="recipe-cookbook">Choisir un cookbook</label>
+        <select id="recipe-cookbook" v-model="selectedCookbookId" :disabled="isLoadingCookbooks || isAddingToCookbook">
+          <option value="">Choisir un cookbook</option>
+          <option v-for="cookbook in cookbooks" :key="cookbook.id" :value="cookbook.id">{{ cookbook.name }}</option>
+        </select>
+        <div class="cookbook-picker-actions">
+          <button type="submit" :disabled="isAddingToCookbook || selectedCookbookId === ''">
+            {{ isAddingToCookbook ? 'Ajout...' : 'Ajouter' }}
+          </button>
+          <button type="button" class="cancel-button" :disabled="isAddingToCookbook" @click="isCookbookPickerVisible = false">Annuler</button>
+        </div>
+        <p v-if="isLoadingCookbooks" class="muted">Chargement des cookbooks...</p>
+        <p v-if="cookbookError" class="delete-error" role="alert">{{ cookbookError }}</p>
+      </form>
       <img v-if="recipe.image_url" class="recipe-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
       <RouterLink class="edit-link" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">Modifier la recette</RouterLink>
       <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" :disabled="isDeleting" @click="openDeleteConfirmation">
@@ -136,6 +194,11 @@ async function confirmDelete(): Promise<void> {
 h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .author, .description, .source, .muted { color: #50634d; line-height: 1.6; }
 .edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
+.cookbook-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.cookbook-picker { display: grid; gap: .55rem; max-width: 24rem; margin-top: .8rem; padding: .9rem; border: 1px solid rgba(86,112,79,.18); border-radius: .7rem; }
+.cookbook-picker select { padding: .5rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
+.cookbook-picker-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.cookbook-picker-actions button { padding: .5rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .delete-button { display: inline-block; margin: .7rem .5rem 0 0; padding: .55rem .75rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: #8f1e1e; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .delete-confirmation { margin-top: 1rem; padding: 1rem; border: 1px solid #e2b3ad; border-radius: .8rem; background: #fff8f6; }
 .delete-confirmation h3 { margin-top: 0; color: #8f1e1e; }

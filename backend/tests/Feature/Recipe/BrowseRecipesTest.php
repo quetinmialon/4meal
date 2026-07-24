@@ -21,7 +21,7 @@ function browseRecipeToken(User $user): string
     ])->json('data.access_token');
 }
 
-it('lists only personal recipes and recipes from accessible cookbooks', function (): void {
+it('lists public personal recipes and recipes from accessible cookbooks', function (): void {
     $user = User::factory()->create(['password' => 'password123']);
     $otherUser = User::factory()->create();
     $accessibleCookbook = Cookbook::factory()->create();
@@ -36,8 +36,32 @@ it('lists only personal recipes and recipes from accessible cookbooks', function
     $response = $this->withToken(browseRecipeToken($user))
         ->getJson('/api/recipes?per_page=10');
 
-    $response->assertOk()->assertJsonCount(2, 'data');
-    expect(collect($response->json('data'))->pluck('id'))->toHaveCount(2);
+    $response->assertOk()->assertJsonCount(3, 'data');
+});
+
+it('lists only owned recipes in the mine scope', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $otherUser = User::factory()->create();
+    Recipe::factory()->create(['user_id' => $user->id, 'author_id' => $user->id]);
+    Recipe::factory()->create(['user_id' => $otherUser->id, 'author_id' => $otherUser->id]);
+
+    $this->withToken(browseRecipeToken($user))
+        ->getJson('/api/recipes?scope=mine')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
+it('lists only personal recipes in the public scope', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'owner']);
+    Recipe::factory()->create(['user_id' => $user->id, 'author_id' => $user->id]);
+    Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $user->id]);
+
+    $this->withToken(browseRecipeToken($user))
+        ->getJson('/api/recipes?scope=public')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
 });
 
 it('paginates accessible recipes', function (): void {
@@ -73,7 +97,7 @@ it('returns a recipe detail with all requested relations and its author', functi
         ->assertJsonPath('data.tags.0.slug', 'dessert');
 });
 
-it('forbids an external user from viewing a personal or cookbook recipe', function (): void {
+it('allows an external user to view personal recipes but not private cookbook recipes', function (): void {
     $owner = User::factory()->create(['password' => 'password123']);
     $external = User::factory()->create(['password' => 'password123']);
     $cookbook = Cookbook::factory()->create(['owner_id' => $owner->id]);
@@ -83,9 +107,9 @@ it('forbids an external user from viewing a personal or cookbook recipe', functi
 
     $token = browseRecipeToken($external);
 
-    $this->withToken($token)->getJson('/api/recipes/'.$personal->public_id)->assertForbidden();
+    $this->withToken($token)->getJson('/api/recipes/'.$personal->public_id)->assertOk();
     $this->withToken($token)->getJson('/api/recipes/'.$shared->public_id)->assertForbidden();
-    $this->withToken($token)->getJson('/api/recipes')->assertJsonCount(0, 'data');
+    $this->withToken($token)->getJson('/api/recipes')->assertJsonCount(1, 'data');
 });
 
 it('loads recipe relations without one query per recipe', function (): void {

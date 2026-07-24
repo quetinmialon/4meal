@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RecipeResource;
 use App\Models\Cookbook;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +22,10 @@ class ListCookbookRecipesController extends Controller
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $recipes = $cookbook->recipes()
             ->with(['ingredients', 'steps', 'tags', 'author'])
+            ->withExists([
+                'favoritedBy as is_favorite' => fn (Builder $query) => $query->whereKey($user->getKey()),
+            ])
+            ->orWhereHas('cookbooks', fn (Builder $query) => $query->whereKey($cookbook->getKey()))
             ->orderByDesc('recipes.created_at')
             ->paginate($perPage)
             ->withQueryString();
