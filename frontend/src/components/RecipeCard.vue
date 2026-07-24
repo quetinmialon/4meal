@@ -22,7 +22,7 @@ defineProps<{ recipe: Recipe }>();
       <div v-if="recipe.tags?.length" class="tags" aria-label="Tags">
         <span v-for="tag in recipe.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
       </div>
-      <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite" />
+      <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
     </div>
     <RouterLink class="details-link" :to="{ name: 'recipe-detail', params: { id: recipe.id } }">Voir la recette</RouterLink>
   </article>

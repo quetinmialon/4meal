@@ -66,7 +66,7 @@ export type Recipe = {
   servings: number | null;
   notes?: string | null;
   source: string | null;
-  is_favorite: boolean;
+  is_favorite?: boolean;
   image_path?: string | null;
   image_url?: string | null;
   created_at: string | null;

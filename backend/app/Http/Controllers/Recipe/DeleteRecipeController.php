@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Recipe;
 use App\Models\User;
 use App\Services\Recipe\DeleteRecipeAction;
-use Illuminate\Http\Response;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
 class DeleteRecipeController extends Controller

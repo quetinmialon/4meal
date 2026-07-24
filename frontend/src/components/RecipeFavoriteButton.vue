@@ -12,7 +12,6 @@ const props = defineProps<{
 const isFavorite = ref(props.isFavorite ?? false);
 const isSaving = ref(false);
 const errorMessage = ref('');
-const authStore = useAuthStore();
 
 watch(() => props.isFavorite, (value) => {
   if (!isSaving.value) isFavorite.value = value ?? false;
@@ -26,6 +25,7 @@ async function toggleFavorite(): Promise<void> {
   isFavorite.value = nextValue;
   errorMessage.value = '';
   isSaving.value = true;
+  const authStore = useAuthStore();
 
   const result = await setRecipeFavorite(
     props.recipeId,

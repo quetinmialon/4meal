@@ -108,7 +108,7 @@ async function confirmDelete(): Promise<void> {
     <article v-else-if="recipe" class="recipe-detail">
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
-      <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite" />
+      <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
       <button v-if="!isCookbookPickerVisible" type="button" class="cookbook-button" @click="openCookbookPicker">
         Ajouter à un cookbook
       </button>
