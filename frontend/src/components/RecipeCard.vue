@@ -8,6 +8,7 @@ defineProps<{ recipe: Recipe }>();
 
 <template>
   <article class="recipe-card">
+    <img v-if="recipe.image_url" class="recipe-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
     <div>
       <p class="recipe-kicker">Recette</p>
       <h3>{{ recipe.title }}</h3>
@@ -27,6 +28,7 @@ defineProps<{ recipe: Recipe }>();
 
 <style scoped>
 .recipe-card { display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.2rem; border: 1px solid rgba(86,112,79,.2); border-radius: 1rem; background: rgba(255,253,248,.92); box-shadow: 0 10px 30px rgba(54,68,35,.06); }
+.recipe-image { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: .75rem; }
 .recipe-kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h3 { margin: 0; color: #243127; font-size: 1.3rem; }
 .description { color: #50634d; line-height: 1.5; }

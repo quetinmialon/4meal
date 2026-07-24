@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Recipe;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin Recipe
@@ -30,6 +31,9 @@ class RecipeResource extends JsonResource
             'rest_time_minutes' => $recipe->rest_time_minutes,
             'servings' => $recipe->servings,
             'image_path' => $recipe->image_path,
+            'image_url' => is_string($recipe->image_path)
+                ? Storage::disk('public')->url($recipe->image_path)
+                : null,
             'visibility' => $recipe->visibility,
             'difficulty' => $recipe->difficulty,
             'notes' => $recipe->notes,

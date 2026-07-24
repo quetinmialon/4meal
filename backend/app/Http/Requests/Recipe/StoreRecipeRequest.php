@@ -32,6 +32,14 @@ class StoreRecipeRequest extends FormRequest
             'cook_time_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
             'servings' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'source' => ['nullable', 'string', 'max:2048'],
+            'image' => [
+                'nullable',
+                'file',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'extensions:jpg,jpeg,png,webp',
+                'max:5120',
+                'dimensions:min_width=200,min_height=200,max_width=4000,max_height=4000',
+            ],
             'cookbook_id' => [
                 'nullable',
                 'uuid',
