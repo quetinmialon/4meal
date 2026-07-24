@@ -22,6 +22,7 @@ Principes obligatoires :
 - éviter les requêtes N+1 ;
 - ajouter les index de base de données pertinents ;
 - ne jamais exposer de secret ;
+- chaque entité implémentée doit être accompagnée d'un seeder complet couvrant ses champs et relations pour faciliter les tests ;
 - ne jamais placer de logique métier dans Vue ;
 - utiliser TypeScript strictement côté frontend ;
 - ne modifier aucun fichier sans rapport avec la tâche ;

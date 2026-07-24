@@ -34,6 +34,8 @@ components:
       $ref: ./components/parameters/pagination.yaml#/Page
     PerPage:
       $ref: ./components/parameters/pagination.yaml#/PerPage
+    Search:
+      $ref: ./components/parameters/pagination.yaml#/Search
   schemas:
     EnvelopeMeta:
       $ref: ./components/schemas/common.yaml#/EnvelopeMeta

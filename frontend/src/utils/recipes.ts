@@ -86,6 +86,15 @@ export type RecipePagination = {
   has_more_pages: boolean;
 };
 
+export type RecipeFilters = {
+  cookbook_id?: string;
+  tag?: string;
+  ingredient?: string;
+  max_prep_time?: number;
+  max_cook_time?: number;
+  favorites?: boolean;
+};
+
 type RecipePayload = { success: true; data: CreatedRecipe };
 type RecipeListPayload = { success: true; data: Recipe[]; meta: { pagination: RecipePagination } };
 type RecipeDetailPayload = { success: true; data: Recipe };
@@ -167,9 +176,20 @@ export async function fetchRecipes(
   accessToken: string,
   page = 1,
   scope: 'all' | 'mine' | 'public' = 'all',
+  search = '',
+  filters: RecipeFilters = {},
 ): Promise<RecipeListResult> {
   try {
-    const response = await fetch(`/api/recipes?page=${page}${scope === 'all' ? '' : `&scope=${scope}`}`, { headers: recipeReadHeaders(tokenType, accessToken) });
+    const params = new URLSearchParams({ page: String(page) });
+    if (scope !== 'all') params.set('scope', scope);
+    if (search.trim() !== '') params.set('q', search.trim());
+    if (filters.cookbook_id) params.set('cookbook_id', filters.cookbook_id);
+    if (filters.tag?.trim()) params.set('tag', filters.tag.trim());
+    if (filters.ingredient?.trim()) params.set('ingredient', filters.ingredient.trim());
+    if (filters.max_prep_time !== undefined) params.set('max_prep_time', String(filters.max_prep_time));
+    if (filters.max_cook_time !== undefined) params.set('max_cook_time', String(filters.max_cook_time));
+    if (filters.favorites) params.set('favorites', 'true');
+    const response = await fetch(`/api/recipes?${params.toString()}`, { headers: recipeReadHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as RecipeListPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) {
       return { ok: true, recipes: payload.data, pagination: payload.meta.pagination };
