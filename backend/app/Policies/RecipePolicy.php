@@ -32,7 +32,8 @@ class RecipePolicy
 
     public function delete(User $user, Recipe $recipe): bool
     {
-        return $this->update($user, $recipe);
+        return $this->ownsPersonally($user, $recipe)
+            || $this->canInCookbook($user, $recipe, CookbookPermissions::DELETE);
     }
 
     private function ownsPersonally(User $user, Recipe $recipe): bool

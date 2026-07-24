@@ -14,6 +14,7 @@ export type RecipeStepInput = {
 
 export type RecipeInput = {
   title: string;
+  description?: string | null;
   prep_time_minutes: number | null;
   cook_time_minutes: number | null;
   servings: number | null;
@@ -160,6 +161,7 @@ export async function createRecipe(
       body: JSON.stringify({
         ...input,
         title: input.title.trim(),
+        description: input.description?.trim() || null,
         source: input.source.trim() || null,
         cookbook_id: input.cookbook_id || null,
         ingredients: input.ingredients.map((ingredient) => ({
@@ -194,6 +196,106 @@ export async function createRecipe(
       ok: false,
       message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
       fieldErrors: {},
+    };
+  }
+}
+
+export type UpdateRecipeResult =
+  | { ok: true; recipe: CreatedRecipe }
+  | { ok: false; message: string; fieldErrors: Record<string, string>; conflict?: boolean };
+
+export async function updateRecipe(
+  id: string,
+  input: RecipeInput,
+  tokenType: string,
+  accessToken: string,
+): Promise<UpdateRecipeResult> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `${tokenType} ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: input.title.trim(),
+        description: input.description?.trim() || null,
+        prep_time_minutes: input.prep_time_minutes,
+        cook_time_minutes: input.cook_time_minutes,
+        servings: input.servings,
+        source: input.source.trim() || null,
+        ingredients: input.ingredients.map((ingredient) => ({
+          ...ingredient,
+          name: ingredient.name.trim(),
+          unit: ingredient.unit.trim() || null,
+          preparation: ingredient.preparation.trim() || null,
+          group_name: ingredient.group_name.trim() || null,
+        })),
+        steps: input.steps.map((step) => ({ ...step, instruction: step.instruction.trim() })),
+        tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as RecipePayload | ApiErrorPayload | null;
+
+    if (response.ok && payload?.success === true) {
+      return { ok: true, recipe: payload.data };
+    }
+
+    const fields = payload?.success === false ? payload.error?.details?.fields : undefined;
+    const conflict = response.status === 409;
+    return {
+      ok: false,
+      conflict,
+      message: payload?.success === false
+        ? (payload.error?.message ?? (conflict ? 'La recette a été modifiée ailleurs. Rechargez-la avant de réessayer.' : 'Impossible de modifier la recette.'))
+        : (conflict ? 'La recette a été modifiée ailleurs. Rechargez-la avant de réessayer.' : 'Impossible de modifier la recette.'),
+      fieldErrors: Object.fromEntries(
+        Object.entries(fields ?? {}).map(([key, messages]) => [key, messages[0] ?? 'Valeur invalide.']),
+      ),
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+      fieldErrors: {},
+    };
+  }
+}
+
+export type DeleteRecipeResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function deleteRecipe(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<DeleteRecipeResult> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `${tokenType} ${accessToken}`,
+      },
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+    if (response.status === 204 || (response.ok && payload?.success !== false)) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de supprimer la recette.')
+        : 'Impossible de supprimer la recette.',
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
     };
   }
 }

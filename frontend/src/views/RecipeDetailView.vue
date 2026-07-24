@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
-import { fetchRecipe, type Recipe } from '@/utils/recipes';
+import { deleteRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
 
 const route = useRoute();
+const router = useRouter();
 const authStore = useAuthStore();
 const recipe = ref<Recipe | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
+const isDeleteConfirmationVisible = ref(false);
+const isDeleting = ref(false);
+const deleteError = ref('');
 
 async function loadRecipe(): Promise<void> {
   isLoading.value = true;
@@ -26,6 +30,32 @@ function ingredientLabel(quantity: number | null, unit: string): string {
   if (quantity === null && unit === '') return '';
   return [quantity, unit].filter((value) => value !== null && value !== '').join(' ');
 }
+
+function openDeleteConfirmation(): void {
+  deleteError.value = '';
+  isDeleteConfirmationVisible.value = true;
+}
+
+function cancelDelete(): void {
+  if (isDeleting.value) return;
+  isDeleteConfirmationVisible.value = false;
+  deleteError.value = '';
+}
+
+async function confirmDelete(): Promise<void> {
+  if (!recipe.value) return;
+  deleteError.value = '';
+  isDeleting.value = true;
+  const result = await deleteRecipe(recipe.value.id, authStore.tokenType, authStore.accessToken);
+
+  if (result.ok) {
+    await router.push({ name: 'recipes' });
+    return;
+  }
+
+  deleteError.value = result.message;
+  isDeleting.value = false;
+}
 </script>
 
 <template>
@@ -39,6 +69,21 @@ function ingredientLabel(quantity: number | null, unit: string): string {
     <article v-else-if="recipe" class="recipe-detail">
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
+      <RouterLink class="edit-link" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">Modifier la recette</RouterLink>
+      <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" :disabled="isDeleting" @click="openDeleteConfirmation">
+        Supprimer la recette
+      </button>
+      <section v-else class="delete-confirmation" aria-labelledby="delete-recipe-heading">
+        <h3 id="delete-recipe-heading">Supprimer cette recette ?</h3>
+        <p>Cette action supprimera la recette et ses ingrédients, étapes et associations de tags.</p>
+        <p v-if="deleteError" class="delete-error" role="alert">{{ deleteError }}</p>
+        <div class="delete-actions">
+          <button type="button" class="delete-button" :disabled="isDeleting" @click="confirmDelete">
+            {{ isDeleting ? 'Suppression...' : 'Confirmer la suppression' }}
+          </button>
+          <button type="button" class="cancel-button" :disabled="isDeleting" @click="cancelDelete">Annuler</button>
+        </div>
+      </section>
       <p v-if="recipe.author" class="author">Par {{ recipe.author.name }}</p>
       <p v-if="recipe.description" class="description">{{ recipe.description }}</p>
       <div class="meta">
@@ -88,6 +133,15 @@ function ingredientLabel(quantity: number | null, unit: string): string {
 .kicker { margin: 0 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .author, .description, .source, .muted { color: #50634d; line-height: 1.6; }
+.edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
+.delete-button { display: inline-block; margin: .7rem .5rem 0 0; padding: .55rem .75rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: #8f1e1e; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.delete-confirmation { margin-top: 1rem; padding: 1rem; border: 1px solid #e2b3ad; border-radius: .8rem; background: #fff8f6; }
+.delete-confirmation h3 { margin-top: 0; color: #8f1e1e; }
+.delete-confirmation p { color: #6d4140; line-height: 1.5; }
+.delete-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.cancel-button { padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.delete-error { color: #8f1e1e !important; font-weight: 700; }
+button:disabled { cursor: wait; opacity: .55; }
 .meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1.2rem 0; color: #395330; font-weight: 700; }
 .tags { display: flex; flex-wrap: wrap; gap: .4rem; }
 .tag { padding: .3rem .55rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: .85rem; }

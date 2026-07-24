@@ -13,6 +13,7 @@ import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
 import RecipeCreateView from '@/views/RecipeCreateView.vue';
 import RecipeDetailView from '@/views/RecipeDetailView.vue';
+import RecipeEditView from '@/views/RecipeEditView.vue';
 import RecipesView from '@/views/RecipesView.vue';
 
 const routes: RouteRecordRaw[] = [
@@ -66,6 +67,14 @@ const routes: RouteRecordRaw[] = [
     path: '/recettes/:id',
     name: 'recipe-detail',
     component: RecipeDetailView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes/:id/modifier',
+    name: 'recipe-edit',
+    component: RecipeEditView,
     meta: {
       requiresAuth: true,
     },

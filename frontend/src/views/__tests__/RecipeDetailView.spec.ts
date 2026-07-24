@@ -6,9 +6,12 @@ import { useAuthStore } from '@/stores/auth';
 
 import RecipeDetailView from '../RecipeDetailView.vue';
 
+const pushMock = vi.fn();
+
 vi.mock('vue-router', () => ({
   RouterLink: { template: '<a><slot /></a>' },
   useRoute: () => ({ params: { id: 'recipe-id' } }),
+  useRouter: () => ({ push: pushMock }),
 }));
 
 describe('RecipeDetailView', () => {
@@ -17,6 +20,7 @@ describe('RecipeDetailView', () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    pushMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     window.localStorage.clear();
     testPinia = createPinia();
@@ -63,5 +67,57 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('[role="status"]').text()).toContain('Chargement');
     await flushPromises();
     expect(wrapper.text()).toContain('Accès refusé');
+  });
+  it('requires confirmation, deletes the recipe and redirects to the list', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 'recipe-id', title: 'A supprimer', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({ ok: true, status: 204, json: async () => null } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.delete-button').trigger('click');
+    expect(wrapper.text()).toContain('Supprimer cette recette ?');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await wrapper.get('.delete-confirmation .delete-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/recipes/recipe-id', {
+      method: 'DELETE',
+      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+    });
+    expect(pushMock).toHaveBeenCalledWith({ name: 'recipes' });
+  });
+
+  it('shows the API deletion error and keeps the recipe visible', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 'recipe-id', title: 'Protegee', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ success: false, error: { message: 'Vous ne pouvez pas supprimer cette recette.' } }),
+      } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.delete-button').trigger('click');
+    await wrapper.get('.delete-confirmation .delete-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Vous ne pouvez pas supprimer cette recette.');
+    expect(wrapper.text()).toContain('Protegee');
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
