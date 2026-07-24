@@ -27,6 +27,7 @@ export type Recipe = {
   rest_time_minutes: number | null;
   servings: number | null;
   image_path: string | null;
+  image_url: string | null;
   visibility: string | null;
   difficulty: string | null;
   notes: string | null;

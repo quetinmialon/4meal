@@ -3,6 +3,7 @@ import { nextTick, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import RecipeIngredientList from '@/components/RecipeIngredientList.vue';
+import RecipeImageField from '@/components/RecipeImageField.vue';
 import RecipeStepList from '@/components/RecipeStepList.vue';
 import { useAuthStore } from '@/stores/auth';
 import { updateRecipe, type Recipe, type RecipeIngredientInput, type RecipeInput, type RecipeStepInput } from '@/utils/recipes';
@@ -44,6 +45,7 @@ const form = reactive<RecipeInput>({
   ingredients: (props.recipe.ingredients ?? []).map(ingredientInput),
   steps: (props.recipe.steps ?? []).map(stepInput),
   tags: (props.recipe.tags ?? []).map((tag) => tag.name),
+  image: null,
 });
 
 function numberValue(event: Event): number | null {
@@ -170,6 +172,8 @@ function reload(): void {
 
       <label for="recipe-source-edit-input">Source</label>
       <input id="recipe-source-edit-input" v-model="form.source" maxlength="2048" />
+
+      <RecipeImageField :model-value="form.image ?? null" :existing-image-url="props.recipe.image_url ?? null" :disabled="isSubmitting" @update:model-value="form.image = $event" />
 
       <div class="form-actions">
         <button class="submit-button" type="submit">{{ isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications' }}</button>

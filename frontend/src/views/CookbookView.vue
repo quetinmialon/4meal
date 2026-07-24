@@ -582,6 +582,8 @@ onMounted(async () => {
         <div v-else class="recipe-list">
           <article v-for="recipe in recipes" :key="recipe.id" class="recipe-item">
             <h4><RouterLink :to="{ name: 'recipe-detail', params: { id: recipe.id } }">{{ recipe.title }}</RouterLink></h4>
+            <img v-if="recipe.image_url" class="recipe-item-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
+            <h4>{{ recipe.title }}</h4>
             <p v-if="recipe.description">{{ recipe.description }}</p>
             <button v-if="canEditName" type="button" class="remove-recipe-button" :disabled="removingRecipeId !== null" @click="removeRecipe(recipe.id)">
               {{ removingRecipeId === recipe.id ? 'Retrait...' : 'Retirer du cookbook' }}
@@ -668,6 +670,7 @@ h3 { margin: 0 0 1rem; font-size: 1.5rem; }
 .empty-state { color: #50634d; }
 .recipe-list { display: grid; gap: 0.7rem; }
 .recipe-item { padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
+.recipe-item-image { display: block; width: 100%; max-height: 12rem; margin-bottom: .8rem; object-fit: cover; border-radius: .6rem; }
 .recipe-item h4, .recipe-item p { margin: 0; }
 .recipe-item p { margin-top: 0.4rem; color: #50634d; line-height: 1.5; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; color: #50634d; font-size: 0.9rem; }

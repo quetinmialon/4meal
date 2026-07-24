@@ -3,6 +3,7 @@ import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import RecipeIngredientList from '@/components/RecipeIngredientList.vue';
+import RecipeImageField from '@/components/RecipeImageField.vue';
 import RecipeStepList from '@/components/RecipeStepList.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook } from '@/utils/cookbooks';
@@ -36,6 +37,7 @@ const form = reactive<RecipeInput>({
   ingredients: [blankIngredient()],
   steps: [blankStep()],
   tags: [],
+  image: null,
 });
 
 function numberValue(event: Event): number | null {
@@ -189,6 +191,8 @@ onMounted(() => { void loadCookbooks(); });
 
       <label for="recipe-source-input">Source (facultatif)</label>
       <input id="recipe-source-input" v-model="form.source" maxlength="2048" />
+
+      <RecipeImageField :model-value="form.image ?? null" :disabled="isSubmitting" @update:model-value="form.image = $event" />
 
       <button class="submit-button" type="submit">{{ isSubmitting ? 'Création...' : 'Créer la recette' }}</button>
     </fieldset>
