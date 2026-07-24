@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/stores/auth';
 
 import RecipeCreateForm from '../RecipeCreateForm.vue';
+import RecipeImageField from '../RecipeImageField.vue';
 
 const pushMock = vi.fn();
 
@@ -144,5 +145,31 @@ describe('RecipeCreateForm', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('invalides');
     expect(wrapper.text()).toContain('Le titre est déjà utilisé.');
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('sends a selected image as multipart data', async () => {
+    fetchMock
+      .mockResolvedValueOnce(cookbooksResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Pâtes', slug: 'pates' } }),
+      } as Response);
+    const wrapper = mount(RecipeCreateForm, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('#recipe-title-input').setValue('Pâtes');
+    await wrapper.get('#ingredient-name-0').setValue('Tomates');
+    await wrapper.get('#step-instruction-0').setValue('Cuire.');
+
+    const image = new File(['image'], 'recipe.png', { type: 'image/png' });
+    wrapper.getComponent(RecipeImageField).vm.$emit('update:modelValue', image);
+    await wrapper.get('form').trigger('submit.prevent');
+    await flushPromises();
+
+    const request = fetchMock.mock.calls[1]?.[1];
+    expect(request?.body).toBeInstanceOf(FormData);
+    expect((request?.body as FormData).get('image')).toBe(image);
+    expect((request?.body as FormData).get('ingredients[0][name]')).toBe('Tomates');
+    expect(request?.headers).not.toHaveProperty('Content-Type');
   });
 });

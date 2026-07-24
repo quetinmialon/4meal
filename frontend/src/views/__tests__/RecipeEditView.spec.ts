@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '@/stores/auth';
 
+import RecipeImageField from '@/components/RecipeImageField.vue';
 import RecipeEditView from '../RecipeEditView.vue';
 
 const pushMock = vi.fn();
@@ -124,5 +125,26 @@ describe('RecipeEditView', () => {
     await wrapper.get('.reload-button').trigger('click');
     await flushPromises();
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('sends a replacement image with method spoofing', async () => {
+    fetchMock
+      .mockResolvedValueOnce(recipeResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Tarte', slug: 'tarte' } }),
+      } as Response);
+    const wrapper = mount(RecipeEditView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    const image = new File(['replacement'], 'replacement.webp', { type: 'image/webp' });
+    wrapper.getComponent(RecipeImageField).vm.$emit('update:modelValue', image);
+    await wrapper.get('form').trigger('submit.prevent');
+    await flushPromises();
+
+    const request = fetchMock.mock.calls[1]?.[1];
+    expect(request?.method).toBe('POST');
+    expect((request?.body as FormData).get('_method')).toBe('PATCH');
+    expect((request?.body as FormData).get('image')).toBe(image);
   });
 });

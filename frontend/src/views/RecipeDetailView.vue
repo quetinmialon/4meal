@@ -69,6 +69,7 @@ async function confirmDelete(): Promise<void> {
     <article v-else-if="recipe" class="recipe-detail">
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
+      <img v-if="recipe.image_url" class="recipe-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
       <RouterLink class="edit-link" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">Modifier la recette</RouterLink>
       <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" :disabled="isDeleting" @click="openDeleteConfirmation">
         Supprimer la recette
@@ -130,6 +131,7 @@ async function confirmDelete(): Promise<void> {
 .error-summary { padding: 1rem; border-radius: .8rem; color: #8f1e1e; background: #fff0ee; }
 .error-summary button { display: block; margin-top: .75rem; padding: .5rem .7rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: transparent; color: #8f1e1e; font: inherit; font-weight: 700; cursor: pointer; }
 .recipe-detail { margin-top: 1.5rem; padding: 2rem; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
+.recipe-image { display: block; width: 100%; max-height: 24rem; margin: 1.2rem 0; object-fit: cover; border-radius: 1rem; }
 .kicker { margin: 0 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .author, .description, .source, .muted { color: #50634d; line-height: 1.6; }

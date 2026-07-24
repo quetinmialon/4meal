@@ -23,6 +23,7 @@ export type RecipeInput = {
   ingredients: RecipeIngredientInput[];
   steps: RecipeStepInput[];
   tags: string[];
+  image?: File | null;
 };
 
 export type CreatedRecipe = {
@@ -65,6 +66,8 @@ export type Recipe = {
   servings: number | null;
   notes?: string | null;
   source: string | null;
+  image_path?: string | null;
+  image_url?: string | null;
   created_at: string | null;
   author: RecipeUser | null;
   ingredients?: RecipeIngredient[];
@@ -113,6 +116,51 @@ function readError(payload: ApiErrorPayload | null, fallback: string): string {
   return payload?.success === false ? (payload.error?.message ?? fallback) : fallback;
 }
 
+function appendRecipeFormData(formData: FormData, input: RecipeInput, method?: string): void {
+  formData.append('title', input.title.trim());
+  if (input.description?.trim()) formData.append('description', input.description.trim());
+  if (input.prep_time_minutes !== null) formData.append('prep_time_minutes', String(input.prep_time_minutes));
+  if (input.cook_time_minutes !== null) formData.append('cook_time_minutes', String(input.cook_time_minutes));
+  if (input.servings !== null) formData.append('servings', String(input.servings));
+  if (input.source.trim()) formData.append('source', input.source.trim());
+  if (input.cookbook_id) formData.append('cookbook_id', input.cookbook_id);
+  if (method) formData.append('_method', method);
+
+  input.ingredients.forEach((ingredient, index) => {
+    formData.append(`ingredients[${index}][name]`, ingredient.name.trim());
+    if (ingredient.quantity !== null) formData.append(`ingredients[${index}][quantity]`, String(ingredient.quantity));
+    if (ingredient.unit.trim()) formData.append(`ingredients[${index}][unit]`, ingredient.unit.trim());
+    if (ingredient.preparation.trim()) formData.append(`ingredients[${index}][preparation]`, ingredient.preparation.trim());
+    formData.append(`ingredients[${index}][is_optional]`, ingredient.is_optional ? '1' : '0');
+    if (ingredient.group_name.trim()) formData.append(`ingredients[${index}][group_name]`, ingredient.group_name.trim());
+  });
+  input.steps.forEach((step, index) => {
+    formData.append(`steps[${index}][instruction]`, step.instruction.trim());
+    if (step.duration_minutes !== null) formData.append(`steps[${index}][duration_minutes]`, String(step.duration_minutes));
+  });
+  input.tags.forEach((tag, index) => formData.append(`tags[${index}]`, tag.trim()));
+  if (input.image instanceof File) formData.append('image', input.image);
+}
+
+function normalizedRecipePayload(input: RecipeInput) {
+  return {
+    ...input,
+    title: input.title.trim(),
+    description: input.description?.trim() || null,
+    source: input.source.trim() || null,
+    cookbook_id: input.cookbook_id || null,
+    ingredients: input.ingredients.map((ingredient) => ({
+      ...ingredient,
+      name: ingredient.name.trim(),
+      unit: ingredient.unit.trim() || null,
+      preparation: ingredient.preparation.trim() || null,
+      group_name: ingredient.group_name.trim() || null,
+    })),
+    steps: input.steps.map((step) => ({ ...step, instruction: step.instruction.trim() })),
+    tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
+  };
+}
+
 export async function fetchRecipes(
   tokenType: string,
   accessToken: string,
@@ -151,29 +199,18 @@ export async function createRecipe(
   accessToken: string,
 ): Promise<CreateRecipeResult> {
   try {
+    const normalizedInput = normalizedRecipePayload(input);
+    const hasImage = input.image instanceof File;
+    const body = hasImage ? new FormData() : JSON.stringify(normalizedInput);
+    if (hasImage) appendRecipeFormData(body as FormData, input);
     const response = await fetch('/api/recipes', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,
-        'Content-Type': 'application/json',
+        ...(hasImage ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: JSON.stringify({
-        ...input,
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
-        source: input.source.trim() || null,
-        cookbook_id: input.cookbook_id || null,
-        ingredients: input.ingredients.map((ingredient) => ({
-          ...ingredient,
-          name: ingredient.name.trim(),
-          unit: ingredient.unit.trim() || null,
-          preparation: ingredient.preparation.trim() || null,
-          group_name: ingredient.group_name.trim() || null,
-        })),
-        steps: input.steps.map((step) => ({ ...step, instruction: step.instruction.trim() })),
-        tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
-      }),
+      body,
     });
     const payload = (await response.json().catch(() => null)) as RecipePayload | ApiErrorPayload | null;
 
@@ -211,30 +248,18 @@ export async function updateRecipe(
   accessToken: string,
 ): Promise<UpdateRecipeResult> {
   try {
+    const normalizedInput = normalizedRecipePayload(input);
+    const hasImage = input.image instanceof File;
+    const body = hasImage ? new FormData() : JSON.stringify(normalizedInput);
+    if (hasImage) appendRecipeFormData(body as FormData, input, 'PATCH');
     const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
+      method: hasImage ? 'POST' : 'PATCH',
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,
-        'Content-Type': 'application/json',
+        ...(hasImage ? {} : { 'Content-Type': 'application/json' }),
       },
-      body: JSON.stringify({
-        title: input.title.trim(),
-        description: input.description?.trim() || null,
-        prep_time_minutes: input.prep_time_minutes,
-        cook_time_minutes: input.cook_time_minutes,
-        servings: input.servings,
-        source: input.source.trim() || null,
-        ingredients: input.ingredients.map((ingredient) => ({
-          ...ingredient,
-          name: ingredient.name.trim(),
-          unit: ingredient.unit.trim() || null,
-          preparation: ingredient.preparation.trim() || null,
-          group_name: ingredient.group_name.trim() || null,
-        })),
-        steps: input.steps.map((step) => ({ ...step, instruction: step.instruction.trim() })),
-        tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
-      }),
+      body,
     });
     const payload = (await response.json().catch(() => null)) as RecipePayload | ApiErrorPayload | null;
 
