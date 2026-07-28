@@ -79,4 +79,9 @@ class Cookbook extends Model
     {
         return $this->hasMany(PlannedMeal::class);
     }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(CookbookMessage::class);
+    }
 }

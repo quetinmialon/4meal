@@ -14,13 +14,16 @@ use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
 use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
+use App\Http\Controllers\Cookbook\CreateCookbookMessageController;
 use App\Http\Controllers\Cookbook\DeclineCookbookInvitationController;
 use App\Http\Controllers\Cookbook\DeleteCookbookController;
 use App\Http\Controllers\Cookbook\LeaveCookbookController;
 use App\Http\Controllers\Cookbook\ListCookbookInvitationsController;
 use App\Http\Controllers\Cookbook\ListCookbookMembersController;
+use App\Http\Controllers\Cookbook\ListCookbookMessagesController;
 use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
+use App\Http\Controllers\Cookbook\ListLatestCookbookMessagesController;
 use App\Http\Controllers\Cookbook\RemoveCookbookMemberController;
 use App\Http\Controllers\Cookbook\RemoveCookbookRecipeController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
@@ -121,6 +124,16 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks/{cookbook}/members', ListCookbookMembersController::class)
             ->name('cookbooks.members.index');
+
+        Route::post('cookbooks/{cookbook}/messages', CreateCookbookMessageController::class)
+            ->middleware('throttle:chat.messages')
+            ->name('cookbooks.messages.store');
+
+        Route::get('cookbooks/{cookbook}/messages', ListCookbookMessagesController::class)
+            ->name('cookbooks.messages.index');
+
+        Route::get('cookbooks/{cookbook}/messages/latest', ListLatestCookbookMessagesController::class)
+            ->name('cookbooks.messages.latest');
 
         Route::delete('cookbooks/{cookbook}/members/me', LeaveCookbookController::class)
             ->name('cookbooks.members.leave');

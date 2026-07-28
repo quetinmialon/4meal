@@ -491,7 +491,7 @@ describe('CookbookView', () => {
     await flushPromises();
 
     expect(wrapper.get('.delete-form').text()).toContain('Action non autorisee.');
-    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('.delete-form button[type="submit"]').attributes('disabled')).toBeUndefined();
     expect(pushMock).not.toHaveBeenCalled();
   });
 });

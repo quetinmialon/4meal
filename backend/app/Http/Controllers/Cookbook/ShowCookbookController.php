@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Cookbook;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CookbookMessageResource;
 use App\Http\Resources\CookbookResource;
 use App\Models\Cookbook;
 use App\Models\CookbookMember;
+use App\Models\CookbookMessage;
 use App\Models\User;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -28,9 +30,26 @@ class ShowCookbookController extends Controller
                 ->value('role'),
         );
 
-        return ApiResponse::success(
-            $request,
-            CookbookResource::make($cookbook->load('owner'))->resolve($request),
-        );
+        $latestMessages = CookbookMessage::query()
+            ->where('cookbook_id', $cookbook->getKey())
+            ->with('user')
+            ->latest('created_at')
+            ->latest('id')
+            ->limit(3)
+            ->get()
+            ->reverse()
+            ->values();
+
+        foreach ($latestMessages as $message) {
+            $message->setAttribute(
+                'member_role',
+                $cookbook->members()->whereKey($message->user_id)->value('cookbook_members.role'),
+            );
+        }
+
+        $data = CookbookResource::make($cookbook->load('owner'))->resolve($request);
+        $data['latest_messages'] = CookbookMessageResource::collection($latestMessages)->resolve($request);
+
+        return ApiResponse::success($request, $data);
     }
 }

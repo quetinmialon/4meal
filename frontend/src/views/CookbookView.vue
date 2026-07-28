@@ -4,7 +4,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
-import type { Cookbook, CookbookMember, Pagination, Recipe } from '@/utils/cookbooks';
+import CookbookMessageComposer from '@/components/CookbookMessageComposer.vue';
+import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe } from '@/utils/cookbooks';
 import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
 
@@ -27,6 +28,9 @@ const members = ref<CookbookMember[]>([]);
 const membersPagination = ref<Pagination | null>(null);
 const membersError = ref('');
 const membersLoading = ref(true);
+const latestMessages = ref<CookbookMessage[]>([]);
+const messagesError = ref('');
+const messagesLoading = ref(true);
 const roleDrafts = reactive<Record<number, string>>({});
 const pendingRoleChange = ref<{ member: CookbookMember; role: string } | null>(null);
 const roleUpdateLoading = ref(false);
@@ -245,6 +249,17 @@ async function loadMembers(page = 1): Promise<void> {
   membersLoading.value = false;
 }
 
+async function loadLatestMessages(): Promise<void> {
+  messagesLoading.value = true;
+  messagesError.value = '';
+  const result = await fetchCookbook(String(route.params.id), authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    cookbook.value = result.cookbook;
+    latestMessages.value = result.cookbook.latest_messages ?? [];
+  } else messagesError.value = result.message;
+  messagesLoading.value = false;
+}
+
 async function goToMemberPage(page: number): Promise<void> {
   if (membersPagination.value === null || page < 1 || page > membersPagination.value.last_page) return;
   await loadMembers(page);
@@ -365,6 +380,7 @@ onMounted(async () => {
 
   if (result.ok) {
     cookbook.value = result.cookbook;
+    latestMessages.value = result.cookbook.latest_messages ?? [];
     await loadRecipes();
     await loadMembers();
     return;
@@ -420,6 +436,28 @@ onMounted(async () => {
       <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
       <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
+      <section class="messages-preview-section" aria-labelledby="messages-preview-title">
+        <div class="section-heading">
+          <h3 id="messages-preview-title">Derniers messages</h3>
+          <RouterLink :to="{ name: 'cookbook-messages', params: { id: cookbook.id } }">Voir tous les messages</RouterLink>
+        </div>
+        <p v-if="messagesLoading" role="status">Chargement des messages...</p>
+        <p v-else-if="messagesError" class="error-summary" role="alert">{{ messagesError }}</p>
+        <p v-else-if="latestMessages.length === 0" class="empty-state">Aucun message.</p>
+        <div v-else class="message-preview-list">
+          <article v-for="message in latestMessages" :key="message.id" class="message-preview-item">
+            <strong>{{ message.author.name }}</strong>
+            <span class="role-badge">{{ roleLabel(message.author.role ?? '') }}</span>
+            <p>{{ message.content }}</p>
+          </article>
+        </div>
+        <CookbookMessageComposer
+          :cookbook-id="cookbook.id"
+          :token-type="authStore.tokenType"
+          :access-token="authStore.accessToken"
+          @sent="loadLatestMessages"
+        />
+      </section>
       <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
       <section class="members-section" aria-labelledby="members-title">
         <div class="section-heading">
@@ -643,6 +681,10 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .delete-actions .cancel-button { padding: 0.6rem 0.8rem; border: 1px solid #395330; border-radius: 0.5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .role-line { margin-top: 0.5rem; color: #395330; }
 .members-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.messages-preview-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.message-preview-list { display: grid; gap: .6rem; }
+.message-preview-item { padding: .8rem 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .7rem; }
+.message-preview-item p { margin: .35rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .section-count { color: #50634d; font-size: 0.9rem; }
 .member-list { display: grid; gap: 0.7rem; }

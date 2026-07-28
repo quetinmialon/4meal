@@ -15,6 +15,7 @@ export type Cookbook = {
   };
   created_at: string | null;
   member_role: string | null;
+  latest_messages?: CookbookMessage[];
 };
 
 export type Recipe = {
@@ -45,6 +46,24 @@ export type CookbookMember = {
   status: string;
 };
 
+export type CookbookMessage = {
+  id: string;
+  content: string;
+  created_at: string | null;
+  author: {
+    id: number;
+    name: string;
+    avatar_url: string | null;
+    role: string | null;
+  };
+};
+
+export type CursorPagination = {
+  per_page: number;
+  next_cursor: string | null;
+  previous_cursor: string | null;
+};
+
 export type Pagination = {
   current_page: number;
   per_page: number;
@@ -59,6 +78,12 @@ type PaginatedPayload<T> = {
   success: true;
   data: T[];
   meta: { pagination: Pagination };
+};
+
+type CursorPayload<T> = {
+  success: true;
+  data: T[];
+  meta: { pagination: CursorPagination };
 };
 
 type CreateCookbookPayload = {
@@ -436,6 +461,88 @@ async function fetchPaginated<T>(url: string, tokenType: string, accessToken: st
       message: payload?.success === false
         ? (payload.error?.message ?? 'Impossible de charger les donnees.')
         : 'Impossible de charger les donnees.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+async function fetchCursorPage<T>(url: string, tokenType: string, accessToken: string): Promise<
+  { ok: true; data: T[]; pagination: CursorPagination } | { ok: false; message: string }
+> {
+  try {
+    const response = await fetch(url, { headers: apiHeaders(tokenType, accessToken) });
+    const payload = (await response.json().catch(() => null)) as CursorPayload<T> | ApiErrorPayload | null;
+
+    if (response.ok && payload?.success === true) {
+      return { ok: true, data: payload.data, pagination: payload.meta.pagination };
+    }
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de charger les messages.')
+        : 'Impossible de charger les messages.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export function fetchLatestCookbookMessages(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<{ ok: true; messages: CookbookMessage[] } | { ok: false; message: string }> {
+  return fetchCursorPage<CookbookMessage>(
+    `/api/cookbooks/${encodeURIComponent(id)}/messages/latest`,
+    tokenType,
+    accessToken,
+  ).then((result) => result.ok ? { ok: true, messages: result.data } : result);
+}
+
+export function fetchCookbookMessages(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+  cursor: string | null = null,
+): Promise<{ ok: true; messages: CookbookMessage[]; pagination: CursorPagination } | { ok: false; message: string }> {
+  const params = new URLSearchParams({ per_page: '20' });
+  if (cursor !== null) params.set('cursor', cursor);
+
+  return fetchCursorPage<CookbookMessage>(
+    `/api/cookbooks/${encodeURIComponent(id)}/messages?${params.toString()}`,
+    tokenType,
+    accessToken,
+  ).then((result) => result.ok ? { ok: true, messages: result.data, pagination: result.pagination } : result);
+}
+
+export async function sendCookbookMessage(
+  id: string,
+  content: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string; fieldError?: string }> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}/messages`, {
+      method: 'POST',
+      headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { success: true; data: CookbookMessage }
+      | ApiErrorPayload
+      | null;
+
+    if (response.ok && payload?.success === true) return { ok: true, message: payload.data };
+
+    const fieldError = payload?.success === false ? payload.error?.details?.fields?.content?.[0] : undefined;
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible d’envoyer le message.')
+        : 'Impossible d’envoyer le message.',
+      ...(fieldError ? { fieldError } : {}),
     };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };

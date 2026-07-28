@@ -8,6 +8,7 @@ import DashboardView from '@/views/DashboardView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
 import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
+import CookbookMessagesView from '@/views/CookbookMessagesView.vue';
 import LoginView from '@/views/LoginView.vue';
 import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
@@ -46,6 +47,14 @@ const routes: RouteRecordRaw[] = [
     path: '/cookbooks/:id',
     name: 'cookbook',
     component: CookbookView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/cookbooks/:id/messages',
+    name: 'cookbook-messages',
+    component: CookbookMessagesView,
     meta: {
       requiresAuth: true,
     },

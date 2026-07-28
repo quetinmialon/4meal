@@ -51,5 +51,12 @@ class AppServiceProvider extends ServiceProvider
                     $headers,
                 ));
         });
+
+        RateLimiter::for('chat.messages', function (Request $request) {
+            $userId = $request->user()?->getAuthIdentifier() ?? 'guest';
+            $cookbookId = (string) $request->route('cookbook');
+
+            return Limit::perMinute(10)->by($userId.'|'.$cookbookId);
+        });
     }
 }
