@@ -1,0 +1,46 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: 4meal_test
+      POSTGRES_USER: 4meal_test
+      POSTGRES_PASSWORD: 4meal_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  backend-test:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    working_dir: /var/www/html
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      APP_NAME: 4meal Backend Tests
+      APP_ENV: testing
+      APP_KEY: base64:8CIYh4owmlLz9EJfpbkoC15zHfMkgfSr2FX2Dh6OW40=
+      JWT_SECRET: 8CIYh4owmlLz9EJfpbkoC15zHfMkgfSr2FX2Dh6OW40
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      DB_DATABASE: 4meal_test
+      DB_USERNAME: 4meal_test
+      DB_PASSWORD: 4meal_test
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+    volumes:
+      - ./backend:/var/www/html
+      - test_backend_vendor:/var/www/html/vendor
+
+volumes:
+  postgres_test_data:
+  test_backend_vendor:

@@ -11,13 +11,31 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: 4meal_test
+          POSTGRES_USER: 4meal_test
+          POSTGRES_PASSWORD: 4meal_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U 4meal_test -d 4meal_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     defaults:
       run:
         working-directory: backend
     env:
       APP_ENV: testing
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ":memory:"
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: 4meal_test
+      DB_USERNAME: 4meal_test
+      DB_PASSWORD: 4meal_test
       CACHE_STORE: array
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
@@ -33,7 +51,7 @@ jobs:
         with:
           php-version: "8.4"
           tools: composer:v2
-          extensions: mbstring, dom, fileinfo, pdo_sqlite, sqlite3
+          extensions: mbstring, dom, fileinfo, pdo_pgsql
           coverage: none
 
       - name: Prepare Laravel environment
@@ -55,8 +73,11 @@ jobs:
           fi
           echo "JWT_SECRET=$APP_KEY" >> .env
 
+      - name: Migrate dedicated test database
+        run: php artisan migrate --force
+
       - name: Run Pint
-        run: composer pint
+        run: composer pint -- --test
 
       - name: Run static analysis
         run: composer analyse
@@ -108,3 +129,6 @@ jobs:
 
       - name: Validate docker-compose.yml
         run: docker compose -f docker-compose.yml config > /tmp/docker-compose.resolved.yml
+
+      - name: Validate dedicated test Compose stack
+        run: docker compose -f docker-compose.test.yml config > /tmp/docker-compose-test.resolved.yml

@@ -6,6 +6,7 @@ DEFAULT_GOAL := help
 DOCKER_COMPOSE_FILE ?= docker-compose.yml
 DOCKER_ENV_FILE ?= .env.docker.example
 COMPOSE = docker compose --env-file $(DOCKER_ENV_FILE) -f $(DOCKER_COMPOSE_FILE)
+TEST_COMPOSE = docker compose --env-file $(DOCKER_ENV_FILE) -f docker-compose.test.yml -p 4meal-test
 
 BACKEND_DIR := backend
 FRONTEND_DIR := frontend
@@ -36,7 +37,7 @@ endif
 ifdef HOST_COMPOSER
 BACKEND_TEST_COMPOSER = $(BACKEND_COMPOSER)
 else
-BACKEND_TEST_COMPOSER = $(COMPOSE) run --rm -e APP_ENV=testing -e DB_CONNECTION=sqlite -e DB_DATABASE=":memory:" -e CACHE_STORE=array -e SESSION_DRIVER=array -e QUEUE_CONNECTION=sync -e MAIL_MAILER=array -w /var/www/html backend composer --working-dir=/var/www/html
+BACKEND_TEST_COMPOSER = $(TEST_COMPOSE) run --rm -w /var/www/html backend-test sh -lc "composer install --no-interaction --prefer-dist --optimize-autoloader && php artisan migrate:fresh --force && composer test"
 endif
 
 .PHONY: \
@@ -61,7 +62,7 @@ env: ## Vérifie la présence des fichiers d'environnement locaux
 
 backend-env: env ## Alias pour initialiser l'environnement backend
 
-init: env build up wait-backend migrate ## Initialise l'environnement Docker et applique les migrations
+init: env up wait-backend migrate ## Initialise l'environnement Docker et applique les migrations
 
 build: ## Build les images Docker
 	$(COMPOSE) build
@@ -89,7 +90,7 @@ ps: ## Affiche l'état des services Docker
 config: ## Valide et résout la configuration docker compose
 	$(COMPOSE) config
 
-rebuild: ## Reconstruit et recrée les conteneurs
+rebuild: ## Reconstruit et recrée les conteneurs (volontairement)
 	$(COMPOSE) up -d --build --force-recreate
 
 rebuild-volumes: ## Supprime les volumes nommés puis reconstruit toute la stack
@@ -240,6 +241,7 @@ ci-frontend: ## Rejoue les briques CI frontend
 
 ci-docker: ## Rejoue la validation Docker Compose de la CI
 	$(MAKE) config
+	$(TEST_COMPOSE) config
 
 ci: ## Lance l'ensemble des vérifications CI locales
 	$(MAKE) ci-backend

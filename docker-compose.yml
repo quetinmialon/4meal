@@ -1,3 +1,5 @@
+name: ${COMPOSE_PROJECT_NAME:-4meal}
+
 services:
   backend:
     build:
@@ -42,7 +44,10 @@ services:
   frontend:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    command: >-
+      sh -c "if [ ! -f node_modules/.4meal-package-lock ] || ! cmp -s package-lock.json node_modules/.4meal-package-lock; then
+      npm ci && cp package-lock.json node_modules/.4meal-package-lock;
+      fi && npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       backend:
         condition: service_healthy
