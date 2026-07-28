@@ -15,13 +15,14 @@ Il exécute trois jobs distincts, sans secret GitHub :
 
 - `backend` : `composer pint`, `composer analyse`, `composer test`
 - `frontend` : `npm run lint`, `npm run typecheck`, `npm run test`
-- `docker-compose` : validation de `docker-compose.yml` via `docker compose config`
+- `docker-compose` : validation des deux fichiers Compose via `docker compose config`
 
-La CI backend prépare un environnement Laravel minimal sans dépendance externe :
+La CI backend utilise un PostgreSQL éphémère dédié au job :
 
 - copie de `backend/.env.example` vers `backend/.env`
 - génération locale de `APP_KEY`
-- surcharge en mémoire de `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`, `CACHE_STORE=array`, `SESSION_DRIVER=array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`
+- `DB_DATABASE=4meal_test`, avec des identifiants propres à la CI ;
+- `CACHE_STORE=array`, `SESSION_DRIVER=array`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=array`.
 
 ## Variables d'environnement attendues
 
@@ -124,8 +125,13 @@ npm run dev
 
 ```bash
 cp .env.docker.example .env
-docker compose up --build
+docker compose up -d
 ```
+
+`docker compose up` réutilise les images et les conteneurs existants. Les dépendances
+ne sont réinstallées que si `composer.lock` ou `package-lock.json` a changé.
+Pour reconstruire explicitement les images et recréer les conteneurs : `make rebuild`.
+Les tests locaux utilisent une base et un volume séparés via `make backend-test`.
 
 Points d'entrée HTTP :
 
