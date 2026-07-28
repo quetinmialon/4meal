@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import RecipeFavoriteButton from '@/components/RecipeFavoriteButton.vue';
+import AddToPlanningModal from '@/components/AddToPlanningModal.vue';
 import { useAuthStore } from '@/stores/auth';
 import { addRecipeToCookbook, fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { deleteRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
@@ -22,6 +23,22 @@ const selectedCookbookId = ref('');
 const isLoadingCookbooks = ref(false);
 const isAddingToCookbook = ref(false);
 const cookbookError = ref('');
+const isPlanningModalVisible = ref(false);
+const planningSuccessMessage = ref('');
+
+function openPlanningModal(): void {
+  planningSuccessMessage.value = '';
+  isPlanningModalVisible.value = true;
+}
+
+function closePlanningModal(): void {
+  isPlanningModalVisible.value = false;
+}
+
+function handlePlanningAdded(): void {
+  isPlanningModalVisible.value = false;
+  planningSuccessMessage.value = 'La recette a été ajoutée au planning.';
+}
 
 async function openCookbookPicker(): Promise<void> {
   isCookbookPickerVisible.value = true;
@@ -109,6 +126,9 @@ async function confirmDelete(): Promise<void> {
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
       <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
+      <button type="button" class="planning-button" @click="openPlanningModal">Ajouter au planning</button>
+      <p v-if="planningSuccessMessage" class="planning-success" role="status">{{ planningSuccessMessage }}</p>
+      <AddToPlanningModal v-if="isPlanningModalVisible" :recipe="recipe" @close="closePlanningModal" @added="handlePlanningAdded" />
       <button v-if="!isCookbookPickerVisible" type="button" class="cookbook-button" @click="openCookbookPicker">
         Ajouter à un cookbook
       </button>
@@ -195,6 +215,8 @@ h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .author, .description, .source, .muted { color: #50634d; line-height: 1.6; }
 .edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
 .cookbook-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.planning-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #edf4e8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.planning-success { color: #395330; font-weight: 700; }
 .cookbook-picker { display: grid; gap: .55rem; max-width: 24rem; margin-top: .8rem; padding: .9rem; border: 1px solid rgba(86,112,79,.18); border-radius: .7rem; }
 .cookbook-picker select { padding: .5rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
 .cookbook-picker-actions { display: flex; flex-wrap: wrap; gap: .6rem; }

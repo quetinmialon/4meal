@@ -13,18 +13,18 @@ class RecipeFactory extends Factory
 {
     public function definition(): array
     {
-        $title = fake()->sentence(3);
+        $title = $this->faker->sentence(3);
 
         return [
             'user_id' => User::factory(),
             'cookbook_id' => null,
             'title' => $title,
-            'slug' => Str::slug($title).'-'.fake()->unique()->numberBetween(1, 999999),
-            'description' => fake()->optional()->paragraph(),
-            'prep_time_minutes' => fake()->numberBetween(1, 60),
-            'cook_time_minutes' => fake()->numberBetween(1, 120),
+            'slug' => Str::slug($title).'-'.$this->faker->unique()->numberBetween(1, 999999),
+            'description' => $this->faker->optional()->paragraph(),
+            'prep_time_minutes' => $this->faker->numberBetween(1, 60),
+            'cook_time_minutes' => $this->faker->numberBetween(1, 120),
             'rest_time_minutes' => null,
-            'servings' => fake()->numberBetween(1, 8),
+            'servings' => $this->faker->numberBetween(1, 8),
             'visibility' => 'private',
             'difficulty' => 'easy',
         ];

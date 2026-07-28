@@ -14,8 +14,8 @@ class RecipeStepFactory extends Factory
         return [
             'recipe_id' => Recipe::factory(),
             'position' => 1,
-            'instruction' => fake()->sentence(10),
-            'duration_minutes' => fake()->numberBetween(1, 30),
+            'instruction' => $this->faker->sentence(10),
+            'duration_minutes' => $this->faker->numberBetween(1, 30),
             'image_path' => null,
         ];
     }

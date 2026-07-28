@@ -351,6 +351,54 @@ export type RecipeFavoriteResult =
   | { ok: true }
   | { ok: false; message: string };
 
+export type PlannedMealInput = {
+  recipe_id: string;
+  date: string;
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  cookbook_id: string | null;
+};
+
+export type CreatePlannedMealResult =
+  | { ok: true }
+  | { ok: false; message: string; fieldErrors: Record<string, string> };
+
+export async function createPlannedMeal(
+  input: PlannedMealInput,
+  tokenType: string,
+  accessToken: string,
+): Promise<CreatePlannedMealResult> {
+  try {
+    const response = await fetch('/api/planned-meals', {
+      method: 'POST',
+      headers: {
+        ...recipeReadHeaders(tokenType, accessToken),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    const fields = payload?.success === false ? payload.error?.details?.fields : undefined;
+
+    if (response.ok && payload?.success !== false) return { ok: true };
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible d’ajouter la recette au planning.')
+        : 'Impossible d’ajouter la recette au planning.',
+      fieldErrors: Object.fromEntries(
+        Object.entries(fields ?? {}).map(([field, messages]) => [field, messages[0] ?? 'Valeur invalide.']),
+      ),
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Réessayez dans un instant.',
+      fieldErrors: {},
+    };
+  }
+}
+
 export async function setRecipeFavorite(
   id: string,
   isFavorite: boolean,

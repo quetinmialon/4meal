@@ -1,0 +1,137 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+
+import { useAuthStore } from '@/stores/auth';
+import { fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
+import { createPlannedMeal, type PlannedMealInput, type Recipe } from '@/utils/recipes';
+
+const props = defineProps<{ recipe: Recipe }>();
+const emit = defineEmits<{ close: []; added: [] }>();
+
+const authStore = useAuthStore();
+const cookbooks = ref<Cookbook[]>([]);
+const date = ref(new Date().toISOString().slice(0, 10));
+const mealType = ref<PlannedMealInput['meal_type']>('dinner');
+const destination = ref<'personal' | 'cookbook'>('personal');
+const selectedCookbookId = ref('');
+const isLoadingCookbooks = ref(false);
+const isSubmitting = ref(false);
+const errorMessage = ref('');
+const fieldErrors = ref<Record<string, string>>({});
+
+const cookbookRequired = computed(() => destination.value === 'cookbook' && selectedCookbookId.value === '');
+
+async function loadCookbooks(): Promise<void> {
+  isLoadingCookbooks.value = true;
+  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  if (result.ok) cookbooks.value = result.data;
+  else errorMessage.value = result.message;
+  isLoadingCookbooks.value = false;
+}
+
+function errorFor(field: string): string {
+  return fieldErrors.value[field] ?? '';
+}
+
+async function submit(): Promise<void> {
+  errorMessage.value = '';
+  fieldErrors.value = {};
+
+  if (cookbookRequired.value) {
+    fieldErrors.value.cookbook_id = 'Choisissez un cookbook.';
+    return;
+  }
+
+  isSubmitting.value = true;
+  const result = await createPlannedMeal({
+    recipe_id: props.recipe.id,
+    date: date.value,
+    meal_type: mealType.value,
+    cookbook_id: destination.value === 'cookbook' ? selectedCookbookId.value : null,
+  }, authStore.tokenType, authStore.accessToken);
+
+  if (result.ok) emit('added');
+  else {
+    errorMessage.value = result.message;
+    fieldErrors.value = result.fieldErrors;
+  }
+  isSubmitting.value = false;
+}
+
+onMounted(() => { void loadCookbooks(); });
+</script>
+
+<template>
+  <div class="modal-backdrop" role="presentation" @click.self="emit('close')">
+    <section class="planning-modal" role="dialog" aria-modal="true" aria-labelledby="planning-modal-title">
+      <div class="modal-header">
+        <div>
+          <p class="kicker">Planning</p>
+          <h3 id="planning-modal-title">Ajouter « {{ recipe.title }} »</h3>
+        </div>
+        <button type="button" class="close-button" aria-label="Fermer" :disabled="isSubmitting" @click="emit('close')">×</button>
+      </div>
+
+      <form novalidate @submit.prevent="submit">
+        <label for="planning-date">Date</label>
+        <input id="planning-date" v-model="date" type="date" :aria-invalid="errorFor('date') ? 'true' : 'false'" />
+        <p v-if="errorFor('date')" class="field-error" role="alert">{{ errorFor('date') }}</p>
+
+        <label for="planning-meal-type">Type de repas</label>
+        <select id="planning-meal-type" v-model="mealType">
+          <option value="breakfast">Petit-déjeuner</option>
+          <option value="lunch">Déjeuner</option>
+          <option value="dinner">Dîner</option>
+          <option value="snack">Collation</option>
+        </select>
+        <p v-if="errorFor('meal_type')" class="field-error" role="alert">{{ errorFor('meal_type') }}</p>
+
+        <fieldset>
+          <legend>Espace de planification</legend>
+          <label class="radio-label"><input v-model="destination" type="radio" value="personal" /> Espace personnel</label>
+          <label class="radio-label"><input v-model="destination" type="radio" value="cookbook" /> Un cookbook</label>
+        </fieldset>
+
+        <template v-if="destination === 'cookbook'">
+          <label for="planning-cookbook">Cookbook</label>
+          <select id="planning-cookbook" v-model="selectedCookbookId" :disabled="isLoadingCookbooks || isSubmitting">
+            <option value="">Choisir un cookbook</option>
+            <option v-for="cookbook in cookbooks" :key="cookbook.id" :value="cookbook.id">{{ cookbook.name }}</option>
+          </select>
+          <p v-if="isLoadingCookbooks" class="muted" role="status">Chargement des cookbooks...</p>
+          <p v-if="errorFor('cookbook_id')" class="field-error" role="alert">{{ errorFor('cookbook_id') }}</p>
+        </template>
+
+        <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
+        <div class="modal-actions">
+          <button type="button" class="cancel-button" :disabled="isSubmitting" @click="emit('close')">Annuler</button>
+          <button type="submit" class="confirm-button" :disabled="isSubmitting || isLoadingCookbooks">
+            {{ isSubmitting ? 'Ajout...' : 'Confirmer l’ajout' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 1rem; background: rgba(36,49,39,.48); }
+.planning-modal { width: min(100%, 30rem); max-height: calc(100vh - 2rem); overflow: auto; padding: 1.5rem; border: 1px solid rgba(86,112,79,.2); border-radius: 1rem; background: #fffdf8; box-shadow: 0 20px 60px rgba(36,49,39,.25); }
+.modal-header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.2rem; }
+.kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h3 { margin: 0; color: #243127; }
+.close-button { border: 0; background: transparent; color: #395330; font-size: 1.7rem; line-height: 1; cursor: pointer; }
+form { display: grid; gap: .55rem; }
+input[type='date'], select { width: 100%; box-sizing: border-box; padding: .6rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; font: inherit; }
+fieldset { display: grid; gap: .55rem; margin: .7rem 0; padding: .8rem; border: 1px solid rgba(86,112,79,.2); border-radius: .6rem; }
+legend { padding: 0 .3rem; font-weight: 700; }
+.radio-label { display: flex; gap: .5rem; align-items: center; }
+.field-error, .form-error { margin: 0; color: #8f1e1e; font-size: .9rem; }
+.form-error { padding: .7rem; border-radius: .5rem; background: #fff0ee; font-weight: 700; }
+.muted { margin: 0; color: #50634d; }
+.modal-actions { display: flex; justify-content: end; gap: .6rem; margin-top: 1rem; }
+.cancel-button, .confirm-button { padding: .6rem .8rem; border: 1px solid #395330; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
+.cancel-button { background: transparent; color: #395330; }
+.confirm-button { background: #395330; color: #fffdf8; }
+button:disabled { cursor: wait; opacity: .55; }
+</style>

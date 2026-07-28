@@ -34,6 +34,7 @@ use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
+use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -90,6 +91,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::delete('recipes/{recipe}', DeleteRecipeController::class)
             ->name('recipes.destroy');
+
+        Route::post('planned-meals', CreatePlannedMealController::class)
+            ->name('planned-meals.store');
 
         Route::post('cookbooks', CreateCookbookController::class)
             ->name('cookbooks.store');
