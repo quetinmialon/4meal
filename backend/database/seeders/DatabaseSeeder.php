@@ -9,16 +9,17 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         $password = Hash::make('password');
-        $alice = User::create(['name' => 'Alice Martin', 'email' => 'alice.martin@example.com', 'email_verified_at' => now()->subMonths(3), 'password' => $password, 'avatar_path' => 'avatars/alice-martin.jpg', 'last_login_at' => now()->subHours(2), 'remember_token_hash' => Str::random(64)]);
-        $bob = User::create(['name' => 'Bob Dupont', 'email' => 'bob.dupont@example.com', 'email_verified_at' => now()->subMonths(2), 'password' => $password, 'avatar_path' => 'avatars/bob-dupont.jpg', 'last_login_at' => now()->subDay(), 'remember_token_hash' => Str::random(64)]);
-        $charlie = User::create(['name' => 'Charlie Bernard', 'email' => 'charlie.bernard@example.com', 'email_verified_at' => null, 'password' => $password, 'avatar_path' => 'avatars/charlie-bernard.jpg', 'last_login_at' => null, 'remember_token_hash' => Str::random(64)]);
+        $users = User::factory()->count(10)->create(['password' => $password]);
+        $users[0]->update(['name' => 'Alice Martin', 'email_verified_at' => now()->subMonths(3), 'avatar_path' => 'avatars/alice-martin.jpg', 'last_login_at' => now()->subHours(2)]);
+        $users[1]->update(['name' => 'Bob Dupont', 'email_verified_at' => now()->subMonths(2), 'avatar_path' => 'avatars/bob-dupont.jpg', 'last_login_at' => now()->subDay()]);
+        $users[2]->update(['name' => 'Charlie Bernard', 'email_verified_at' => null, 'last_login_at' => null]);
+        [$alice, $bob, $charlie] = [$users[0], $users[1], $users[2]];
 
         $alice->oauthAccounts()->create(['provider' => 'google', 'provider_user_id' => 'google-alice-123456', 'provider_email' => $alice->email, 'access_token' => 'seed-google-access-token', 'refresh_token' => 'seed-google-refresh-token', 'token_expires_at' => now()->addHour()]);
 
@@ -44,6 +45,50 @@ class DatabaseSeeder extends Seeder
         $week->linkedRecipes()->attach($curry->id);
         $alice->favoriteRecipes()->attach([$curry->id, $tiramisu->id]);
         $bob->favoriteRecipes()->attach($ratatouille->id);
+
+        $generatedCookbooks = collect(range(1, 8))->map(function (): Cookbook {
+            $owner = User::query()->inRandomOrder()->firstOrFail();
+            $cookbook = Cookbook::factory()->create(['owner_id' => $owner->id]);
+            $cookbook->members()->attach($owner, ['role' => 'owner', 'joined_at' => now()]);
+
+            $member = User::query()->where('id', '!=', $owner->id)->inRandomOrder()->first();
+            if ($member !== null) {
+                $cookbook->members()->attach($member, ['role' => 'editor', 'joined_at' => now()]);
+            }
+
+            return $cookbook;
+        });
+
+        foreach (range(1, 7) as $index) {
+            $author = User::query()->inRandomOrder()->firstOrFail();
+            $attributes = [
+                'author_id' => $author->id,
+                'title' => fake()->sentence(3),
+                'description' => fake()->paragraph(),
+                'prep_time_minutes' => fake()->numberBetween(5, 60),
+                'cook_time_minutes' => fake()->numberBetween(0, 120),
+                'rest_time_minutes' => fake()->optional()->numberBetween(5, 240),
+                'servings' => fake()->numberBetween(2, 8),
+                'visibility' => 'private',
+                'difficulty' => fake()->randomElement(['easy', 'medium', 'hard']),
+            ];
+
+            if ($index % 2 === 0) {
+                $attributes['user_id'] = $author->id;
+            } else {
+                $attributes['cookbook_id'] = $generatedCookbooks->random()->id;
+            }
+
+            $recipe = $this->createRecipe($attributes, [
+                ['name' => fake()->word(), 'quantity' => fake()->numberBetween(1, 500), 'unit' => fake()->randomElement(['g', 'ml', 'pièce']), 'preparation' => fake()->optional()->sentence(3), 'group_name' => fake()->word()],
+                ['name' => fake()->word(), 'quantity' => fake()->numberBetween(1, 10), 'unit' => 'pièce', 'preparation' => null, 'group_name' => fake()->word()],
+            ], [
+                ['instruction' => fake()->sentence(12), 'duration_minutes' => fake()->numberBetween(1, 30)],
+                ['instruction' => fake()->sentence(12), 'duration_minutes' => fake()->numberBetween(1, 30)],
+            ]);
+
+            $recipe->tags()->attach($tags->random(fake()->numberBetween(1, 3))->pluck('id'));
+        }
 
         CookbookInvitation::create(['cookbook_id' => $family->id, 'invited_by' => $alice->id, 'email' => $charlie->email, 'token_hash' => hash('sha256', 'seed-family-charlie'), 'role' => 'reader', 'expires_at' => now()->addDays(5)]);
         CookbookInvitation::create(['cookbook_id' => $week->id, 'invited_by' => $bob->id, 'email' => $alice->email, 'token_hash' => hash('sha256', 'seed-week-alice'), 'role' => 'editor', 'expires_at' => now()->subDays(10), 'accepted_at' => now()->subDays(12), 'accepted_by' => $alice->id]);

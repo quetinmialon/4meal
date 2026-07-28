@@ -77,3 +77,32 @@ it('does not return recipes outside the authenticated user access scope', functi
         ->assertJsonPath('data.0.id', $personal->public_id)
         ->assertJsonMissing(['id' => $hidden->public_id]);
 });
+
+it('combines all supplied filters with the text search', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'owner', 'joined_at' => now()]);
+    $tag = Tag::factory()->create(['user_id' => $user->id, 'name' => 'Rapide', 'slug' => 'rapide']);
+
+    $match = Recipe::factory()->inCookbook($cookbook)->create([
+        'author_id' => $user->id,
+        'title' => 'Poulet rapide',
+        'prep_time_minutes' => 15,
+        'cook_time_minutes' => 20,
+    ]);
+    $match->ingredients()->create(['position' => 1, 'name' => 'Poulet']);
+    $match->tags()->attach($tag);
+
+    Recipe::factory()->create([
+        'user_id' => $user->id,
+        'author_id' => $user->id,
+        'title' => 'Poulet rapide mais long',
+        'prep_time_minutes' => 45,
+    ]);
+
+    $this->withToken(searchRecipeToken($user))
+        ->getJson('/api/recipes?q=poulet&cookbook_id='.$cookbook->public_id.'&tag=rapide&ingredient=poulet&max_prep_time=20')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $match->public_id);
+});

@@ -103,10 +103,35 @@ class AccessibleRecipesQuery
     {
         if (DB::connection()->getDriverName() === 'pgsql') {
             $tsQuery = "websearch_to_tsquery('french', ? )";
+            $similarityThreshold = 0.32;
+            $fuzzyBindings = [$search, $search, $search, $search, $search];
 
             $query
-                ->whereRaw("recipes.search_vector @@ {$tsQuery}", [$search])
-                ->orderByRaw("ts_rank(recipes.search_vector, {$tsQuery}) DESC", [$search]);
+                ->where(function (Builder $query) use ($search, $tsQuery, $similarityThreshold): void {
+                    $query
+                        ->whereRaw("recipes.search_vector @@ {$tsQuery}", [$search])
+                        ->orWhereRaw('word_similarity(LOWER(?), LOWER(recipes.title)) >= ?', [$search, $similarityThreshold])
+                        ->orWhereHas('ingredients', fn (Builder $ingredients): Builder => $ingredients
+                            ->whereRaw('word_similarity(LOWER(?), LOWER(recipe_ingredients.name)) >= ?', [$search, $similarityThreshold]))
+                        ->orWhereHas('steps', fn (Builder $steps): Builder => $steps
+                            ->whereRaw('word_similarity(LOWER(?), LOWER(recipe_steps.instruction)) >= ?', [$search, $similarityThreshold]))
+                        ->orWhereHas('tags', fn (Builder $tags): Builder => $tags
+                            ->where(function (Builder $tags) use ($search, $similarityThreshold): void {
+                                $tags
+                                    ->whereRaw('word_similarity(LOWER(?), LOWER(tags.name)) >= ?', [$search, $similarityThreshold])
+                                    ->orWhereRaw('word_similarity(LOWER(?), LOWER(tags.slug)) >= ?', [$search, $similarityThreshold]);
+                            }));
+                })
+                ->orderByRaw("ts_rank(recipes.search_vector, {$tsQuery}) DESC", [$search])
+                ->orderByRaw(<<<'SQL'
+GREATEST(
+    word_similarity(LOWER(?), LOWER(recipes.title)),
+    COALESCE((SELECT MAX(word_similarity(LOWER(?), LOWER(i.name))) FROM recipe_ingredients i WHERE i.recipe_id = recipes.id), 0),
+    COALESCE((SELECT MAX(word_similarity(LOWER(?), LOWER(s.instruction))) FROM recipe_steps s WHERE s.recipe_id = recipes.id), 0),
+    COALESCE((SELECT MAX(GREATEST(word_similarity(LOWER(?), LOWER(t.name)), word_similarity(LOWER(?), LOWER(t.slug))))
+        FROM tags t JOIN recipe_tag rt ON rt.tag_id = t.id WHERE rt.recipe_id = recipes.id), 0)
+) DESC
+SQL, $fuzzyBindings);
 
             return;
         }
