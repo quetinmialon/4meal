@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
-import { fetchPlannedMeals, type PlannedMeal } from '@/utils/planning';
+import { deletePlannedMeal, fetchPlannedMeals, updatePlannedMeal, type PlannedMeal } from '@/utils/planning';
 
 type CalendarMode = 'week' | 'month';
 const authStore = useAuthStore();
@@ -10,6 +10,15 @@ const mode = ref<CalendarMode>('week');
 const currentDate = ref(startOfDay(new Date()));
 const meals = ref<PlannedMeal[]>([]);
 const selectedMeal = ref<PlannedMeal | null>(null);
+const isEditing = ref(false);
+const editForm = ref({ date: '', meal_type: 'dinner' as PlannedMeal['meal_type'], note: '' });
+const editError = ref('');
+const editFieldErrors = ref<Record<string, string>>({});
+const isUpdating = ref(false);
+const isDeleteConfirmationVisible = ref(false);
+const deleteError = ref('');
+const isDeleting = ref(false);
+const feedbackMessage = ref('');
 const isLoading = ref(true);
 const errorMessage = ref('');
 const mealTypeLabels: Record<PlannedMeal['meal_type'], string> = {
@@ -77,10 +86,81 @@ function movePeriod(direction: number): void {
   currentDate.value = startOfDay(next);
 }
 function goToToday(): void { currentDate.value = startOfDay(new Date()); }
-function closeDetail(): void { selectedMeal.value = null; }
+function closeDetail(): void {
+  if (isUpdating.value || isDeleting.value) return;
+  selectedMeal.value = null;
+  isEditing.value = false;
+  isDeleteConfirmationVisible.value = false;
+  editError.value = '';
+  deleteError.value = '';
+}
+function openMealDetail(meal: PlannedMeal): void {
+  selectedMeal.value = meal;
+  isEditing.value = false;
+  isDeleteConfirmationVisible.value = false;
+  editError.value = '';
+  deleteError.value = '';
+  feedbackMessage.value = '';
+}
+function startEditing(): void {
+  if (!selectedMeal.value) return;
+  editForm.value = {
+    date: selectedMeal.value.date,
+    meal_type: selectedMeal.value.meal_type,
+    note: selectedMeal.value.note ?? '',
+  };
+  editError.value = '';
+  editFieldErrors.value = {};
+  isEditing.value = true;
+}
+function cancelEditing(): void {
+  if (isUpdating.value) return;
+  isEditing.value = false;
+  editError.value = '';
+  editFieldErrors.value = {};
+}
+function errorFor(field: string): string { return editFieldErrors.value[field] ?? ''; }
+async function submitEdit(): Promise<void> {
+  if (!selectedMeal.value) return;
+  editError.value = '';
+  editFieldErrors.value = {};
+  isUpdating.value = true;
+  const result = await updatePlannedMeal(selectedMeal.value.id, editForm.value, authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    await loadMeals();
+    feedbackMessage.value = 'Le repas planifié a été modifié.';
+  } else {
+    editError.value = result.message;
+    editFieldErrors.value = result.fieldErrors;
+  }
+  isUpdating.value = false;
+}
+function startDeleteConfirmation(): void {
+  deleteError.value = '';
+  isDeleteConfirmationVisible.value = true;
+}
+function cancelDelete(): void {
+  if (isDeleting.value) return;
+  isDeleteConfirmationVisible.value = false;
+  deleteError.value = '';
+}
+async function confirmDelete(): Promise<void> {
+  if (!selectedMeal.value) return;
+  deleteError.value = '';
+  isDeleting.value = true;
+  const result = await deletePlannedMeal(selectedMeal.value.id, authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    await loadMeals();
+    feedbackMessage.value = 'Le repas planifié a été supprimé.';
+  } else {
+    deleteError.value = result.message;
+  }
+  isDeleting.value = false;
+}
 async function loadMeals(): Promise<void> {
   isLoading.value = true;
   errorMessage.value = '';
+  feedbackMessage.value = '';
   selectedMeal.value = null;
   const result = await fetchPlannedMeals(period.value.from, period.value.to, authStore.tokenType, authStore.accessToken);
   if (result.ok) meals.value = result.meals;
@@ -113,19 +193,53 @@ onMounted(() => { void loadMeals(); });
       <div class="calendar-grid">
         <article v-for="day in calendarDays" :key="dateKey(day)" class="calendar-day" :class="{ outside: isOutsideCurrentMonth(day), today: dateKey(day) === dateKey(new Date()) }">
           <h3>{{ day.getDate() }}</h3>
-          <button v-for="meal in mealsFor(day)" :key="meal.id" type="button" class="meal-card" @click="selectedMeal = meal"><strong>{{ meal.recipe.title }}</strong><span>{{ mealTypeLabels[meal.meal_type] }}</span></button>
+          <button v-for="meal in mealsFor(day)" :key="meal.id" type="button" class="meal-card" @click="openMealDetail(meal)"><strong>{{ meal.recipe.title }}</strong><span>{{ mealTypeLabels[meal.meal_type] }}</span></button>
         </article>
       </div>
     </section>
     <div v-if="selectedMeal" class="detail-backdrop" role="presentation" @click.self="closeDetail">
       <section class="meal-detail" role="dialog" aria-modal="true" aria-labelledby="meal-detail-title">
+        <form v-if="isEditing" class="edit-meal-form" @submit.prevent="submitEdit">
+          <h3 id="meal-detail-title">Modifier le repas</h3>
+          <label for="edit-meal-date">Date</label>
+          <input id="edit-meal-date" v-model="editForm.date" type="date" />
+          <p v-if="errorFor('date')" class="form-error" role="alert">{{ errorFor('date') }}</p>
+          <label for="edit-meal-type">Type de repas</label>
+          <select id="edit-meal-type" v-model="editForm.meal_type">
+            <option value="breakfast">Petit-déjeuner</option><option value="lunch">Déjeuner</option><option value="dinner">Dîner</option><option value="snack">Collation</option>
+          </select>
+          <p v-if="errorFor('meal_type')" class="form-error" role="alert">{{ errorFor('meal_type') }}</p>
+          <label for="edit-meal-note">Note</label>
+          <textarea id="edit-meal-note" v-model="editForm.note" rows="3" maxlength="5000" />
+          <p v-if="editError" class="form-error" role="alert">{{ editError }}</p>
+          <div class="detail-actions">
+            <button type="submit" class="edit-detail-button" :disabled="isUpdating">{{ isUpdating ? 'Enregistrement...' : 'Enregistrer' }}</button>
+            <button type="button" class="cancel-detail-button" :disabled="isUpdating" @click="cancelEditing">Annuler</button>
+          </div>
+        </form>
+        <template v-else>
         <button type="button" class="close-detail" aria-label="Fermer le détail" @click="closeDetail">×</button>
         <p class="kicker">{{ displayDate(selectedMeal.date) }}</p><h3 id="meal-detail-title">{{ selectedMeal.recipe.title }}</h3>
         <p>{{ mealTypeLabels[selectedMeal.meal_type] }} · {{ selectedMeal.initial_servings }} portion<span v-if="selectedMeal.initial_servings > 1">s</span></p>
         <p v-if="selectedMeal.note" class="detail-note">{{ selectedMeal.note }}</p>
         <p v-if="selectedMeal.cookbook_id" class="detail-space">Repas du cookbook</p>
+        <div v-if="!isDeleteConfirmationVisible" class="detail-actions">
+          <button type="button" class="edit-detail-button" @click="startEditing">Modifier</button>
+          <button type="button" class="delete-detail-button" @click="startDeleteConfirmation">Supprimer</button>
+        </div>
+        <section v-else class="delete-confirmation" aria-labelledby="delete-meal-heading">
+          <h4 id="delete-meal-heading">Supprimer ce repas planifié ?</h4>
+          <p>Cette action est définitive.</p>
+          <p v-if="deleteError" class="form-error" role="alert">{{ deleteError }}</p>
+          <div class="detail-actions">
+            <button type="button" class="delete-detail-button" :disabled="isDeleting" @click="confirmDelete">{{ isDeleting ? 'Suppression...' : 'Confirmer la suppression' }}</button>
+            <button type="button" class="cancel-detail-button" :disabled="isDeleting" @click="cancelDelete">Annuler</button>
+          </div>
+        </section>
+        </template>
       </section>
     </div>
+    <p v-if="feedbackMessage" class="feedback-message" role="status">{{ feedbackMessage }}</p>
   </main>
 </template>
 
@@ -164,6 +278,20 @@ h2, h3 { margin: 0; color: #243127; }
 .close-detail { position: absolute; top: .75rem; right: .75rem; border: 0; background: transparent; color: #395330; font-size: 1.6rem; cursor: pointer; }
 .detail-note { padding: .7rem; border-radius: .5rem; background: #f3f7ef; }
 .detail-space { font-size: .85rem; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+.edit-detail-button, .delete-detail-button, .cancel-detail-button { padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
+.edit-detail-button { background: #395330; color: #fffdf8; }
+.delete-detail-button { border-color: #8f1e1e; background: #8f1e1e; color: #fffdf8; }
+.cancel-detail-button { background: transparent; color: #395330; }
+.edit-meal-form { display: grid; gap: .55rem; }
+.edit-meal-form h3 { margin-bottom: .4rem; }
+.edit-meal-form input, .edit-meal-form select, .edit-meal-form textarea { box-sizing: border-box; width: 100%; padding: .6rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; font: inherit; }
+.form-error { margin: 0; padding: .55rem; border-radius: .5rem; background: #fff0ee; color: #8f1e1e; font-size: .9rem; }
+.delete-confirmation { margin-top: 1rem; padding: .8rem; border: 1px solid #e2b3ad; border-radius: .7rem; background: #fff8f6; }
+.delete-confirmation h4 { margin: 0; color: #8f1e1e; }
+.delete-confirmation p { color: #6d4140; }
+.feedback-message { margin: 1rem 0 0; color: #395330; font-weight: 700; text-align: center; }
+button:disabled { cursor: wait; opacity: .55; }
 @media (max-width: 640px) {
   .planning-page { padding: 1rem .6rem; border-radius: 1rem; }
   .planning-header { display: grid; align-items: start; }
