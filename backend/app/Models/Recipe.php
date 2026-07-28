@@ -121,4 +121,9 @@ class Recipe extends Model
     {
         return $this->belongsToMany(User::class, 'recipe_favorites')->withTimestamps();
     }
+
+    public function plannedMeals(): HasMany
+    {
+        return $this->hasMany(PlannedMeal::class);
+    }
 }

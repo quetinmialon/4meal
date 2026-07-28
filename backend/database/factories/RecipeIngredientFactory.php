@@ -14,9 +14,9 @@ class RecipeIngredientFactory extends Factory
         return [
             'recipe_id' => Recipe::factory(),
             'position' => 1,
-            'name' => fake()->word(),
-            'quantity' => fake()->randomFloat(3, 0.1, 10),
-            'unit' => fake()->randomElement(['g', 'ml', 'pièce']),
+            'name' => $this->faker->word(),
+            'quantity' => $this->faker->randomFloat(3, 0.1, 10),
+            'unit' => $this->faker->randomElement(['g', 'ml', 'pièce']),
             'preparation' => null,
             'is_optional' => false,
             'group_name' => null,

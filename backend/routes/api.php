@@ -27,6 +27,10 @@ use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
+use App\Http\Controllers\Planning\CreatePlannedMealController;
+use App\Http\Controllers\Planning\DeletePlannedMealController;
+use App\Http\Controllers\Planning\ListPlannedMealsController;
+use App\Http\Controllers\Planning\UpdatePlannedMealController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
@@ -90,6 +94,18 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::delete('recipes/{recipe}', DeleteRecipeController::class)
             ->name('recipes.destroy');
+
+        Route::post('planned-meals', CreatePlannedMealController::class)
+            ->name('planned-meals.store');
+
+        Route::get('planned-meals', ListPlannedMealsController::class)
+            ->name('planned-meals.index');
+
+        Route::patch('planned-meals/{plannedMeal}', UpdatePlannedMealController::class)
+            ->name('planned-meals.update');
+
+        Route::delete('planned-meals/{plannedMeal}', DeletePlannedMealController::class)
+            ->name('planned-meals.destroy');
 
         Route::post('cookbooks', CreateCookbookController::class)
             ->name('cookbooks.store');

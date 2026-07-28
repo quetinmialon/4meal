@@ -74,4 +74,9 @@ class Cookbook extends Model
     {
         return $this->belongsToMany(Recipe::class, 'cookbook_recipe')->withTimestamps();
     }
+
+    public function plannedMeals(): HasMany
+    {
+        return $this->hasMany(PlannedMeal::class);
+    }
 }

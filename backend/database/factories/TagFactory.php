@@ -12,13 +12,13 @@ class TagFactory extends Factory
 {
     public function definition(): array
     {
-        $name = fake()->unique()->word();
+        $name = $this->faker->unique()->word();
 
         return [
             'user_id' => User::factory(),
             'name' => $name,
             'slug' => Str::slug($name),
-            'color' => fake()->hexColor(),
+            'color' => $this->faker->hexColor(),
         ];
     }
 }
