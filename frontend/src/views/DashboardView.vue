@@ -131,6 +131,7 @@ async function handleLogout(): Promise<void> {
         <div class="dashboard-actions">
           <RouterLink class="create-button" :to="{ name: 'public-recipes' }">Toutes les recettes</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'search' }">Rechercher</RouterLink>
+          <RouterLink class="create-button" :to="{ name: 'planning' }">Mon planning</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'recipes' }">Mes recettes</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'recipe-create' }">Nouvelle recette</RouterLink>
           <button class="create-button" type="button" @click="isCreateFormVisible = !isCreateFormVisible">

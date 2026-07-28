@@ -27,6 +27,8 @@ use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
+use App\Http\Controllers\Planning\CreatePlannedMealController;
+use App\Http\Controllers\Planning\ListPlannedMealsController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
@@ -34,7 +36,6 @@ use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
-use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -94,6 +95,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::post('planned-meals', CreatePlannedMealController::class)
             ->name('planned-meals.store');
+
+        Route::get('planned-meals', ListPlannedMealsController::class)
+            ->name('planned-meals.index');
 
         Route::post('cookbooks', CreateCookbookController::class)
             ->name('cookbooks.store');
