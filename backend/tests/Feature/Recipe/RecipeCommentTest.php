@@ -114,3 +114,81 @@ it('validates comment content and paginates comments newest first', function ():
         ->assertJsonPath('data.0.content', 'Comment 1')
         ->assertJsonCount(1, 'data');
 });
+
+it('allows each commenting role to update and delete its own comment', function (string $role): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $author = User::factory()->create(['password' => 'password123']);
+    [$cookbook, $recipe] = commentableRecipe($owner);
+    $cookbook->members()->attach($author, ['role' => $role]);
+    $comment = RecipeComment::query()->create([
+        'recipe_id' => $recipe->id,
+        'user_id' => $author->id,
+        'content' => 'Avant modification',
+    ]);
+
+    $token = recipeCommentToken($author);
+    $this->withToken($token)
+        ->patchJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id, ['content' => 'Après modification'])
+        ->assertOk()
+        ->assertJsonPath('data.content', 'Après modification')
+        ->assertJsonPath('data.author.role', $role)
+        ->assertJsonPath('data.edited_at', fn ($value): bool => is_string($value));
+
+    expect($comment->fresh()->edited_at)->not->toBeNull();
+
+    $this->withToken($token)
+        ->deleteJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id)
+        ->assertNoContent();
+
+    expect(RecipeComment::withTrashed()->find($comment->id)?->trashed())->toBeTrue();
+})->with(['commenter', 'editor', 'owner']);
+
+it('does not allow a reader or the cookbook owner to moderate another users comment', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $reader = User::factory()->create(['password' => 'password123']);
+    $author = User::factory()->create(['password' => 'password123']);
+    [$cookbook, $recipe] = commentableRecipe($owner);
+    $cookbook->members()->attach($reader, ['role' => 'reader']);
+    $cookbook->members()->attach($author, ['role' => 'commenter']);
+    $comment = RecipeComment::query()->create([
+        'recipe_id' => $recipe->id,
+        'user_id' => $author->id,
+        'content' => 'Commentaire original',
+    ]);
+
+    foreach ([$owner, $reader] as $user) {
+        $token = recipeCommentToken($user);
+        $this->withToken($token)
+            ->patchJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id, ['content' => 'Intrusion'])
+            ->assertForbidden();
+        $this->withToken($token)
+            ->deleteJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id)
+            ->assertForbidden();
+    }
+
+    expect($comment->fresh()->content)->toBe('Commentaire original');
+});
+
+it('validates updated content and rejects a comment routed through another recipe', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    [$cookbook, $recipe] = commentableRecipe($owner);
+    $otherRecipe = Recipe::factory()->create(['user_id' => $owner->id]);
+    $comment = RecipeComment::query()->create([
+        'recipe_id' => $recipe->id,
+        'user_id' => $owner->id,
+        'content' => 'Original',
+    ]);
+    $token = recipeCommentToken($owner);
+
+    $this->withToken($token)
+        ->patchJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id, ['content' => '   '])
+        ->assertUnprocessable();
+
+    $this->withToken($token)
+        ->patchJson('/api/recipes/'.$otherRecipe->public_id.'/comments/'.$comment->public_id, ['content' => 'Autre recette'])
+        ->assertNotFound();
+
+    $this->withToken($token)
+        ->deleteJson('/api/recipes/'.$otherRecipe->public_id.'/comments/'.$comment->public_id)
+        ->assertNotFound();
+});

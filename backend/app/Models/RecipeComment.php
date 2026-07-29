@@ -16,6 +16,7 @@ class RecipeComment extends Model
         'recipe_id',
         'user_id',
         'content',
+        'edited_at',
     ];
 
     protected function casts(): array

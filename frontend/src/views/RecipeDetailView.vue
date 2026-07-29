@@ -203,6 +203,7 @@ async function confirmDelete(): Promise<void> {
         :recipe-id="recipe.id"
         :token-type="authStore.tokenType"
         :access-token="authStore.accessToken"
+        :current-user-id="authStore.user?.id ?? null"
       />
     </article>
   </main>

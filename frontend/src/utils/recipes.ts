@@ -287,6 +287,55 @@ export async function createRecipeComment(
   }
 }
 
+export type UpdateRecipeCommentResult =
+  | { ok: true; comment: RecipeComment }
+  | { ok: false; message: string; fieldError?: string };
+
+export async function updateRecipeComment(
+  recipeId: string,
+  commentId: string,
+  content: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<UpdateRecipeCommentResult> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
+      method: 'PATCH',
+      headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as { success: true; data: RecipeComment } | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, comment: payload.data };
+    const fieldError = payload?.success === false ? payload.error?.details?.fields?.content?.[0] : undefined;
+    return {
+      ok: false,
+      message: readError(payload?.success === false ? payload : null, 'Impossible de modifier le commentaire.'),
+      ...(fieldError ? { fieldError } : {}),
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function deleteRecipeComment(
+  recipeId: string,
+  commentId: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
+      method: 'DELETE',
+      headers: recipeReadHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.ok) return { ok: true };
+    return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible de supprimer le commentaire.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
 export async function createRecipe(
   input: RecipeInput,
   tokenType: string,
