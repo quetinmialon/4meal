@@ -35,8 +35,10 @@ use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
 use App\Http\Controllers\Planning\UpdatePlannedMealController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
+use App\Http\Controllers\Recipe\CreateRecipeCommentController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
+use App\Http\Controllers\Recipe\ListRecipeCommentsController;
 use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
@@ -85,6 +87,12 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('recipes/{recipe}', ShowRecipeController::class)
             ->name('recipes.show');
+
+        Route::get('recipes/{recipe}/comments', ListRecipeCommentsController::class)
+            ->name('recipes.comments.index');
+
+        Route::post('recipes/{recipe}/comments', CreateRecipeCommentController::class)
+            ->name('recipes.comments.store');
 
         Route::post('recipes/{recipe}/favorite', AddRecipeFavoriteController::class)
             ->name('recipes.favorite.store');

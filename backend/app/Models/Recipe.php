@@ -126,4 +126,9 @@ class Recipe extends Model
     {
         return $this->hasMany(PlannedMeal::class);
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(RecipeComment::class);
+    }
 }

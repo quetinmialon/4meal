@@ -86,6 +86,19 @@ export type RecipePagination = {
   has_more_pages: boolean;
 };
 
+export type RecipeComment = {
+  id: string;
+  content: string;
+  edited_at: string | null;
+  created_at: string | null;
+  author: {
+    id: number;
+    name: string;
+    avatar_url: string | null;
+    role: string | null;
+  };
+};
+
 export type RecipeFilters = {
   cookbook_id?: string;
   tag?: string;
@@ -98,6 +111,7 @@ export type RecipeFilters = {
 type RecipePayload = { success: true; data: CreatedRecipe };
 type RecipeListPayload = { success: true; data: Recipe[]; meta: { pagination: RecipePagination } };
 type RecipeDetailPayload = { success: true; data: Recipe };
+type RecipeCommentsPayload = { success: true; data: RecipeComment[]; meta: { pagination: RecipePagination } };
 type ApiErrorPayload = {
   success: false;
   error?: {
@@ -117,6 +131,10 @@ export type RecipeListResult =
 export type RecipeDetailResult =
   | { ok: true; recipe: Recipe }
   | { ok: false; message: string };
+
+export type RecipeCommentsResult =
+  | { ok: true; comments: RecipeComment[]; pagination: RecipePagination }
+  | { ok: false; message: string; unavailable?: boolean };
 
 function recipeReadHeaders(tokenType: string, accessToken: string): HeadersInit {
   return { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` };
@@ -210,6 +228,60 @@ export async function fetchRecipe(
     const payload = (await response.json().catch(() => null)) as RecipeDetailPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) return { ok: true, recipe: payload.data };
     return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible de charger la recette.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function fetchRecipeComments(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+  page = 1,
+): Promise<RecipeCommentsResult> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/comments?per_page=20&page=${page}`, {
+      headers: recipeReadHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as RecipeCommentsPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true && Array.isArray(payload.data) && payload.meta?.pagination
+      && payload.data.every((comment) => comment !== null && typeof comment === 'object' && 'author' in comment)) {
+      return { ok: true, comments: payload.data, pagination: payload.meta.pagination };
+    }
+    return {
+      ok: false,
+      unavailable: response.status === 403,
+      message: readError(payload?.success === false ? payload : null, 'Impossible de charger les commentaires.'),
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function createRecipeComment(
+  id: string,
+  content: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<{ ok: true; comment: RecipeComment } | { ok: false; message: string; fieldError?: string }> {
+  try {
+    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/comments`, {
+      method: 'POST',
+      headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { success: true; data: RecipeComment }
+      | ApiErrorPayload
+      | null;
+    if (response.ok && payload?.success === true) return { ok: true, comment: payload.data };
+
+    const fieldError = payload?.success === false ? payload.error?.details?.fields?.content?.[0] : undefined;
+    return {
+      ok: false,
+      message: readError(payload?.success === false ? payload : null, 'Impossible d’ajouter le commentaire.'),
+      ...(fieldError ? { fieldError } : {}),
+    };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
   }

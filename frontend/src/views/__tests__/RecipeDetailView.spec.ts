@@ -33,6 +33,14 @@ describe('RecipeDetailView', () => {
     });
   });
 
+  function commentsUnavailableResponse(): Response {
+    return {
+      ok: false,
+      status: 403,
+      json: async () => ({ success: false, error: { message: 'Commentaires indisponibles.' } }),
+    } as Response;
+  }
+
   it('displays recipe metadata and all details', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
@@ -75,6 +83,7 @@ describe('RecipeDetailView', () => {
         ok: true,
         json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Tarte', is_favorite: false, author: null, ingredients: [], steps: [], tags: [] } }),
       } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, data: [{ id: 'cookbook-id', name: 'Mes desserts' }], meta: { pagination: { current_page: 1, per_page: 15, total: 1, last_page: 1, from: 1, to: 1, has_more_pages: false } } }),
@@ -89,7 +98,7 @@ describe('RecipeDetailView', () => {
     await wrapper.get('.cookbook-picker').trigger('submit');
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/cookbooks/cookbook-id/recipes/recipe-id', {
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/recipes/recipe-id', {
       method: 'POST',
       headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
@@ -104,18 +113,19 @@ describe('RecipeDetailView', () => {
           data: { id: 'recipe-id', title: 'A supprimer', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
         }),
       } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
       .mockResolvedValueOnce({ ok: true, status: 204, json: async () => null } as Response);
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
     await flushPromises();
     await wrapper.get('.delete-button').trigger('click');
     expect(wrapper.text()).toContain('Supprimer cette recette ?');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     await wrapper.get('.delete-confirmation .delete-button').trigger('click');
     await flushPromises();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/recipes/recipe-id', {
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/recipes/recipe-id', {
       method: 'DELETE',
       headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
@@ -131,6 +141,7 @@ describe('RecipeDetailView', () => {
           data: { id: 'recipe-id', title: 'Protegee', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
         }),
       } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
       .mockResolvedValueOnce({
         ok: false,
         status: 403,
