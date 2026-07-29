@@ -101,6 +101,11 @@ class User extends Authenticatable
         return $this->hasMany(PlannedMeal::class);
     }
 
+    public function recipeComments(): HasMany
+    {
+        return $this->hasMany(RecipeComment::class);
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(

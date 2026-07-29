@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import RecipeFavoriteButton from '@/components/RecipeFavoriteButton.vue';
 import AddToPlanningModal from '@/components/AddToPlanningModal.vue';
+import RecipeCommentsSection from '@/components/RecipeCommentsSection.vue';
 import { useAuthStore } from '@/stores/auth';
 import { addRecipeToCookbook, fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { deleteRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
@@ -198,6 +199,12 @@ async function confirmDelete(): Promise<void> {
           </li>
         </ol>
       </section>
+      <RecipeCommentsSection
+        :recipe-id="recipe.id"
+        :token-type="authStore.tokenType"
+        :access-token="authStore.accessToken"
+        :current-user-id="authStore.user?.id ?? null"
+      />
     </article>
   </main>
 </template>

@@ -35,11 +35,15 @@ use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
 use App\Http\Controllers\Planning\UpdatePlannedMealController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
+use App\Http\Controllers\Recipe\CreateRecipeCommentController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
+use App\Http\Controllers\Recipe\DeleteRecipeCommentController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
+use App\Http\Controllers\Recipe\ListRecipeCommentsController;
 use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
+use App\Http\Controllers\Recipe\UpdateRecipeCommentController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -85,6 +89,18 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('recipes/{recipe}', ShowRecipeController::class)
             ->name('recipes.show');
+
+        Route::get('recipes/{recipe}/comments', ListRecipeCommentsController::class)
+            ->name('recipes.comments.index');
+
+        Route::post('recipes/{recipe}/comments', CreateRecipeCommentController::class)
+            ->name('recipes.comments.store');
+
+        Route::patch('recipes/{recipe}/comments/{comment}', UpdateRecipeCommentController::class)
+            ->name('recipes.comments.update');
+
+        Route::delete('recipes/{recipe}/comments/{comment}', DeleteRecipeCommentController::class)
+            ->name('recipes.comments.destroy');
 
         Route::post('recipes/{recipe}/favorite', AddRecipeFavoriteController::class)
             ->name('recipes.favorite.store');
