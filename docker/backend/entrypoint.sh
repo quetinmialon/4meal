@@ -32,6 +32,12 @@ if [ -z "${APP_KEY:-}" ]; then
   export APP_KEY="$(php artisan key:generate --show --no-interaction)"
 fi
 
+# JWT tokens need a secret as well. Generate one at container startup when it
+# is not provided through the environment or the mounted .env file.
+if [ -z "${JWT_SECRET:-}" ]; then
+  export JWT_SECRET="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
+fi
+
 if [ "${BACKEND_CONFIG_CACHE:-false}" = "true" ]; then
   php artisan config:cache --no-interaction
 fi

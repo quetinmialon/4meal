@@ -15,7 +15,15 @@ class CookbookMessage extends Model
         'cookbook_id',
         'user_id',
         'content',
+        'edited_at',
+        'deleted_at',
+        'deleted_by_user_id',
     ];
+
+    protected function casts(): array
+    {
+        return ['edited_at' => 'datetime', 'deleted_at' => 'datetime'];
+    }
 
     protected static function booted(): void
     {
@@ -37,5 +45,10 @@ class CookbookMessage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by_user_id');
     }
 }

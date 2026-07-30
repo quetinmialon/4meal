@@ -34,7 +34,7 @@ class PlannedMealResource extends JsonResource
                 'title' => $recipe->title,
                 'slug' => $recipe->slug,
                 'servings' => $recipe->servings,
-                'image_url' => is_string($recipe->image_path)
+                'image_url' => is_string($recipe->image_path) && Storage::disk('public')->exists($recipe->image_path)
                     ? Storage::disk('public')->url($recipe->image_path)
                     : null,
             ] : []),

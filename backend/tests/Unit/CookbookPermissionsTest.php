@@ -16,6 +16,18 @@ it('enforces every cell of the cookbook permission matrix', function (string $ro
         CookbookPermissions::REMOVE_MEMBERS => true,
         CookbookPermissions::DELETE => true,
         CookbookPermissions::COMMENT => true,
+        CookbookPermissions::MODERATE_MESSAGES => true,
+    ]],
+    'moderator' => [CookbookPermissions::MODERATOR, [
+        CookbookPermissions::VIEW => true,
+        CookbookPermissions::UPDATE => false,
+        CookbookPermissions::MANAGE_MEMBERS => false,
+        CookbookPermissions::INVITE_MEMBERS => false,
+        CookbookPermissions::LEAVE => true,
+        CookbookPermissions::REMOVE_MEMBERS => false,
+        CookbookPermissions::DELETE => false,
+        CookbookPermissions::COMMENT => true,
+        CookbookPermissions::MODERATE_MESSAGES => true,
     ]],
     'editor' => [CookbookPermissions::EDITOR, [
         CookbookPermissions::VIEW => true,

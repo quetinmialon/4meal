@@ -49,6 +49,10 @@ export type CookbookMember = {
 export type CookbookMessage = {
   id: string;
   content: string;
+  is_deleted: boolean;
+  edited_at: string | null;
+  deleted_at: string | null;
+  deleted_by: { id: number; name: string } | null;
   created_at: string | null;
   author: {
     id: number;
@@ -547,6 +551,33 @@ export async function sendCookbookMessage(
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
   }
+}
+
+export async function updateCookbookMessage(
+  cookbookId: string, messageId: string, content: string, tokenType: string, accessToken: string,
+): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string; fieldError?: string }> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
+      method: 'PATCH', headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ content: content.trim() }),
+    });
+    const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookMessage } | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, message: payload.data };
+    const fieldError = payload?.success === false ? payload.error?.details?.fields?.content?.[0] : undefined;
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de modifier le message.') : 'Impossible de modifier le message.', ...(fieldError ? { fieldError } : {}) };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' }; }
+}
+
+export async function deleteCookbookMessage(
+  cookbookId: string, messageId: string, tokenType: string, accessToken: string,
+): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string }> {
+  try {
+    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
+      method: 'DELETE', headers: apiHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookMessage } | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, message: payload.data };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de supprimer le message.') : 'Impossible de supprimer le message.' };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' }; }
 }
 
 export function fetchCookbooks(tokenType: string, accessToken: string, page = 1): Promise<ListResult<Cookbook>> {
