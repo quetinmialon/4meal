@@ -1,0 +1,4 @@
+{
+  "format": "SUPMEAL", "version": "1.0.0", "exported_at": "2026-07-30T12:00:00Z",
+  "cookbooks": [{"id": "supmeal:cookbook:missing", "name": "Incomplet", "recipe_ids": ["supmeal:recipe:absente"]}], "recipes": []
+}

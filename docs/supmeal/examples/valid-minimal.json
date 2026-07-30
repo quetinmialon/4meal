@@ -1,0 +1,19 @@
+{
+  "format": "SUPMEAL",
+  "version": "1.0.0",
+  "exported_at": "2026-07-30T12:00:00Z",
+  "cookbooks": [],
+  "recipes": [{
+    "id": "supmeal:recipe:r1",
+    "title": "Omelette nature",
+    "description": null,
+    "servings": 1,
+    "prep_time_minutes": 2,
+    "cook_time_minutes": 3,
+    "rest_time_minutes": null,
+    "ingredients": [{"name": "Œuf", "quantity": 2, "unit": "pièce", "preparation": null, "optional": false, "group": null}],
+    "steps": [{"position": 1, "instruction": "Battre puis cuire les œufs.", "duration_minutes": 3, "image_url": null}],
+    "tags": [],
+    "cookbook_ids": []
+  }]
+}

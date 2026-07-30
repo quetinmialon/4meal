@@ -1,0 +1,17 @@
+{
+  "format": "SUPMEAL",
+  "version": "1.0.0",
+  "exported_at": "2026-07-30T12:00:00+02:00",
+  "source": {"application": "4meal", "application_version": "0.1.0"},
+  "cookbooks": [{"id": "supmeal:cookbook:famille", "name": "Famille", "slug": "famille", "description": "Recettes partagées.", "recipe_ids": ["supmeal:recipe:curry"], "image_url": "https://cdn.example.test/famille.jpg"}],
+  "recipes": [{
+    "id": "supmeal:recipe:curry", "title": "Curry de pois chiches", "slug": "curry-de-pois-chiches", "description": "Un curry doux.", "servings": 4,
+    "prep_time_minutes": 15, "cook_time_minutes": 30, "rest_time_minutes": 0,
+    "ingredients": [
+      {"name": "Pois chiches", "quantity": 400, "unit": "g", "preparation": "égouttés", "optional": false, "group": "Base"},
+      {"name": "Coriandre", "quantity": null, "unit": null, "preparation": null, "optional": true, "group": "Finition"}
+    ],
+    "steps": [{"position": 1, "instruction": "Mijoter 30 minutes.", "duration_minutes": 30, "image_url": null}],
+    "tags": ["végétarien"], "cookbook_ids": ["supmeal:cookbook:famille"], "notes": "Servir chaud.", "source": "https://example.test/curry", "image_url": null
+  }]
+}
