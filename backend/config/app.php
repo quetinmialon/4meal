@@ -97,7 +97,9 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    // Prefer the process environment so the Docker entrypoint can generate
+    // the key even when the mounted .env contains an empty APP_KEY value.
+    'key' => getenv('APP_KEY') ?: env('APP_KEY'),
 
     'previous_keys' => [
         ...array_filter(

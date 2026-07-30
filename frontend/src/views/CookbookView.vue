@@ -5,6 +5,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
 import CookbookMessageComposer from '@/components/CookbookMessageComposer.vue';
+import CookbookMessageItem from '@/components/CookbookMessageItem.vue';
 import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe } from '@/utils/cookbooks';
 import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
@@ -278,8 +279,14 @@ function roleLabel(role: string): string {
     owner: 'Propriétaire',
     editor: 'Éditeur',
     reader: 'Lecteur',
-    commenter: 'Commentateur',
+      commenter: 'Commentateur',
+      moderator: 'Modérateur',
   }[role] ?? role;
+}
+
+function replaceLatestMessage(message: CookbookMessage): void {
+  const index = latestMessages.value.findIndex((item) => item.id === message.id);
+  if (index !== -1) latestMessages.value[index] = message;
 }
 
 async function requestRoleChange(member: CookbookMember): Promise<void> {
@@ -381,12 +388,14 @@ onMounted(async () => {
   if (result.ok) {
     cookbook.value = result.cookbook;
     latestMessages.value = result.cookbook.latest_messages ?? [];
+    messagesLoading.value = false;
     await loadRecipes();
     await loadMembers();
     return;
   }
 
   errorMessage.value = result.message;
+  messagesLoading.value = false;
 });
 </script>
 
@@ -445,11 +454,7 @@ onMounted(async () => {
         <p v-else-if="messagesError" class="error-summary" role="alert">{{ messagesError }}</p>
         <p v-else-if="latestMessages.length === 0" class="empty-state">Aucun message.</p>
         <div v-else class="message-preview-list">
-          <article v-for="message in latestMessages" :key="message.id" class="message-preview-item">
-            <strong>{{ message.author.name }}</strong>
-            <span class="role-badge">{{ roleLabel(message.author.role ?? '') }}</span>
-            <p>{{ message.content }}</p>
-          </article>
+          <CookbookMessageItem v-for="message in latestMessages" :key="message.id" :message="message" :cookbook-id="cookbook.id" :current-user-id="authStore.user?.id ?? null" :current-user-role="cookbook.member_role" :token-type="authStore.tokenType" :access-token="authStore.accessToken" @updated="replaceLatestMessage" @deleted="replaceLatestMessage" />
         </div>
         <CookbookMessageComposer
           :cookbook-id="cookbook.id"
@@ -487,7 +492,7 @@ onMounted(async () => {
                 <form class="member-role-form" @submit.prevent="requestRoleChange(member)">
                   <label class="sr-only" :for="`member-role-${member.user.id}`">Rôle de {{ member.user.name }}</label>
                   <select :id="`member-role-${member.user.id}`" v-model="roleDrafts[member.user.id]" :disabled="roleUpdateLoading">
-                    <option v-for="role in ['owner', 'editor', 'reader', 'commenter']" :key="role" :value="role">
+                    <option v-for="role in ['owner', 'editor', 'reader', 'commenter', 'moderator']" :key="role" :value="role">
                       {{ roleLabel(role) }}
                     </option>
                   </select>
@@ -499,7 +504,7 @@ onMounted(async () => {
               <form v-else-if="canManageRoles" class="member-role-form" @submit.prevent="requestRoleChange(member)">
                 <label class="sr-only" :for="`member-role-${member.user.id}`">Rôle de {{ member.user.name }}</label>
                 <select :id="`member-role-${member.user.id}`" v-model="roleDrafts[member.user.id]" :disabled="roleUpdateLoading">
-                  <option v-for="role in ['owner', 'editor', 'reader', 'commenter']" :key="role" :value="role">
+                  <option v-for="role in ['owner', 'editor', 'reader', 'commenter', 'moderator']" :key="role" :value="role">
                     {{ roleLabel(role) }}
                   </option>
                 </select>

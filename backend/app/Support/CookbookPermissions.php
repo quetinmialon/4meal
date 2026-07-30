@@ -12,6 +12,8 @@ final class CookbookPermissions
 
     public const COMMENTER = 'commenter';
 
+    public const MODERATOR = 'moderator';
+
     public const VIEW = 'view';
 
     public const UPDATE = 'update';
@@ -28,20 +30,24 @@ final class CookbookPermissions
 
     public const COMMENT = 'comment';
 
+    public const MODERATE_MESSAGES = 'moderate_messages';
+
     /** @var list<string> */
     public const ROLES = [
         self::OWNER,
         self::EDITOR,
         self::READER,
         self::COMMENTER,
+        self::MODERATOR,
     ];
 
     /** @var array<string, list<string>> */
     private const MATRIX = [
-        self::OWNER => [self::VIEW, self::UPDATE, self::MANAGE_MEMBERS, self::INVITE_MEMBERS, self::LEAVE, self::REMOVE_MEMBERS, self::DELETE, self::COMMENT],
+        self::OWNER => [self::VIEW, self::UPDATE, self::MANAGE_MEMBERS, self::INVITE_MEMBERS, self::LEAVE, self::REMOVE_MEMBERS, self::DELETE, self::COMMENT, self::MODERATE_MESSAGES],
         self::EDITOR => [self::VIEW, self::UPDATE, self::INVITE_MEMBERS, self::LEAVE, self::COMMENT],
         self::READER => [self::VIEW, self::LEAVE],
         self::COMMENTER => [self::VIEW, self::LEAVE, self::COMMENT],
+        self::MODERATOR => [self::VIEW, self::LEAVE, self::COMMENT, self::MODERATE_MESSAGES],
     ];
 
     public static function allows(?string $role, string $permission): bool

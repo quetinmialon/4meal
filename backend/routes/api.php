@@ -17,6 +17,7 @@ use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
 use App\Http\Controllers\Cookbook\CreateCookbookMessageController;
 use App\Http\Controllers\Cookbook\DeclineCookbookInvitationController;
 use App\Http\Controllers\Cookbook\DeleteCookbookController;
+use App\Http\Controllers\Cookbook\DeleteCookbookMessageController;
 use App\Http\Controllers\Cookbook\LeaveCookbookController;
 use App\Http\Controllers\Cookbook\ListCookbookInvitationsController;
 use App\Http\Controllers\Cookbook\ListCookbookMembersController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
+use App\Http\Controllers\Cookbook\UpdateCookbookMessageController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
@@ -144,6 +146,12 @@ Route::middleware(AuthenticateWithJwt::class)
         Route::post('cookbooks/{cookbook}/messages', CreateCookbookMessageController::class)
             ->middleware('throttle:chat.messages')
             ->name('cookbooks.messages.store');
+
+        Route::patch('cookbooks/{cookbook}/messages/{message}', UpdateCookbookMessageController::class)
+            ->name('cookbooks.messages.update');
+
+        Route::delete('cookbooks/{cookbook}/messages/{message}', DeleteCookbookMessageController::class)
+            ->name('cookbooks.messages.destroy');
 
         Route::get('cookbooks/{cookbook}/messages', ListCookbookMessagesController::class)
             ->name('cookbooks.messages.index');

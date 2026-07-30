@@ -138,3 +138,46 @@ it('protects history access and throttles message creation', function (): void {
 
     expect(CookbookMessage::query()->count())->toBe(10);
 });
+
+it('allows moderators to edit their own messages and moderate other messages', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $moderator = User::factory()->create(['password' => 'password123']);
+    $author = User::factory()->create(['password' => 'password123']);
+    $cookbook = messageCookbook($owner);
+    $cookbook->members()->attach($moderator, ['role' => 'moderator']);
+    $cookbook->members()->attach($author, ['role' => 'commenter']);
+    $ownMessage = CookbookMessage::query()->create(['cookbook_id' => $cookbook->id, 'user_id' => $moderator->id, 'content' => 'A modifier']);
+    $otherMessage = CookbookMessage::query()->create(['cookbook_id' => $cookbook->id, 'user_id' => $author->id, 'content' => 'A moderer']);
+
+    $this->withToken(cookbookMessageToken($moderator))
+        ->patchJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$ownMessage->public_id, ['content' => 'Modifié'])
+        ->assertOk()
+        ->assertJsonPath('data.content', 'Modifié')
+        ->assertJsonPath('data.edited_at', fn ($value): bool => is_string($value));
+
+    $this->withToken(cookbookMessageToken($moderator))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$otherMessage->public_id)
+        ->assertOk()
+        ->assertJsonPath('data.content', 'Message supprimé par '.$moderator->name)
+        ->assertJsonPath('data.is_deleted', true)
+        ->assertJsonPath('data.deleted_by.name', $moderator->name);
+});
+
+it('prevents regular members from moderating other messages and lets the owner moderate', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $member = User::factory()->create(['password' => 'password123']);
+    $author = User::factory()->create(['password' => 'password123']);
+    $cookbook = messageCookbook($owner);
+    $cookbook->members()->attach($member, ['role' => 'commenter']);
+    $cookbook->members()->attach($author, ['role' => 'commenter']);
+    $message = CookbookMessage::query()->create(['cookbook_id' => $cookbook->id, 'user_id' => $author->id, 'content' => 'Original']);
+
+    $this->withToken(cookbookMessageToken($member))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id)
+        ->assertForbidden();
+
+    $this->withToken(cookbookMessageToken($owner))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id)
+        ->assertOk()
+        ->assertJsonPath('data.deleted_by.name', $owner->name);
+});
