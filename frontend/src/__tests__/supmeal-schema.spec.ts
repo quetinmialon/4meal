@@ -1,12 +1,24 @@
 import Ajv from 'ajv'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import schema from '@supmeal/supmeal-1.0.schema.json'
+import invalidReference from '@supmeal/examples/invalid-reference.json'
+import invalidUnknownVersion from '@supmeal/examples/invalid-unknown-version.json'
+import validComplete from '@supmeal/examples/valid-complete.json'
+import validMinimal from '@supmeal/examples/valid-minimal.json'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
-const schema = JSON.parse(fs.readFileSync(path.join(root, 'docs/supmeal/supmeal-1.0.schema.json'), 'utf8'))
-const loadExample = (name: string) => JSON.parse(fs.readFileSync(path.join(root, `docs/supmeal/examples/${name}`), 'utf8'))
+type TestDocument = {
+  [key: string]: unknown
+  cookbooks: Array<{ id: string; recipe_ids: string[] }>
+  recipes: Array<Record<string, unknown> & { id: string; cookbook_ids: string[] }>
+}
+
+const examples: Record<string, TestDocument> = {
+  'invalid-reference.json': invalidReference as TestDocument,
+  'invalid-unknown-version.json': invalidUnknownVersion as TestDocument,
+  'valid-complete.json': validComplete as TestDocument,
+  'valid-minimal.json': validMinimal as TestDocument,
+}
+const loadExample = (name: string) => examples[name]!
 
 const ajv = new Ajv({ allErrors: true })
 ajv.addFormat('date-time', /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/)
@@ -42,7 +54,7 @@ describe('SUPMEAL 1.0 JSON Schema', () => {
   it('rejects an unknown format version', () => {
     const document = loadExample('invalid-unknown-version.json')
     expect(validateSchema(document)).toBe(false)
-    expect(validateSchema.errors?.some((error) => error.instancePath === '/version')).toBe(true)
+    expect(validateSchema.errors?.some((error) => error.dataPath === '.version')).toBe(true)
   })
 
   it('rejects a structurally valid document with dangling or asymmetric references', () => {
@@ -54,7 +66,7 @@ describe('SUPMEAL 1.0 JSON Schema', () => {
   it('rejects unsupported properties and missing required recipe data', () => {
     const document = loadExample('valid-minimal.json')
     document.unexpected = true
-    delete document.recipes[0].ingredients
+    delete document.recipes[0]!.ingredients
     expect(validateSchema(document)).toBe(false)
   })
 })

@@ -22,7 +22,8 @@
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@supmeal/*": ["../docs/supmeal/*"]
     },
     "types": ["vite/client", "vitest/globals"]
   },
