@@ -5,6 +5,7 @@ import { pinia } from '@/pinia';
 import { useAuthStore } from '@/stores/auth';
 
 import DashboardView from '@/views/DashboardView.vue';
+import ExportView from '@/views/ExportView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
 import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
@@ -39,6 +40,14 @@ const routes: RouteRecordRaw[] = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/export',
+    name: 'export',
+    component: ExportView,
     meta: {
       requiresAuth: true,
     },

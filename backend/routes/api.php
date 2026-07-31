@@ -32,6 +32,7 @@ use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
 use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMessageController;
+use App\Http\Controllers\Export\DownloadExportController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
@@ -80,6 +81,9 @@ Route::get('auth/microsoft/callback', MicrosoftOAuthCallbackController::class)
 
 Route::middleware(AuthenticateWithJwt::class)
     ->group(function () {
+        Route::get('export', DownloadExportController::class)
+            ->name('export.download');
+
         Route::get('cookbooks', ListCookbooksController::class)
             ->name('cookbooks.index');
 
