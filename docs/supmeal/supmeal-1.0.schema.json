@@ -39,7 +39,7 @@
         "id": { "type": "string", "pattern": "^supmeal:cookbook:[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$" },
         "name": { "$ref": "#/definitions/text" },
         "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 200 },
-        "description": { "type": "string", "maxLength": 10000 },
+        "description": { "type": ["string", "null"], "maxLength": 10000 },
         "recipe_ids": {
           "type": "array", "uniqueItems": true,
           "items": { "type": "string", "pattern": "^supmeal:recipe:[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$" }
