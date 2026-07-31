@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import DashboardView from '@/views/DashboardView.vue';
 import ExportView from '@/views/ExportView.vue';
+import ImportView from '@/views/ImportView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
 import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
@@ -48,6 +49,14 @@ const routes: RouteRecordRaw[] = [
     path: '/export',
     name: 'export',
     component: ExportView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/import',
+    name: 'import',
+    component: ImportView,
     meta: {
       requiresAuth: true,
     },
