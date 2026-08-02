@@ -22,7 +22,8 @@ class AuthenticateWithJwt
 
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $request->bearerToken();
+        $token = $request->bearerToken()
+            ?: $request->cookie((string) config('jwt.cookie.name', '4meal_access_token'));
 
         if (! is_string($token) || $token === '') {
             throw new AuthenticationException;

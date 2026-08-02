@@ -75,7 +75,7 @@ async function declineInvitation(invitation: CookbookInvitation): Promise<void> 
 onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
 
 async function handleLogout(): Promise<void> {
-  authStore.clearSession();
+  await authStore.logout();
   await router.push({ name: 'login' });
 }
 </script>

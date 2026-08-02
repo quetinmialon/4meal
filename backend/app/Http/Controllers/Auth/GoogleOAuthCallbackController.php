@@ -7,16 +7,15 @@ use App\Exceptions\Auth\AmbiguousOAuthAccountException;
 use App\Exceptions\Auth\GoogleOAuthException;
 use App\Exceptions\Auth\OAuthAccountAlreadyLinkedException;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Auth\GoogleOAuthAuthenticator;
 use App\Services\Auth\OAuthAccountLinker;
+use App\Support\Jwt\AccessTokenCookie;
 use App\Support\Jwt\AccessTokenIssuer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use JsonException;
 use Throwable;
 
 final class GoogleOAuthCallbackController extends Controller
@@ -25,6 +24,7 @@ final class GoogleOAuthCallbackController extends Controller
         private readonly GoogleOAuthAuthenticator $authenticator,
         private readonly OAuthAccountLinker $linker,
         private readonly AccessTokenIssuer $accessTokenIssuer,
+        private readonly AccessTokenCookie $accessTokenCookie,
     ) {}
 
     public function __invoke(Request $request, GoogleOAuthProvider $provider): RedirectResponse
@@ -54,17 +54,10 @@ final class GoogleOAuthCallbackController extends Controller
             }
             $user = $this->authenticator->authenticate($profile);
 
-            $session = [
-                ...$this->accessTokenIssuer->issue($user),
-                'user' => UserResource::make($user)->resolve($request),
-            ];
+            $session = $this->accessTokenIssuer->issue($user);
 
-            return redirect()->to($this->frontendUrl().'?'.http_build_query([
-                'access_token' => $session['access_token'],
-                'token_type' => $session['token_type'],
-                'expires_in' => $session['expires_in'],
-                'user' => $this->encodeUser($session['user']),
-            ]));
+            return redirect()->to($this->frontendUrl().'?oauth=success')
+                ->withCookie($this->accessTokenCookie->make($session['access_token'], $session['expires_in']));
         } catch (AmbiguousOAuthAccountException|GoogleOAuthException|OAuthAccountAlreadyLinkedException $exception) {
             return $this->failure($exception->getMessage());
         } catch (Throwable $exception) {
@@ -84,15 +77,5 @@ final class GoogleOAuthCallbackController extends Controller
         return redirect()->to($this->frontendUrl().'?'.http_build_query([
             'oauth_error' => $message,
         ]));
-    }
-
-    /** @param array<string, mixed> $user */
-    private function encodeUser(array $user): string
-    {
-        try {
-            return json_encode($user, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return '{}';
-        }
     }
 }

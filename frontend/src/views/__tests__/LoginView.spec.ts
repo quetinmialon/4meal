@@ -187,4 +187,27 @@ describe('LoginView', () => {
     expect(replaceMock).toHaveBeenCalledWith({ query: {} });
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it('restores the OAuth session from the secure cookie without reading a token from the URL', async () => {
+    window.history.replaceState({}, '', '/connexion?oauth=success');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null },
+      }),
+    } as Response);
+
+    mount(LoginView, { global: { plugins: [createPinia()] } });
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    });
+    expect(window.location.search).toBe('?oauth=success');
+    expect(pushMock).toHaveBeenCalledWith({ name: 'dashboard' });
+    expect(useAuthStore().accessToken).toBe('');
+  });
 });

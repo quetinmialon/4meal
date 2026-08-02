@@ -80,6 +80,7 @@ describe('auth store session restoration', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/auth/me', {
       method: 'GET',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer renewed-token',

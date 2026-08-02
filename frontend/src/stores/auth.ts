@@ -212,10 +212,15 @@ function extractUpdateProfileFieldErrors(
 }
 
 function authHeaders(session: Pick<AuthSession, 'accessToken' | 'tokenType'>): HeadersInit {
-  return {
+  const headers: HeadersInit = {
     Accept: 'application/json',
-    Authorization: `${session.tokenType} ${session.accessToken}`,
   };
+
+  if (session.accessToken !== '' && session.tokenType !== '') {
+    headers.Authorization = `${session.tokenType} ${session.accessToken}`;
+  }
+
+  return headers;
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -234,7 +239,7 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) =>
-      state.isRestored && state.status === 'authenticated' && state.user !== null && state.accessToken !== '',
+      state.isRestored && state.status === 'authenticated' && state.user !== null,
   },
 
   actions: {
@@ -306,13 +311,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchCurrentUser(): Promise<AuthUser | null> {
-      if (this.accessToken === '' || this.tokenType === '') {
-        return null;
-      }
-
       try {
         const response = await fetch('/api/auth/me', {
           method: 'GET',
+          credentials: 'include',
           headers: authHeaders({
             accessToken: this.accessToken,
             tokenType: this.tokenType,
@@ -346,8 +348,16 @@ export const useAuthStore = defineStore('auth', {
       }
 
       if (this.accessToken === '' || this.tokenType === '') {
+        this.status = 'restoring';
+        const currentUser = await this.fetchCurrentUser();
+        if (currentUser !== null) {
+          this.user = currentUser;
+          this.status = 'authenticated';
+          this.isRestored = true;
+          persistSession({ accessToken: '', tokenType: 'Bearer', expiresIn: 3600, user: currentUser });
+          return;
+        }
         this.clearSession();
-
         return;
       }
 
@@ -455,6 +465,20 @@ export const useAuthStore = defineStore('auth', {
         return { ok: false, message: error, fieldErrors: {} };
       }
 
+      if (!params.has('access_token') && !params.has('token')) {
+      this.status = 'loading';
+      this.isRestored = false;
+      const cookieUser = await this.fetchCurrentUser();
+      if (cookieUser === null) {
+        this.clearSession();
+        return { ok: false, message: `Impossible de finaliser la connexion avec ${provider}.`, fieldErrors: {} };
+      }
+
+      this.applySession({ accessToken: '', tokenType: 'Bearer', expiresIn: 3600, user: cookieUser });
+      return { ok: true };
+      }
+
+      if (params.has('access_token') || params.has('token')) {
       const accessToken = params.get('access_token') || params.get('token');
 
       if (accessToken === null || accessToken === '') {
@@ -500,6 +524,10 @@ export const useAuthStore = defineStore('auth', {
 
       this.applySession({ accessToken, tokenType, expiresIn, user });
       return { ok: true };
+      }
+
+      this.clearSession();
+      return { ok: false, message: `Impossible de finaliser la connexion avec ${provider}.`, fieldErrors: {} };
     },
 
     async completeGoogleLogin(params: URLSearchParams): Promise<LoginResult> {
@@ -510,12 +538,24 @@ export const useAuthStore = defineStore('auth', {
       return this.completeOAuthLogin(params, 'Microsoft');
     },
 
+    async logout(): Promise<void> {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: authHeaders({ accessToken: this.accessToken, tokenType: this.tokenType }),
+        });
+      } finally {
+        this.clearSession();
+      }
+    },
+
     async changePassword(
       currentPassword: string,
       password: string,
       passwordConfirmation: string,
     ): Promise<ChangePasswordResult> {
-      if (this.accessToken === '' || this.tokenType === '') {
+      if (this.user === null) {
         return {
           ok: false,
           message: 'Une authentification est requise.',
@@ -584,7 +624,7 @@ export const useAuthStore = defineStore('auth', {
       allergies: string[],
       defaultServings: number,
     ): Promise<UpdateProfileResult> {
-      if (this.accessToken === '' || this.tokenType === '' || this.user === null) {
+      if (this.user === null) {
         return {
           ok: false,
           message: 'Une authentification est requise.',

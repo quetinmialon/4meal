@@ -2,10 +2,4 @@ bearerAuth:
   type: http
   scheme: bearer
   bearerFormat: JWT
-  description: |
-    Authentification par jeton JWT transmis dans l'en-tête
-    `Authorization: Bearer <jwt>`.
-
-    Le schéma est déclaré globalement pour être réutilisé par les endpoints
-    qui exigeront une authentification. Aucun endpoint n'y est encore relié
-    dans cette base contractuelle.
+  description: Authentification JWT via l'en-tête `Authorization: Bearer <token>`.
