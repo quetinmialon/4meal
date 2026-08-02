@@ -54,6 +54,21 @@ it('starts linking with an authenticated state bound to the current user', funct
     expect($response->headers->get('Location'))->toContain('state=');
 });
 
+it('returns the provider authorization URL to authenticated JSON clients', function () {
+    config()->set('services.microsoft.client_id', 'client-id');
+    config()->set('services.microsoft.client_secret', 'client-secret');
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $response = $this->withToken(oauthManagementToken($user))
+        ->withHeader('Accept', 'application/json')
+        ->getJson('/api/auth/oauth/microsoft/link')
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->json('data.authorization_url');
+
+    expect($response)->toContain('login.microsoftonline.com');
+});
+
 it('does not allow unlinking the only OAuth login method', function () {
     $user = User::factory()->create(['password' => 'password123']);
     $user->oauthAccounts()->create([

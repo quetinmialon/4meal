@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, reactive, ref } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
+import OAuthAccountsSection from '@/components/OAuthAccountsSection.vue';
 
 type TextField = 'name' | 'email' | 'currentPassword' | 'allergyDraft' | 'defaultServings';
 type ErrorField = TextField | 'avatar' | 'diet' | 'allergies' | 'defaultServings';
@@ -247,6 +248,8 @@ onBeforeUnmount(revokeObjectPreview);
         <button type="submit">{{ authStore.status === 'loading' ? 'Enregistrement...' : 'Enregistrer le profil' }}</button>
       </fieldset>
     </form>
+
+    <OAuthAccountsSection />
   </main>
 </template>
 
