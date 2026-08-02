@@ -13,7 +13,7 @@ class AuthenticateUser
             ->where('email', $email)
             ->first();
 
-        if ($user === null || ! Hash::check($password, $user->getAttribute('password_hash'))) {
+        if ($user === null || ! is_string($user->getAttribute('password_hash')) || ! Hash::check($password, $user->getAttribute('password_hash'))) {
             return null;
         }
 
