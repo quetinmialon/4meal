@@ -57,6 +57,42 @@ it('creates an email invitation with a hashed token and proposed role', function
     Mail::assertSent(CookbookInvitationMail::class, fn (CookbookInvitationMail $mail) => $mail->hasTo('invite@example.test'));
 });
 
+it('enforces cookbook invitation permissions for editors, readers and external users', function (string $role, int $expectedStatus): void {
+    Mail::fake();
+    $owner = User::factory()->create(['password' => 'password123']);
+    $actor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Famille', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+
+    if ($role !== 'external') {
+        $cookbook->members()->attach($actor, ['role' => $role]);
+    }
+
+    $response = $this->withToken(invitationAuthToken($actor))
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/invitations', [
+            'email' => 'invite-'.$role.'@example.test',
+            'role' => 'reader',
+        ]);
+
+    $response->assertStatus($expectedStatus);
+
+    if ($expectedStatus === 201) {
+        $this->assertDatabaseHas('cookbook_invitations', [
+            'cookbook_id' => $cookbook->id,
+            'invited_by' => $actor->id,
+            'email' => 'invite-'.$role.'@example.test',
+        ]);
+        Mail::assertSent(CookbookInvitationMail::class);
+    } else {
+        $this->assertDatabaseCount('cookbook_invitations', 0);
+        Mail::assertNothingSent();
+    }
+})->with([
+    ['editor', 201],
+    ['reader', 403],
+    ['external', 403],
+]);
+
 it('rejects inviting an already active member', function () {
     Mail::fake();
     $owner = User::factory()->create(['password' => 'password123']);
