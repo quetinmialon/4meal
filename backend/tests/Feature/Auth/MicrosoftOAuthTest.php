@@ -39,7 +39,8 @@ it('simulates the Microsoft callback and stores the oauth account', function () 
     $this->app->instance(MicrosoftOAuthProvider::class, $provider);
 
     $this->get('/api/auth/microsoft/callback?state='.$state.'&code=code')
-        ->assertRedirect();
+        ->assertRedirect('http://frontend.test/connexion?oauth=success')
+        ->assertCookie('4meal_access_token');
 
     expect(OAuthAccount::query()->where('provider', 'microsoft')->where('provider_user_id', 'ms-user-123')->exists())->toBeTrue();
 });

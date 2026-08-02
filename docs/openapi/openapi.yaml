@@ -1,63 +1,1233 @@
 openapi: 3.0.3
 info:
   title: 4meal API
-  version: 0.1.0
+  version: 1.0.0
+  description: Contrat HTTP de l'API 4meal.
   license:
-    name: MIT
-    url: https://spdx.org/licenses/MIT.html
-  description: |
-    Contrat OpenAPI racine de l'API 4meal.
-
-    Cette première base documente uniquement les conventions transverses déjà
-    implémentées dans l'application :
-    - l'enveloppe JSON commune ;
-    - les schémas d'erreur ;
-    - la pagination ;
-    - l'authentification Bearer JWT.
-
-    Aucun endpoint métier n'est décrit à ce stade.
+    name: Internal
 servers:
   - url: /api
-    description: Préfixe HTTP de l'API
-paths: {}
+    description: PrÃ©fixe de l'API
+security: []
+tags:
+  - name: Health
+    description: API availability checks.
+  - name: Authentication
+    description: Registration, login, refresh and session revocation.
+  - name: OAuth
+    description: OAuth connections and linked account management.
+  - name: Profile
+    description: Current user profile management.
+  - name: Recipes
+    description: Recipe management.
+  - name: Recipe comments
+    description: Comments associated with recipes.
+  - name: Favorites
+    description: Favorite recipe management.
+  - name: Cookbooks
+    description: Cookbook and cookbook recipe management.
+  - name: Cookbook members
+    description: Cookbook members, roles and invitations.
+  - name: Cookbook messages
+    description: Messages associated with cookbooks.
+  - name: Invitations
+    description: Invitation consultation and processing.
+  - name: Planning
+    description: Planned meal management.
+  - name: Import / export
+    description: SUPMEAL document import and export.
+paths:
+  /health:
+    get:
+      operationId: health
+      tags: [Health]
+      responses:
+        '200': { $ref: '#/components/responses/SuccessObject' }
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/UserCreated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/HttpError' }
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/LoginRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/SessionSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/HttpError' }
+
+  /auth/google/redirect:
+    get:
+      operationId: googleOAuthRedirect
+      tags: [OAuth]
+      responses:
+        '302': { $ref: '#/components/responses/Redirect' }
+        '503': { $ref: '#/components/responses/HttpError' }
+
+  /auth/google/callback:
+    get:
+      operationId: googleOAuthCallback
+      tags: [OAuth]
+      parameters:
+        - { $ref: '#/components/parameters/OAuthState' }
+        - { $ref: '#/components/parameters/OAuthCode' }
+        - { $ref: '#/components/parameters/OAuthError' }
+      responses:
+        '302': { $ref: '#/components/responses/Redirect' }
+        '503': { $ref: '#/components/responses/HttpError' }
+
+  /auth/microsoft/redirect:
+    get:
+      operationId: microsoftOAuthRedirect
+      tags: [OAuth]
+      responses:
+        '302': { $ref: '#/components/responses/Redirect' }
+        '503': { $ref: '#/components/responses/HttpError' }
+
+  /auth/microsoft/callback:
+    get:
+      operationId: microsoftOAuthCallback
+      tags: [OAuth]
+      parameters:
+        - { $ref: '#/components/parameters/OAuthState' }
+        - { $ref: '#/components/parameters/OAuthCode' }
+        - { $ref: '#/components/parameters/OAuthError' }
+      responses:
+        '302': { $ref: '#/components/responses/Redirect' }
+        '503': { $ref: '#/components/responses/HttpError' }
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Profile]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/UserSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+    patch:
+      operationId: updateProfile
+      tags: [Profile]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: { schema: { $ref: '#/components/schemas/UpdateProfileRequest' } }
+          application/json: { schema: { $ref: '#/components/schemas/UpdateProfileRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/UserSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/refresh:
+    post:
+      operationId: refreshAccessToken
+      tags: [Authentication]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/SessionSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Authentication]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Session revoked and authentication cookie expired. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /auth/password:
+    put:
+      operationId: changePassword
+      tags: [Authentication]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ChangePasswordRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/SuccessObject' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/oauth-accounts:
+    get:
+      operationId: listOAuthAccounts
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OAuthAccountsSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /auth/oauth:
+    get: { $ref: '#/paths/~1auth~1oauth-accounts/get' }
+  /auth/oauth/accounts:
+    get: { $ref: '#/paths/~1auth~1oauth-accounts/get' }
+
+  /auth/oauth/google/link:
+    get:
+      operationId: linkGoogleOAuth
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OAuthLinkSuccess' }
+        '302': { $ref: '#/components/responses/Redirect' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+    post:
+      operationId: linkGoogleOAuthPost
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OAuthLinkSuccess' }
+        '302': { $ref: '#/components/responses/Redirect' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /auth/oauth/microsoft/link:
+    get:
+      operationId: linkMicrosoftOAuth
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OAuthLinkSuccess' }
+        '302': { $ref: '#/components/responses/Redirect' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+    post:
+      operationId: linkMicrosoftOAuthPost
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/OAuthLinkSuccess' }
+        '302': { $ref: '#/components/responses/Redirect' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /auth/oauth/{provider}:
+    delete:
+      operationId: unlinkOAuthAccount
+      tags: [OAuth]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google, microsoft] }
+      responses:
+        '200': { $ref: '#/components/responses/SuccessObject' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /recipes:
+    get:
+      operationId: listRecipes
+      tags: [Recipes]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+        - { $ref: '#/components/parameters/Search' }
+        - { $ref: '#/components/parameters/RecipeScope' }
+        - { $ref: '#/components/parameters/CookbookId' }
+        - { $ref: '#/components/parameters/Tag' }
+        - { $ref: '#/components/parameters/Ingredient' }
+        - { $ref: '#/components/parameters/MaxPrepTime' }
+        - { $ref: '#/components/parameters/MaxCookTime' }
+        - { $ref: '#/components/parameters/Favorites' }
+      responses:
+        '200': { $ref: '#/components/responses/RecipeListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      operationId: createRecipe
+      tags: [Recipes]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateRecipeRequest' } }
+          multipart/form-data: { schema: { $ref: '#/components/schemas/CreateRecipeRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/RecipeSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /recipes/{recipe}:
+    parameters: [{ $ref: '#/components/parameters/RecipePath' }]
+    get:
+      operationId: getRecipe
+      tags: [Recipes]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/RecipeSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      operationId: updateRecipe
+      tags: [Recipes]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdateRecipeRequest' } }
+          multipart/form-data: { schema: { $ref: '#/components/schemas/UpdateRecipeRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/RecipeSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteRecipe
+      tags: [Recipes]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Recipe deleted. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /recipes/{recipe}/comments:
+    parameters: [{ $ref: '#/components/parameters/RecipePath' }]
+    get:
+      operationId: listRecipeComments
+      tags: [Recipe comments]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+      responses:
+        '200': { $ref: '#/components/responses/CommentListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    post:
+      operationId: createRecipeComment
+      tags: [Recipe comments]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ContentRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/CommentSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /recipes/{recipe}/comments/{comment}:
+    parameters:
+      - { $ref: '#/components/parameters/RecipePath' }
+      - { $ref: '#/components/parameters/CommentPath' }
+    patch:
+      operationId: updateRecipeComment
+      tags: [Recipe comments]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ContentRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/CommentSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteRecipeComment
+      tags: [Recipe comments]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Comment deleted. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /recipes/{recipe}/favorite:
+    parameters: [{ $ref: '#/components/parameters/RecipePath' }]
+    post:
+      operationId: addRecipeFavorite
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Favorite added. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    delete:
+      operationId: removeRecipeFavorite
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Favorite removed. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /cookbooks:
+    get:
+      operationId: listCookbooks
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }, { $ref: '#/components/parameters/Page' }]
+      responses:
+        '200': { $ref: '#/components/responses/CookbookListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+    post:
+      operationId: createCookbook
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: { schema: { $ref: '#/components/schemas/CookbookRequest' } }
+          application/json: { schema: { $ref: '#/components/schemas/CookbookRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/CookbookSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cookbooks/{cookbook}:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    get:
+      operationId: getCookbook
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/CookbookSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+    patch:
+      operationId: updateCookbook
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data: { schema: { $ref: '#/components/schemas/CookbookRequest' } }
+          application/json: { schema: { $ref: '#/components/schemas/CookbookRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/CookbookSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteCookbook
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/DeleteCookbookRequest' } }
+      responses:
+        '204': { description: Cookbook deleted. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cookbooks/{cookbook}/recipes:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    get:
+      operationId: listCookbookRecipes
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }, { $ref: '#/components/parameters/Page' }]
+      responses:
+        '200': { $ref: '#/components/responses/RecipeListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+  /cookbooks/{cookbook}/recipes/{recipe}:
+    parameters:
+      - { $ref: '#/components/parameters/CookbookPath' }
+      - { $ref: '#/components/parameters/RecipePath' }
+    post:
+      operationId: addCookbookRecipe
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Recipe attached to cookbook. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/HttpError' }
+    delete:
+      operationId: removeCookbookRecipe
+      tags: [Cookbooks]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Recipe detached from cookbook. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+
+  /cookbooks/{cookbook}/members:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    get:
+      operationId: listCookbookMembers
+      tags: [Cookbook members]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/PerPage' }, { $ref: '#/components/parameters/Page' }]
+      responses:
+        '200': { $ref: '#/components/responses/MemberListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+
+  /cookbooks/{cookbook}/members/me:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    delete:
+      operationId: leaveCookbook
+      tags: [Cookbook members]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Membership removed. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+
+  /cookbooks/{cookbook}/members/{member}:
+    parameters:
+      - { $ref: '#/components/parameters/CookbookPath' }
+      - { $ref: '#/components/parameters/MemberPath' }
+    delete:
+      operationId: removeCookbookMember
+      tags: [Cookbook members]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Member removed. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+
+  /cookbooks/{cookbook}/members/{member}/role:
+    parameters:
+      - { $ref: '#/components/parameters/CookbookPath' }
+      - { $ref: '#/components/parameters/MemberPath' }
+    patch:
+      operationId: updateCookbookMemberRole
+      tags: [Cookbook members]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/MemberRoleRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/MemberSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cookbooks/{cookbook}/invitations:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    post:
+      operationId: createCookbookInvitation
+      tags: [Invitations]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/InvitationRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/InvitationSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /cookbooks/{cookbook}/messages:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    get:
+      operationId: listCookbookMessages
+      tags: [Cookbook messages]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/PerPage' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+    post:
+      operationId: createCookbookMessage
+      tags: [Cookbook messages]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ContentRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/HttpError' }
+
+  /cookbooks/{cookbook}/messages/latest:
+    parameters: [{ $ref: '#/components/parameters/CookbookPath' }]
+    get:
+      operationId: listLatestCookbookMessages
+      tags: [Cookbook messages]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/MessageListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+
+  /cookbooks/{cookbook}/messages/{message}:
+    parameters:
+      - { $ref: '#/components/parameters/CookbookPath' }
+      - { $ref: '#/components/parameters/MessagePath' }
+    patch:
+      operationId: updateCookbookMessage
+      tags: [Cookbook messages]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/ContentRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteCookbookMessage
+      tags: [Cookbook messages]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /invitations:
+    get:
+      operationId: listInvitations
+      tags: [Invitations]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/InvitationListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
+  /invitations/{token}:
+    get:
+      operationId: showInvitation
+      tags: [Invitations]
+      parameters: [{ $ref: '#/components/parameters/TokenPath' }]
+      responses:
+        '200': { $ref: '#/components/responses/InvitationSuccess' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '410': { $ref: '#/components/responses/HttpError' }
+
+  /invitations/token/{token}/accept:
+    post:
+      operationId: acceptInvitationByToken
+      tags: [Invitations]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TokenPath' }]
+      responses:
+        '200': { $ref: '#/components/responses/InvitationActionSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+        '410': { $ref: '#/components/responses/HttpError' }
+
+  /invitations/{cookbookInvitation}/accept:
+    post:
+      operationId: acceptInvitationById
+      tags: [Invitations]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/InvitationPath' }]
+      responses:
+        '200': { $ref: '#/components/responses/InvitationActionSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '409': { $ref: '#/components/responses/HttpError' }
+        '410': { $ref: '#/components/responses/HttpError' }
+
+  /invitations/{cookbookInvitation}/decline:
+    post:
+      operationId: declineInvitation
+      tags: [Invitations]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/InvitationPath' }]
+      responses:
+        '200': { $ref: '#/components/responses/InvitationSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '410': { $ref: '#/components/responses/HttpError' }
+
+  /planned-meals:
+    get:
+      operationId: listPlannedMeals
+      tags: [Planning]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+        - { $ref: '#/components/parameters/CookbookId' }
+      responses:
+        '200': { $ref: '#/components/responses/PlannedMealListSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      operationId: createPlannedMeal
+      tags: [Planning]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreatePlannedMealRequest' } }
+      responses:
+        '201': { $ref: '#/components/responses/PlannedMealSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /planned-meals/{plannedMeal}:
+    parameters: [{ $ref: '#/components/parameters/PlannedMealPath' }]
+    patch:
+      operationId: updatePlannedMeal
+      tags: [Planning]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdatePlannedMealRequest' } }
+      responses:
+        '200': { $ref: '#/components/responses/PlannedMealSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deletePlannedMeal
+      tags: [Planning]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '204': { description: Planned meal deleted. }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/AuthorizationError' }
+        '404': { $ref: '#/components/responses/NotFoundError' }
+
+  /import:
+    post:
+      operationId: importSupmeal
+      tags: [Import / export]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: SUPMEAL JSON file, maximum 10 MiB.
+      responses:
+        '201': { $ref: '#/components/responses/ImportSuccess' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /export:
+    get:
+      operationId: exportSupmeal
+      tags: [Import / export]
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }]
+      responses:
+        '200':
+          description: SUPMEAL JSON export.
+          headers:
+            X-4Meal-Export-Warning: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SupmealDocument' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+
 components:
   securitySchemes:
     bearerAuth:
-      $ref: ./components/securitySchemes.yaml#/bearerAuth
-  headers:
-    XCorrelationId:
-      $ref: ./components/headers.yaml#/XCorrelationId
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT authentication using the Authorization Bearer header.'
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: 4meal_access_token
+      description: HttpOnly JWT cookie issued by the authentication endpoints.
   parameters:
-    XCorrelationId:
-      $ref: ./components/parameters/correlation.yaml#/XCorrelationId
-    Page:
-      $ref: ./components/parameters/pagination.yaml#/Page
-    PerPage:
-      $ref: ./components/parameters/pagination.yaml#/PerPage
-    Search:
-      $ref: ./components/parameters/pagination.yaml#/Search
+    Page: { $ref: ./components/parameters/pagination.yaml#/Page }
+    PerPage: { $ref: ./components/parameters/pagination.yaml#/PerPage }
+    Search: { $ref: ./components/parameters/pagination.yaml#/Search }
+    RecipePath: { name: recipe, in: path, required: true, schema: { type: string, format: uuid } }
+    CookbookPath: { name: cookbook, in: path, required: true, schema: { type: string, format: uuid } }
+    CommentPath: { name: comment, in: path, required: true, schema: { type: string, format: uuid } }
+    MemberPath: { name: member, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    MessagePath: { name: message, in: path, required: true, schema: { type: string, format: uuid } }
+    PlannedMealPath: { name: plannedMeal, in: path, required: true, schema: { type: string, format: uuid } }
+    InvitationPath: { name: cookbookInvitation, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    TokenPath: { name: token, in: path, required: true, schema: { type: string, minLength: 1 } }
+    OAuthState: { name: state, in: query, required: true, schema: { type: string, minLength: 1 } }
+    OAuthCode: { name: code, in: query, required: false, schema: { type: string } }
+    OAuthError: { name: error, in: query, required: false, schema: { type: string } }
+    RecipeScope: { name: scope, in: query, schema: { type: string, enum: [accessible, mine, public], default: accessible } }
+    CookbookId: { name: cookbook_id, in: query, schema: { type: string, format: uuid } }
+    Tag: { name: tag, in: query, schema: { type: string, minLength: 1, maxLength: 64 } }
+    Ingredient: { name: ingredient, in: query, schema: { type: string, minLength: 1, maxLength: 255 } }
+    MaxPrepTime: { name: max_prep_time, in: query, schema: { type: integer, minimum: 0, maximum: 10080 } }
+    MaxCookTime: { name: max_cook_time, in: query, schema: { type: integer, minimum: 0, maximum: 10080 } }
+    Favorites: { name: favorites, in: query, schema: { type: boolean } }
+    Cursor: { name: cursor, in: query, schema: { type: string, maxLength: 2048 } }
+    FromDate: { name: from, in: query, required: true, schema: { type: string, format: date } }
+    ToDate: { name: to, in: query, required: true, schema: { type: string, format: date } }
+  responses:
+    SuccessObject:
+      description: Successful response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/SuccessObject' } } }
+    UserCreated:
+      description: User created.
+      content: { application/json: { schema: { $ref: '#/components/schemas/UserEnvelope' } } }
+    UserSuccess:
+      description: Current user.
+      content: { application/json: { schema: { $ref: '#/components/schemas/UserEnvelope' } } }
+    SessionSuccess:
+      description: Authenticated session. A JWT cookie is also issued.
+      content: { application/json: { schema: { $ref: '#/components/schemas/SessionEnvelope' } } }
+    RecipeSuccess:
+      description: Recipe response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/RecipeEnvelope' } } }
+    RecipeListSuccess:
+      description: Paginated recipes.
+      content: { application/json: { schema: { $ref: '#/components/schemas/RecipeListEnvelope' } } }
+    CommentSuccess:
+      description: Recipe comment response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/CommentEnvelope' } } }
+    CommentListSuccess:
+      description: Paginated recipe comments.
+      content: { application/json: { schema: { $ref: '#/components/schemas/CommentListEnvelope' } } }
+    CookbookSuccess:
+      description: Cookbook response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/CookbookEnvelope' } } }
+    CookbookListSuccess:
+      description: Paginated cookbooks.
+      content: { application/json: { schema: { $ref: '#/components/schemas/CookbookListEnvelope' } } }
+    MemberSuccess:
+      description: Cookbook member response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/MemberEnvelope' } } }
+    MemberListSuccess:
+      description: Paginated cookbook members.
+      content: { application/json: { schema: { $ref: '#/components/schemas/MemberListEnvelope' } } }
+    MessageSuccess:
+      description: Cookbook message response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/MessageEnvelope' } } }
+    MessageListSuccess:
+      description: Cookbook messages.
+      content: { application/json: { schema: { $ref: '#/components/schemas/MessageListEnvelope' } } }
+    InvitationSuccess:
+      description: Invitation response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/InvitationEnvelope' } } }
+    InvitationListSuccess:
+      description: Pending invitations.
+      content: { application/json: { schema: { $ref: '#/components/schemas/InvitationListEnvelope' } } }
+    InvitationActionSuccess:
+      description: Invitation action result.
+      content: { application/json: { schema: { $ref: '#/components/schemas/InvitationActionEnvelope' } } }
+    PlannedMealSuccess:
+      description: Planned meal response.
+      content: { application/json: { schema: { $ref: '#/components/schemas/PlannedMealEnvelope' } } }
+    PlannedMealListSuccess:
+      description: Planned meals in the requested period.
+      content: { application/json: { schema: { $ref: '#/components/schemas/PlannedMealListEnvelope' } } }
+    OAuthAccountsSuccess:
+      description: Linked OAuth accounts.
+      content: { application/json: { schema: { $ref: '#/components/schemas/OAuthAccountListEnvelope' } } }
+    OAuthLinkSuccess:
+      description: OAuth provider authorization URL for API clients.
+      content: { application/json: { schema: { $ref: '#/components/schemas/OAuthLinkEnvelope' } } }
+    ImportSuccess:
+      description: Import report.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ImportEnvelope' } } }
+    Redirect:
+      description: Browser redirect to the OAuth provider or frontend.
+      headers: { Location: { required: true, schema: { type: string, format: uri-reference } } }
+    ValidationError: { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ValidationErrorEnvelope' } } } }
+    AuthenticationError: { description: Authentication required, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    AuthorizationError: { description: Authorization denied, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    NotFoundError: { description: Resource not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    HttpError: { description: HTTP error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
   schemas:
-    EnvelopeMeta:
-      $ref: ./components/schemas/common.yaml#/EnvelopeMeta
-    PaginationMeta:
-      $ref: ./components/schemas/pagination.yaml#/PaginationMeta
-    PaginatedEnvelopeMeta:
-      $ref: ./components/schemas/pagination.yaml#/PaginatedEnvelopeMeta
-    ApiError:
-      $ref: ./components/schemas/errors.yaml#/ApiError
-    ApiErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/ApiErrorEnvelope
-    ValidationErrorDetails:
-      $ref: ./components/schemas/errors.yaml#/ValidationErrorDetails
+    Meta:
+      type: object
+      properties:
+        correlation_id: { type: string }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+      additionalProperties: true
+    Pagination:
+      type: object
+      required: [current_page, per_page, total, last_page, from, to, path, has_more_pages]
+      properties:
+        current_page: { type: integer, minimum: 1 }
+        per_page: { type: integer, minimum: 1 }
+        total: { type: integer, minimum: 0 }
+        last_page: { type: integer, minimum: 1 }
+        from: { type: integer, nullable: true }
+        to: { type: integer, nullable: true }
+        path: { type: string }
+        has_more_pages: { type: boolean }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+    ErrorEnvelope:
+      type: object
+      required: [success, error, meta]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error: { $ref: '#/components/schemas/Error' }
+        meta: { $ref: '#/components/schemas/Meta' }
     ValidationErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/ValidationErrorEnvelope
-    AuthenticationErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/AuthenticationErrorEnvelope
-    AuthorizationErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/AuthorizationErrorEnvelope
-    NotFoundErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/NotFoundErrorEnvelope
-    HttpErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/HttpErrorEnvelope
-    ServerErrorEnvelope:
-      $ref: ./components/schemas/errors.yaml#/ServerErrorEnvelope
+      allOf:
+        - $ref: '#/components/schemas/ErrorEnvelope'
+        - type: object
+          properties:
+            error:
+              type: object
+              properties:
+                code: { type: string, enum: [validation_error] }
+                details:
+                  type: object
+                  required: [fields]
+                  properties:
+                    fields: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    SuccessObject:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object, additionalProperties: true }
+        meta: { $ref: '#/components/schemas/Meta' }
+    Envelope:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: {}
+        meta: { $ref: '#/components/schemas/Meta' }
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        diet: { type: string, nullable: true, enum: [omnivore, vegetarian, vegan, pescatarian, flexitarian, null] }
+        allergies: { type: array, items: { type: string } }
+        default_servings: { type: integer, minimum: 1 }
+        avatar_path: { type: string, nullable: true }
+        avatar_url: { type: string, format: uri, nullable: true }
+        last_login_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+    AuthSession:
+      type: object
+      required: [access_token, token_type, expires_in, user]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer, minimum: 1 }
+        user: { $ref: '#/components/schemas/User' }
+    Ingredient:
+      type: object
+      properties:
+        position: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        quantity: { type: number, minimum: 0, nullable: true }
+        unit: { type: string, maxLength: 64, nullable: true }
+        preparation: { type: string, maxLength: 255, nullable: true }
+        is_optional: { type: boolean }
+        group_name: { type: string, maxLength: 255, nullable: true }
+    Step:
+      type: object
+      properties:
+        position: { type: integer, minimum: 1 }
+        instruction: { type: string, minLength: 1 }
+        duration_minutes: { type: integer, minimum: 0, nullable: true }
+    Tag:
+      type: object
+      properties: { id: { type: integer }, name: { type: string }, slug: { type: string }, color: { type: string, nullable: true } }
+    Recipe:
+      type: object
+      required: [id, title, ingredients, steps, tags, is_favorite]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        title: { type: string }
+        slug: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        prep_time_minutes: { type: integer, nullable: true }
+        cook_time_minutes: { type: integer, nullable: true }
+        rest_time_minutes: { type: integer, nullable: true }
+        servings: { type: integer, nullable: true }
+        image_path: { type: string, nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+        visibility: { type: string, nullable: true }
+        difficulty: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        source: { type: string, nullable: true }
+        is_favorite: { type: boolean }
+        author:
+          oneOf:
+            - { $ref: '#/components/schemas/User' }
+            - { type: object, nullable: true }
+        ingredients: { type: array, items: { $ref: '#/components/schemas/Ingredient' } }
+        steps: { type: array, items: { $ref: '#/components/schemas/Step' } }
+        tags: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        created_at: { type: string, format: date-time, nullable: true }
+    Comment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string }
+        author: { $ref: '#/components/schemas/User' }
+        edited_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+    Cookbook:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        image_path: { type: string, nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+        owner: { $ref: '#/components/schemas/User' }
+        member_role: { type: string, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+        latest_messages: { type: array, items: { $ref: '#/components/schemas/Message' } }
+    Member:
+      type: object
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        role: { type: string, enum: [owner, moderator, editor, commenter, reader] }
+        joined_at: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [active] }
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string }
+        is_deleted: { type: boolean }
+        edited_at: { type: string, format: date-time, nullable: true }
+        deleted_at: { type: string, format: date-time, nullable: true }
+        deleted_by: { type: object, nullable: true, additionalProperties: true }
+        author: { $ref: '#/components/schemas/User' }
+        created_at: { type: string, format: date-time, nullable: true }
+    Invitation:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        role: { type: string }
+        expires_at: { type: string, format: date-time }
+        accepted_at: { type: string, format: date-time, nullable: true }
+        declined_at: { type: string, format: date-time, nullable: true }
+        cookbook: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }
+    PlannedMeal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        meal_type: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        note: { type: string, nullable: true }
+        initial_servings: { type: integer, minimum: 1 }
+        recipe: { $ref: '#/components/schemas/PlannedRecipe' }
+        cookbook_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+    PlannedRecipe:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        slug: { type: string, nullable: true }
+        servings: { type: integer, nullable: true }
+        image_url: { type: string, format: uri, nullable: true }
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, format: password, minLength: 8 }
+        password_confirmation: { type: string, format: password }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, format: password }
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, password, password_confirmation]
+      properties:
+        current_password: { type: string, format: password }
+        password: { type: string, format: password, minLength: 8 }
+        password_confirmation: { type: string, format: password }
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 255 }
+        email: { type: string, format: email, maxLength: 255 }
+        current_password: { type: string, format: password, description: Required when changing email. }
+        avatar: { type: string, format: binary }
+        diet: { type: string, nullable: true }
+        allergies: { type: array, maxItems: 50, items: { type: string, minLength: 1, maxLength: 100 } }
+        default_servings: { type: integer, minimum: 1, maximum: 50 }
+    ContentRequest:
+      type: object
+      required: [content]
+      properties: { content: { type: string, minLength: 1, maxLength: 2000 } }
+    CookbookRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        slug: { type: string, minLength: 1, maxLength: 255, nullable: true }
+        description: { type: string, nullable: true }
+        image: { type: string, format: binary }
+    DeleteCookbookRequest:
+      type: object
+      required: [confirmation]
+      properties: { confirmation: { type: string, description: Must exactly match the cookbook name. } }
+    MemberRoleRequest:
+      type: object
+      required: [role]
+      properties: { role: { type: string, enum: [owner, moderator, editor, commenter, reader] } }
+    InvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email, maxLength: 255 }
+        role: { type: string, enum: [editor, reader, commenter] }
+    CreateRecipeRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipeFields'
+        - type: object
+          required: [title, ingredients, steps]
+    UpdateRecipeRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipeFields'
+        - type: object
+          properties: {}
+    RecipeFields:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 255 }
+        description: { type: string, nullable: true }
+        prep_time_minutes: { type: integer, minimum: 0, maximum: 10080, nullable: true }
+        cook_time_minutes: { type: integer, minimum: 0, maximum: 10080, nullable: true }
+        servings: { type: integer, minimum: 1, maximum: 1000, nullable: true }
+        source: { type: string, maxLength: 2048, nullable: true }
+        image: { type: string, format: binary }
+        cookbook_id: { type: string, format: uuid, nullable: true }
+        ingredients: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Ingredient' } }
+        steps: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Step' } }
+        tags: { type: array, maxItems: 50, items: { type: string, minLength: 1, maxLength: 64 } }
+    CreatePlannedMealRequest:
+      type: object
+      required: [recipe_id, date, meal_type]
+      properties:
+        recipe_id: { type: string, format: uuid }
+        cookbook_id: { type: string, format: uuid, nullable: true }
+        date: { type: string, format: date }
+        meal_type: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        note: { type: string, maxLength: 5000, nullable: true }
+    UpdatePlannedMealRequest:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        meal_type: { type: string, enum: [breakfast, lunch, dinner, snack] }
+        note: { type: string, maxLength: 5000, nullable: true }
+    SupmealDocument:
+      type: object
+      description: SUPMEAL 1.0 export document.
+      additionalProperties: true
+      required: [format, version, exported_at, cookbooks, recipes]
+      properties:
+        format: { type: string, enum: [SUPMEAL] }
+        version: { type: string, enum: [1.0.0] }
+        exported_at: { type: string, format: date-time }
+        cookbooks: { type: array, items: { type: object, additionalProperties: true } }
+        recipes: { type: array, items: { type: object, additionalProperties: true } }
+    ImportReport:
+      type: object
+      additionalProperties: true
+    SuccessEnvelopeBase:
+      type: object
+      required: [success, data, meta]
+      properties: { success: { type: boolean, enum: [true] }, meta: { $ref: '#/components/schemas/Meta' } }
+    UserEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/User' } } }]
+    SessionEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/AuthSession' } } }]
+    RecipeEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Recipe' } } }]
+    RecipeListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Recipe' } }, meta: { allOf: [{ $ref: '#/components/schemas/Meta' }, { required: [pagination] }] } } }]
+    CommentEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }]
+    CommentListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Comment' } }, meta: { allOf: [{ $ref: '#/components/schemas/Meta' }, { required: [pagination] }] } } }]
+    CookbookEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Cookbook' } } }]
+    CookbookListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Cookbook' } }, meta: { allOf: [{ $ref: '#/components/schemas/Meta' }, { required: [pagination] }] } } }]
+    MemberEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Member' } } }]
+    MemberListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Member' } }, meta: { allOf: [{ $ref: '#/components/schemas/Meta' }, { required: [pagination] }] } } }]
+    MessageEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Message' } } }]
+    MessageListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Message' } } } }]
+    InvitationEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/Invitation' } } }]
+    InvitationListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Invitation' } } } }]
+    InvitationActionEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: object, additionalProperties: true } } }]
+    PlannedMealEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { $ref: '#/components/schemas/PlannedMeal' } } }]
+    PlannedMealListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/PlannedMeal' } } } }]
+    OAuthAccountListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: array, items: { type: object, additionalProperties: true } } } }]
+    OAuthLinkEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: object, required: [authorization_url], properties: { authorization_url: { type: string, format: uri } } } } }]
+    ImportEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelopeBase' }, { type: object, properties: { data: { type: object, properties: { message: { type: string }, report: { $ref: '#/components/schemas/ImportReport' } } } } }]

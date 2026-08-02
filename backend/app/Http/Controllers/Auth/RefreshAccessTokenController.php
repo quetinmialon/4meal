@@ -7,6 +7,7 @@ use App\Http\Middleware\AuthenticateWithJwt;
 use App\Http\Resources\Auth\AuthenticatedSessionResource;
 use App\Models\User;
 use App\Support\ApiResponse;
+use App\Support\Jwt\AccessTokenCookie;
 use App\Support\Jwt\AccessTokenIssuer;
 use App\Support\Jwt\AccessTokenRegistry;
 use Illuminate\Auth\AuthenticationException;
@@ -18,6 +19,7 @@ class RefreshAccessTokenController extends Controller
     public function __construct(
         private readonly AccessTokenIssuer $accessTokenIssuer,
         private readonly AccessTokenRegistry $accessTokenRegistry,
+        private readonly AccessTokenCookie $accessTokenCookie,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -31,12 +33,14 @@ class RefreshAccessTokenController extends Controller
 
         $this->accessTokenRegistry->forget($currentToken->tokenId);
 
+        $session = [
+            ...$this->accessTokenIssuer->issue($user),
+            'user' => $user,
+        ];
+
         return ApiResponse::success(
             $request,
-            AuthenticatedSessionResource::make([
-                ...$this->accessTokenIssuer->issue($user),
-                'user' => $user,
-            ])->resolve($request),
-        );
+            AuthenticatedSessionResource::make($session)->resolve($request),
+        )->withCookie($this->accessTokenCookie->make($session['access_token'], $session['expires_in']));
     }
 }

@@ -9,7 +9,7 @@ export async function handleOAuthCallback(
   params: URLSearchParams,
   completeLogin: (params: URLSearchParams) => Promise<LoginResult>,
 ): Promise<OAuthCallbackResult> {
-  const hasCallbackData = ['access_token', 'token', 'code', 'error', 'error_description', 'oauth_error'].some((key) =>
+  const hasCallbackData = ['oauth', 'access_token', 'token', 'code', 'error', 'error_description', 'oauth_error'].some((key) =>
     params.has(key),
   );
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\LinkGoogleOAuthRedirectController;
 use App\Http\Controllers\Auth\LinkMicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\ListOAuthAccountsController;
 use App\Http\Controllers\Auth\LoginUserController;
+use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
@@ -220,6 +221,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::post('refresh', RefreshAccessTokenController::class)
             ->name('auth.refresh');
+
+        Route::post('logout', LogoutController::class)
+            ->name('auth.logout');
 
         Route::put('password', ChangePasswordController::class)
             ->name('auth.password.update');
