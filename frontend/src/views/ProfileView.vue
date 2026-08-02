@@ -21,7 +21,6 @@ const hasSubmitted = ref(false);
 const globalError = ref('');
 const successMessage = ref('');
 const formErrorSummary = ref<HTMLElement | null>(null);
-const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref<string | null>(authStore.user?.avatar_url ?? null);
 let objectPreviewUrl: string | null = null;
 
@@ -157,7 +156,7 @@ onBeforeUnmount(revokeObjectPreview);
 
         <div class="field">
           <label for="avatar-input">Photo de profil</label>
-          <input id="avatar-input" ref="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" :aria-invalid="visibleError('avatar') ? 'true' : 'false'" aria-describedby="avatar-help" @change="handleAvatarChange" />
+          <input id="avatar-input" type="file" accept="image/jpeg,image/png,image/webp" :aria-invalid="visibleError('avatar') ? 'true' : 'false'" aria-describedby="avatar-help" @change="handleAvatarChange" />
           <small id="avatar-help">JPEG, PNG ou WebP, 5 Mo maximum.</small>
           <figure v-if="avatarPreview" class="avatar-figure">
             <img class="avatar-preview" :src="avatarPreview" alt="Photo actuelle du profil" />
