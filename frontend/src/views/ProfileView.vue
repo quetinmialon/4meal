@@ -3,8 +3,18 @@ import { nextTick, onBeforeUnmount, reactive, ref } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
 
-type TextField = 'name' | 'email' | 'currentPassword';
-type ErrorField = TextField | 'avatar';
+type TextField = 'name' | 'email' | 'currentPassword' | 'allergyDraft' | 'defaultServings';
+type ErrorField = TextField | 'avatar' | 'diet' | 'allergies' | 'defaultServings';
+
+const dietOptions = [
+  { value: 'omnivore', label: 'Omnivore' },
+  { value: 'vegetarian', label: 'Végétarien' },
+  { value: 'vegan', label: 'Végétalien' },
+  { value: 'pescatarian', label: 'Pescétarien' },
+  { value: 'flexitarian', label: 'Flexitarien' },
+  { value: 'halal', label: 'Halal' },
+  { value: 'kosher', label: 'Casher' },
+];
 
 const authStore = useAuthStore();
 const originalEmail = authStore.user?.email ?? '';
@@ -13,10 +23,14 @@ const form = reactive({
   email: authStore.user?.email ?? '',
   avatar: null as File | null,
   currentPassword: '',
+  diet: authStore.user?.diet ?? null,
+  allergies: [...(authStore.user?.allergies ?? [])],
+  defaultServings: authStore.user?.default_servings ?? 2,
 });
-const clientErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '' });
-const apiErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '' });
-const touched = reactive<Record<ErrorField, boolean>>({ name: false, email: false, avatar: false, currentPassword: false });
+const allergyDraft = ref('');
+const clientErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', allergyDraft: '' });
+const apiErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', allergyDraft: '' });
+const touched = reactive<Record<ErrorField, boolean>>({ name: false, email: false, avatar: false, currentPassword: false, diet: false, allergies: false, defaultServings: false, allergyDraft: false });
 const hasSubmitted = ref(false);
 const globalError = ref('');
 const successMessage = ref('');
@@ -30,6 +44,7 @@ function emailChanged(): boolean {
 
 function validateField(field: ErrorField): string {
   if (field === 'avatar') return '';
+  if (field === 'allergyDraft') return allergyDraft.value.trim().length > 100 ? 'Une allergie ne peut pas dépasser 100 caractères.' : '';
   if (field === 'currentPassword') return emailChanged() && form.currentPassword === '' ? 'Ce champ est requis pour modifier l email.' : '';
   if (field === 'name') {
     if (form.name.trim() === '') return 'Le nom est requis.';
@@ -39,6 +54,8 @@ function validateField(field: ErrorField): string {
     if (form.email.trim() === '') return 'L adresse e-mail est requise.';
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return 'Saisissez une adresse e-mail valide.';
   }
+  if (field === 'allergies' && form.allergies.length > 50) return 'Vous pouvez renseigner au maximum 50 allergies.';
+  if (field === 'defaultServings' && (!Number.isInteger(form.defaultServings) || form.defaultServings < 1 || form.defaultServings > 50)) return 'Indiquez un nombre de portions entre 1 et 50.';
   return '';
 }
 
@@ -58,6 +75,18 @@ function handleBlur(field: TextField): void {
   touched[field] = true;
   validateAndStore(field);
 }
+
+function addAllergy(): void {
+  const allergy = allergyDraft.value.trim();
+  if (allergy === '') return;
+  if (allergy.length > 100) { clientErrors.allergyDraft = 'Une allergie ne peut pas dépasser 100 caractères.'; return; }
+  if (!form.allergies.includes(allergy)) form.allergies.push(allergy);
+  allergyDraft.value = '';
+  clientErrors.allergyDraft = '';
+  apiErrors.allergies = '';
+}
+
+function removeAllergy(allergy: string): void { form.allergies = form.allergies.filter((item) => item !== allergy); }
 
 function revokeObjectPreview(): void {
   if (objectPreviewUrl !== null) URL.revokeObjectURL(objectPreviewUrl);
@@ -92,17 +121,17 @@ function handleAvatarChange(event: Event): void {
 }
 
 function validateForm(): boolean {
-  (['name', 'email', 'avatar', 'currentPassword'] as ErrorField[]).forEach((field) => {
+  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'allergyDraft'] as ErrorField[]).forEach((field) => {
     touched[field] = true;
     validateAndStore(field);
   });
-  return (['name', 'email', 'avatar', 'currentPassword'] as ErrorField[]).every((field) => visibleError(field) === '');
+  return (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'allergyDraft'] as ErrorField[]).every((field) => visibleError(field) === '');
 }
 
 async function focusFirstError(): Promise<void> {
   await nextTick();
-  const field = (['name', 'email', 'avatar', 'currentPassword'] as ErrorField[]).find((item) => visibleError(item) !== '');
-  if (field !== undefined) document.getElementById(`${field}-input`)?.focus();
+  const field = (['name', 'email', 'avatar', 'diet', 'allergies', 'defaultServings', 'allergyDraft', 'currentPassword'] as ErrorField[]).find((item) => visibleError(item) !== '');
+  if (field !== undefined) document.getElementById(`${field === 'allergyDraft' ? 'allergy' : field}-input`)?.focus();
   else formErrorSummary.value?.focus();
 }
 
@@ -110,10 +139,10 @@ async function handleSubmit(): Promise<void> {
   hasSubmitted.value = true;
   globalError.value = '';
   successMessage.value = '';
-  (['name', 'email', 'avatar', 'currentPassword'] as ErrorField[]).forEach((field) => { apiErrors[field] = ''; });
+  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings'] as ErrorField[]).forEach((field) => { apiErrors[field] = ''; });
   if (!validateForm()) { await focusFirstError(); return; }
 
-  const result = await authStore.updateProfile(form.name, form.email, form.avatar, form.currentPassword, originalEmail);
+  const result = await authStore.updateProfile(form.name, form.email, form.avatar, form.currentPassword, originalEmail, form.diet, form.allergies, form.defaultServings);
   if (result.ok) {
     successMessage.value = 'Votre profil a bien ete modifie.';
     form.currentPassword = '';
@@ -125,6 +154,9 @@ async function handleSubmit(): Promise<void> {
   apiErrors.email = result.fieldErrors.email ?? '';
   apiErrors.avatar = result.fieldErrors.avatar_path ?? '';
   apiErrors.currentPassword = result.fieldErrors.current_password ?? '';
+  apiErrors.diet = result.fieldErrors.diet ?? '';
+  apiErrors.allergies = result.fieldErrors.allergies ?? '';
+  apiErrors.defaultServings = result.fieldErrors.default_servings ?? '';
   await focusFirstError();
 }
 
@@ -172,6 +204,46 @@ onBeforeUnmount(revokeObjectPreview);
           <p v-if="visibleError('currentPassword')" id="currentPassword-error" class="field-error" role="alert">{{ visibleError('currentPassword') }}</p>
         </div>
 
+        <section class="preferences-section" aria-labelledby="food-preferences-title">
+          <h3 id="food-preferences-title">Préférences culinaires</h3>
+          <p class="section-help">Ces préférences servent à personnaliser vos suggestions de recettes. Vous pourrez les modifier à tout moment.</p>
+
+          <div class="field">
+            <label for="diet-input">Régime alimentaire</label>
+            <select id="diet-input" v-model="form.diet" name="diet" :aria-invalid="visibleError('diet') ? 'true' : 'false'" aria-describedby="diet-help diet-error" @change="apiErrors.diet = ''">
+              <option :value="null">Aucun régime particulier</option>
+              <option v-for="option in dietOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+            <small id="diet-help">Choisissez une valeur dans la liste pour garder des préférences cohérentes.</small>
+            <p v-if="visibleError('diet')" id="diet-error" class="field-error" role="alert">{{ visibleError('diet') }}</p>
+          </div>
+
+          <div class="field">
+            <label for="allergy-input">Allergies et ingrédients à éviter</label>
+            <div class="tag-list" aria-live="polite">
+              <span v-for="allergy in form.allergies" :key="allergy" class="tag">
+                {{ allergy }}
+                <button type="button" class="remove-tag" :aria-label="'Retirer ' + allergy" @click="removeAllergy(allergy)">×</button>
+              </span>
+              <span v-if="form.allergies.length === 0" class="empty-tags">Aucune allergie renseignée.</span>
+            </div>
+            <div class="allergy-entry">
+              <input id="allergy-input" v-model="allergyDraft" name="allergy" maxlength="100" placeholder="Ex. arachides" :aria-invalid="clientErrors.allergyDraft || visibleError('allergies') ? 'true' : 'false'" aria-describedby="allergy-help allergy-error" @keydown.enter.prevent="addAllergy" @input="apiErrors.allergies = ''; clientErrors.allergyDraft = ''" />
+              <button type="button" class="secondary-button" @click="addAllergy">Ajouter</button>
+            </div>
+            <small id="allergy-help">Ajoutez chaque allergie séparément. Appuyez sur Entrée ou sur Ajouter.</small>
+            <p v-if="clientErrors.allergyDraft" id="allergy-error" class="field-error" role="alert">{{ clientErrors.allergyDraft }}</p>
+            <p v-else-if="visibleError('allergies')" id="allergy-error" class="field-error" role="alert">{{ visibleError('allergies') }}</p>
+          </div>
+
+          <div class="field">
+            <label for="defaultServings-input">Portions par défaut</label>
+            <input id="defaultServings-input" v-model.number="form.defaultServings" name="default_servings" type="number" min="1" max="50" :aria-invalid="visibleError('defaultServings') ? 'true' : 'false'" aria-describedby="defaultServings-help defaultServings-error" @input="handleInput('defaultServings')" @blur="handleBlur('defaultServings')" />
+            <small id="defaultServings-help">Nombre de personnes pour lequel vous cuisinez habituellement (de 1 à 50).</small>
+            <p v-if="visibleError('defaultServings')" id="defaultServings-error" class="field-error" role="alert">{{ visibleError('defaultServings') }}</p>
+          </div>
+        </section>
+
         <button type="submit">{{ authStore.status === 'loading' ? 'Enregistrement...' : 'Enregistrer le profil' }}</button>
       </fieldset>
     </form>
@@ -186,11 +258,21 @@ h2 { margin: 0 0 0.75rem; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1;
 .profile-form { margin-top: 1.75rem; }
 fieldset { display: grid; gap: 1.25rem; margin: 0; padding: 0; border: 0; }
 .field { display: grid; gap: 0.45rem; }
+.preferences-section { display: grid; gap: 1.25rem; margin-top: 0.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+h3 { margin: 0; font-size: 1.35rem; }
+.section-help { margin: -0.75rem 0 0; color: #50634d; line-height: 1.5; }
 label { font-weight: 700; }
-input { width: 100%; padding: 0.9rem 1rem; border: 1px solid #b4bead; border-radius: 0.95rem; background: #fffdfa; color: #243127; font: inherit; }
-input:focus-visible { outline: 3px solid rgba(116, 144, 88, 0.32); outline-offset: 2px; }
-input[aria-invalid='true'] { border-color: #b64242; background: #fff8f6; }
+input, select { width: 100%; padding: 0.9rem 1rem; border: 1px solid #b4bead; border-radius: 0.95rem; background: #fffdfa; color: #243127; font: inherit; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid rgba(116, 144, 88, 0.32); outline-offset: 2px; }
+input[aria-invalid='true'], select[aria-invalid='true'] { border-color: #b64242; background: #fff8f6; }
 small { color: #50634d; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 2rem; align-items: center; }
+.tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.55rem 0.35rem 0.75rem; border-radius: 999px; background: #e6efdc; color: #2f4520; font-size: 0.92rem; }
+.remove-tag { margin: 0; padding: 0; border: 0; background: transparent; color: #2f4520; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.allergy-entry { display: flex; gap: 0.6rem; }
+.allergy-entry input { flex: 1; }
+.secondary-button { margin: 0; padding: 0.75rem 1rem; background: #e6efdc; color: #2f4520; }
+.empty-tags { color: #50634d; font-size: 0.92rem; }
 .avatar-preview { width: 7rem; height: 7rem; border: 1px solid rgba(86,112,79,.2); border-radius: 50%; object-fit: cover; }
 .avatar-figure { display: grid; justify-items: start; gap: .4rem; margin: 0; }
 .avatar-figure figcaption { color: #50634d; font-size: .9rem; }

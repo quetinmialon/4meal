@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Diet;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -26,6 +27,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'diet',
+        'allergies',
+        'default_servings',
         'password', // API/application alias for password_hash.
         'password_hash',
         'avatar_path',
@@ -56,6 +60,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password_hash' => 'hashed',
             'last_login_at' => 'datetime',
+            'diet' => Diet::class,
+            'allergies' => 'array',
+            'default_servings' => 'integer',
         ];
     }
 
