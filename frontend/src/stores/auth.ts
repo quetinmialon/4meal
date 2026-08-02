@@ -12,6 +12,9 @@ export type AuthUser = {
   avatar_url?: string | null;
   last_login_at: string | null;
   created_at: string | null;
+  diet?: string | null;
+  allergies?: string[];
+  default_servings?: number;
 };
 
 type AuthSession = {
@@ -79,7 +82,7 @@ export type UpdateProfileResult =
   | {
       ok: false;
       message: string;
-      fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password', string>>;
+      fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password' | 'diet' | 'allergies' | 'default_servings', string>>;
     };
 
 type PersistedSession = {
@@ -190,7 +193,7 @@ function extractChangePasswordFieldErrors(
 
 function extractUpdateProfileFieldErrors(
   payload: ApiErrorPayload | null,
-): Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password', string>> {
+): Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password' | 'diet' | 'allergies' | 'default_servings', string>> {
   const fields = payload?.error?.details?.fields;
 
   if (fields === undefined) {
@@ -202,6 +205,9 @@ function extractUpdateProfileFieldErrors(
     email: typeof fields.email?.[0] === 'string' ? fields.email[0] : '',
     avatar_path: typeof fields.avatar_path?.[0] === 'string' ? fields.avatar_path[0] : '',
     current_password: typeof fields.current_password?.[0] === 'string' ? fields.current_password[0] : '',
+    diet: typeof fields.diet?.[0] === 'string' ? fields.diet[0] : '',
+    allergies: typeof fields.allergies?.[0] === 'string' ? fields.allergies[0] : '',
+    default_servings: typeof fields.default_servings?.[0] === 'string' ? fields.default_servings[0] : '',
   };
 }
 
@@ -574,6 +580,9 @@ export const useAuthStore = defineStore('auth', {
       avatar: File | null,
       currentPassword: string,
       originalEmail: string,
+      diet: string | null,
+      allergies: string[],
+      defaultServings: number,
     ): Promise<UpdateProfileResult> {
       if (this.accessToken === '' || this.tokenType === '' || this.user === null) {
         return {
@@ -595,6 +604,11 @@ export const useAuthStore = defineStore('auth', {
         body.append('email', normalizedEmail);
         body.append('current_password', currentPassword);
       }
+
+      body.append('diet', diet ?? '');
+      allergies.forEach((allergy) => body.append('allergies[]', allergy));
+      if (allergies.length === 0) body.append('allergies[]', '');
+      body.append('default_servings', String(defaultServings));
 
       try {
         const response = await fetch('/api/auth/me', {

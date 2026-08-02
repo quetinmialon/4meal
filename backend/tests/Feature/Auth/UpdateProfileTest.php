@@ -41,6 +41,62 @@ it('updates the authenticated user profile and returns the resource', function (
     expect($user->fresh()->name)->toBe('Jane Doe');
 });
 
+it('updates food preferences and exposes them in the user resource', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(profileToken($user))->patchJson('/api/auth/me', [
+        'diet' => 'vegetarian',
+        'allergies' => ['  peanuts ', 'milk', 'peanuts'],
+        'default_servings' => 4,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.diet', 'vegetarian')
+        ->assertJsonPath('data.allergies', ['peanuts', 'milk'])
+        ->assertJsonPath('data.default_servings', 4);
+
+    expect($user->fresh()->allergies)->toBe(['peanuts', 'milk'])
+        ->and($user->fresh()->default_servings)->toBe(4);
+});
+
+it('allows clearing all allergies', function () {
+    $user = User::factory()->create([
+        'password' => 'password123',
+        'allergies' => ['peanuts', 'milk'],
+    ]);
+
+    $this->withToken(profileToken($user))->patchJson('/api/auth/me', [
+        'allergies' => [''],
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.allergies', []);
+
+    expect($user->fresh()->allergies)->toBe([]);
+});
+
+it('defaults portions to two for new users', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(profileToken($user))
+        ->getJson('/api/auth/me')
+        ->assertOk()
+        ->assertJsonPath('data.diet', null)
+        ->assertJsonPath('data.allergies', [])
+        ->assertJsonPath('data.default_servings', 2);
+});
+
+it('validates controlled diets, custom allergies and default servings', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(profileToken($user))->patchJson('/api/auth/me', [
+        'diet' => 'low-carb',
+        'allergies' => ['peanuts', ['invalid']],
+        'default_servings' => 0,
+    ])->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['fields' => [
+            'diet', 'allergies.1', 'default_servings',
+        ]]]]);
+});
+
 it('requires the current password and resets verification when changing email', function () {
     $user = User::factory()->create([
         'email' => 'old@example.com',
