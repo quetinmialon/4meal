@@ -10,6 +10,7 @@ export type Cookbook = {
     name: string;
     email: string;
     avatar_path: string | null;
+    avatar_url?: string | null;
     last_login_at: string | null;
     created_at: string | null;
   };
@@ -40,6 +41,7 @@ export type CookbookMember = {
     id: number;
     name: string;
     email: string;
+    avatar_url?: string | null;
   };
   role: string;
   joined_at: string | null;

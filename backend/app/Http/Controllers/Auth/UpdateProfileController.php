@@ -6,17 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\Auth\UpdateProfileAction;
 use App\Support\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class UpdateProfileController extends Controller
 {
-    public function __invoke(UpdateProfileRequest $request): JsonResponse
+    public function __invoke(UpdateProfileRequest $request, UpdateProfileAction $action): JsonResponse
     {
         $user = $request->user();
 
@@ -33,7 +33,7 @@ class UpdateProfileController extends Controller
             ]);
         }
 
-        $attributes = $request->safe()->only(['name', 'email', 'avatar_path']);
+        $attributes = $request->safe()->only(['name', 'email', 'avatar']);
         $emailChanged = array_key_exists('email', $attributes)
             && $attributes['email'] !== $user->email;
 
@@ -42,9 +42,7 @@ class UpdateProfileController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($user, $attributes): void {
-                $user->forceFill($attributes)->save();
-            });
+            $user = $action->execute($user, $attributes);
         } catch (QueryException $exception) {
             if ($this->isUniqueEmailViolation($exception)) {
                 throw ValidationException::withMessages([
@@ -57,7 +55,7 @@ class UpdateProfileController extends Controller
 
         return ApiResponse::success(
             $request,
-            UserResource::make($user->fresh())->resolve($request),
+            UserResource::make($user)->resolve($request),
         );
     }
 

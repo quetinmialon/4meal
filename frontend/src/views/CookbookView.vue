@@ -442,7 +442,11 @@ onMounted(async () => {
           <button type="button" class="cancel-button" :disabled="isSavingName" @click="cancelEditingName">Annuler</button>
         </div>
       </form>
-      <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
+      <div class="cookbook-owner">
+        <img v-if="cookbook.owner.avatar_url" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
+        <span v-else class="owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
+        <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
+      </div>
       <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
       <section class="messages-preview-section" aria-labelledby="messages-preview-title">
@@ -475,6 +479,8 @@ onMounted(async () => {
         <div v-else class="member-list">
           <article v-for="member in members" :key="member.user.id" class="member-item">
             <div class="member-identity">
+              <img v-if="member.user.avatar_url" :src="member.user.avatar_url" :alt="`Photo de ${member.user.name}`" />
+              <span v-else class="member-fallback" aria-hidden="true">{{ member.user.name.charAt(0).toUpperCase() }}</span>
               <strong>{{ member.user.name }}</strong>
               <span v-if="member.user.email" class="member-email">{{ member.user.email }}</span>
             </div>
@@ -695,6 +701,11 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .member-list { display: grid; gap: 0.7rem; }
 .member-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
 .member-identity { display: grid; gap: 0.25rem; min-width: 0; }
+.cookbook-owner { display: flex; align-items: center; gap: .6rem; }
+.cookbook-owner img, .owner-fallback, .member-identity img, .member-fallback { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; }
+.owner-fallback, .member-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
+.member-identity { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: .6rem; }
+.member-identity strong, .member-identity .member-email { grid-column: 2; }
 .member-email { overflow: hidden; color: #50634d; text-overflow: ellipsis; white-space: nowrap; }
 .role-badge, .member-self { padding: 0.3rem 0.55rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
 .member-actions { color: #50634d; font-size: 0.85rem; text-align: right; }

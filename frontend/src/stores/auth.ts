@@ -9,6 +9,7 @@ export type AuthUser = {
   name: string;
   email: string;
   avatar_path: string | null;
+  avatar_url?: string | null;
   last_login_at: string | null;
   created_at: string | null;
 };
@@ -100,6 +101,9 @@ function isAuthUser(value: unknown): value is AuthUser {
     ((value as AuthUser).avatar_path === undefined ||
       (value as AuthUser).avatar_path === null ||
       typeof (value as AuthUser).avatar_path === 'string') &&
+    ((value as AuthUser).avatar_url === undefined ||
+      (value as AuthUser).avatar_url === null ||
+      typeof (value as AuthUser).avatar_url === 'string') &&
     ((value as AuthUser).last_login_at === undefined ||
       (value as AuthUser).last_login_at === null ||
       typeof (value as AuthUser).last_login_at === 'string') &&
@@ -567,7 +571,7 @@ export const useAuthStore = defineStore('auth', {
     async updateProfile(
       name: string,
       email: string,
-      avatarPath: string,
+      avatar: File | null,
       currentPassword: string,
       originalEmail: string,
     ): Promise<UpdateProfileResult> {
@@ -581,27 +585,27 @@ export const useAuthStore = defineStore('auth', {
 
       this.status = 'loading';
       const normalizedEmail = email.trim().toLowerCase();
-      const body: Record<string, string> = {
-        name: name.trim(),
-        avatar_path: avatarPath.trim(),
-      };
+      const body = new FormData();
+      body.append('_method', 'PATCH');
+      body.append('name', name.trim());
+
+      if (avatar !== null) body.append('avatar', avatar);
 
       if (normalizedEmail !== originalEmail) {
-        body.email = normalizedEmail;
-        body.current_password = currentPassword;
+        body.append('email', normalizedEmail);
+        body.append('current_password', currentPassword);
       }
 
       try {
         const response = await fetch('/api/auth/me', {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
             ...authHeaders({
               accessToken: this.accessToken,
               tokenType: this.tokenType,
             }),
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify(body),
+          body,
         });
 
         const payload = (await response.json().catch(() => null)) as

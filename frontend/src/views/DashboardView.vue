@@ -88,6 +88,9 @@ async function handleLogout(): Promise<void> {
       <span v-if="userName">Bienvenue, {{ userName }}.</span>
       <span v-else>Vous etes bien connecte.</span>
     </p>
+    <div v-if="authStore.user?.avatar_url" class="profile-avatar">
+      <img :src="authStore.user.avatar_url" alt="Photo de profil" />
+    </div>
     <p class="detail">Votre espace est accessible. Vous pouvez continuer en toute simplicite.</p>
     <p v-if="userEmail" class="meta">Compte associe : {{ userEmail }}.</p>
     <section class="invitations-section" aria-labelledby="invitations-title">
@@ -155,6 +158,8 @@ async function handleLogout(): Promise<void> {
           :to="{ name: 'cookbook', params: { id: cookbook.id } }"
         >
           <span>
+            <img v-if="cookbook.owner.avatar_url" class="cookbook-owner-avatar" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
+            <span v-else class="cookbook-owner-avatar owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
             <strong>{{ cookbook.name }}</strong>
             <small>{{ cookbook.owner.name }}</small>
           </span>
@@ -226,6 +231,9 @@ h2 {
   font-weight: 700;
 }
 
+.profile-avatar { margin-top: 1.25rem; }
+.profile-avatar img { width: 6rem; height: 6rem; border: 1px solid rgba(86,112,79,.2); border-radius: 50%; object-fit: cover; }
+
 .password-link {
   display: inline-flex;
   margin-top: 1.5rem;
@@ -262,6 +270,8 @@ h3 { margin: 0; font-size: 1.5rem; }
 .cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; color: #243127; text-decoration: none; }
 .cookbook-item:hover { border-color: #6b7b57; background: #f7fbf3; }
 .cookbook-item strong, .cookbook-item small { display: block; }
+.cookbook-owner-avatar { display: inline-grid; width: 2rem; height: 2rem; margin-right: .45rem; vertical-align: middle; border-radius: 50%; object-fit: cover; }
+.owner-fallback { place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .cookbook-item small { margin-top: 0.25rem; color: #50634d; }
 .role-badge { padding: 0.35rem 0.6rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.5rem; color: #50634d; font-size: 0.9rem; }

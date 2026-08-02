@@ -164,7 +164,11 @@ async function confirmDelete(): Promise<void> {
           <button type="button" class="cancel-button" :disabled="isDeleting" @click="cancelDelete">Annuler</button>
         </div>
       </section>
-      <p v-if="recipe.author" class="author">Par {{ recipe.author.name }}</p>
+      <div v-if="recipe.author" class="author">
+        <img v-if="recipe.author.avatar_url" :src="recipe.author.avatar_url" :alt="`Photo de ${recipe.author.name}`" />
+        <span v-else class="author-fallback" aria-hidden="true">{{ recipe.author.name.charAt(0).toUpperCase() }}</span>
+        <span>Par {{ recipe.author.name }}</span>
+      </div>
       <p v-if="recipe.description" class="description">{{ recipe.description }}</p>
       <div class="meta">
         <span v-if="recipe.prep_time_minutes !== null">Préparation : {{ recipe.prep_time_minutes }} min</span>
@@ -219,7 +223,10 @@ async function confirmDelete(): Promise<void> {
 .recipe-image { display: block; width: 100%; max-height: 24rem; margin: 1.2rem 0; object-fit: cover; border-radius: 1rem; }
 .kicker { margin: 0 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
-.author, .description, .source, .muted { color: #50634d; line-height: 1.6; }
+.author { display: flex; align-items: center; gap: .55rem; color: #50634d; line-height: 1.6; }
+.author img, .author-fallback { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; }
+.author-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
+.description, .source, .muted { color: #50634d; line-height: 1.6; }
 .edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
 .cookbook-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .planning-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #edf4e8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }

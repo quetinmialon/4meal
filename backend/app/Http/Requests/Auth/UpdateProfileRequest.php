@@ -48,12 +48,13 @@ class UpdateProfileRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->getKey()),
             ],
-            'avatar_path' => [
+            'avatar' => [
                 'sometimes',
-                'nullable',
-                'string',
-                'max:2048',
-                'regex:/\\A[^\\x00-\\x1F\\x7F]+\\z/u',
+                'file',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'extensions:jpg,jpeg,png,webp',
+                'max:5120',
+                'dimensions:min_width=100,min_height=100,max_width=4000,max_height=4000',
             ],
             'current_password' => ['required_with:email', 'string'],
         ];

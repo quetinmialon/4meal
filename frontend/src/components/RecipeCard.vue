@@ -13,6 +13,11 @@ defineProps<{ recipe: Recipe }>();
     <div>
       <p class="recipe-kicker">Recette</p>
       <h3>{{ recipe.title }}</h3>
+      <div v-if="recipe.author" class="recipe-author">
+        <img v-if="recipe.author.avatar_url" :src="recipe.author.avatar_url" :alt="`Photo de ${recipe.author.name}`" />
+        <span v-else class="author-fallback" aria-hidden="true">{{ recipe.author.name.charAt(0).toUpperCase() }}</span>
+        <span>Par {{ recipe.author.name }}</span>
+      </div>
       <p v-if="recipe.description" class="description">{{ recipe.description }}</p>
       <div class="recipe-meta">
         <span v-if="recipe.prep_time_minutes !== null">Préparation : {{ recipe.prep_time_minutes }} min</span>
@@ -34,6 +39,9 @@ defineProps<{ recipe: Recipe }>();
 .recipe-kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h3 { margin: 0; color: #243127; font-size: 1.3rem; }
 .description { color: #50634d; line-height: 1.5; }
+.recipe-author { display: flex; align-items: center; gap: .5rem; margin-top: .7rem; color: #50634d; font-size: .9rem; }
+.recipe-author img, .author-fallback { width: 2rem; height: 2rem; border-radius: 50%; object-fit: cover; }
+.author-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .recipe-meta { display: flex; flex-wrap: wrap; gap: .45rem .8rem; color: #50634d; font-size: .9rem; }
 .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
 .tag { padding: .25rem .5rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: .8rem; }

@@ -12,6 +12,8 @@ describe('ProfileView', () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    Object.defineProperty(URL, 'createObjectURL', { value: vi.fn(() => 'blob:avatar'), configurable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
     window.localStorage.clear();
     setActivePinia(createPinia());
   });
@@ -29,6 +31,7 @@ describe('ProfileView', () => {
         name: 'Jane Doe',
         email: 'jane@example.com',
         avatar_path: 'avatars/jane.webp',
+        avatar_url: 'https://example.test/storage/avatars/jane.webp',
         last_login_at: null,
         created_at: null,
       },
@@ -58,26 +61,32 @@ describe('ProfileView', () => {
 
     expect((wrapper.get('#name-input').element as HTMLInputElement).value).toBe('Jane Doe');
     expect((wrapper.get('#email-input').element as HTMLInputElement).value).toBe('jane@example.com');
-    expect((wrapper.get('#avatarPath-input').element as HTMLInputElement).value).toBe('avatars/jane.webp');
+    expect(wrapper.get('#avatar-input').attributes('type')).toBe('file');
+    expect(wrapper.get('img.avatar-preview').attributes('src')).toBe('https://example.test/storage/avatars/jane.webp');
     expect((wrapper.get('#currentPassword-input').element as HTMLInputElement).value).toBe('');
 
     await wrapper.get('#name-input').setValue('Jane Smith');
-    await wrapper.get('#avatarPath-input').setValue('avatars/jane-smith.webp');
+    const avatarInput = wrapper.get('#avatar-input').element as HTMLInputElement;
+    Object.defineProperty(avatarInput, 'files', {
+      value: [new File(['avatar'], 'jane-smith.webp', { type: 'image/webp' })],
+      configurable: true,
+    });
+    await wrapper.get('#avatar-input').trigger('change');
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer jwt-token',
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        name: 'Jane Smith',
-        avatar_path: 'avatars/jane-smith.webp',
-      }),
+      body: expect.any(FormData),
     });
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get('_method')).toBe('PATCH');
+    expect(body.get('name')).toBe('Jane Smith');
+    expect(body.get('avatar')).toBeInstanceOf(File);
     expect(wrapper.get('[role="status"]').text()).toContain('bien ete modifie');
   });
 
@@ -99,7 +108,8 @@ describe('ProfileView', () => {
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ body: expect.stringContaining('current_password') });
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get('current_password')).toBe('password123');
   });
 
   it('displays API field errors and a global error', async () => {
