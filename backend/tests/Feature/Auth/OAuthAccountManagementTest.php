@@ -111,7 +111,9 @@ it('links a provider only to the authenticated user after a valid OAuth callback
     config()->set('jwt.ttl', 900);
     $user = User::factory()->create(['password' => 'password123']);
     $token = oauthManagementToken($user);
-    $redirect = $this->withToken($token)->get('/api/auth/oauth/google/link');
+    $redirect = $this->withToken($token)
+        ->withHeader('Accept', 'text/html')
+        ->get('/api/auth/oauth/google/link');
     parse_str((string) parse_url($redirect->headers->get('Location'), PHP_URL_QUERY), $query);
 
     $this->app->instance(GoogleOAuthProvider::class, new class implements GoogleOAuthProvider
