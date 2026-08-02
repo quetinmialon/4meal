@@ -175,6 +175,9 @@ async function handleLogout(): Promise<void> {
     <RouterLink class="password-link" :to="{ name: 'change-password' }">
       Modifier mon mot de passe
     </RouterLink>
+    <RouterLink class="password-link" :to="{ name: 'profile' }">
+      Modifier mon profil
+    </RouterLink>
     <button class="logout-button" type="button" @click="handleLogout">Deconnexion</button>
   </main>
 </template>

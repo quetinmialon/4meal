@@ -21,6 +21,7 @@ import PublicRecipesView from '@/views/PublicRecipesView.vue';
 import RecipesView from '@/views/RecipesView.vue';
 import SearchView from '@/views/SearchView.vue';
 import PlanningView from '@/views/PlanningView.vue';
+import ProfileView from '@/views/ProfileView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -142,6 +143,14 @@ const routes: RouteRecordRaw[] = [
     path: '/mot-de-passe',
     name: 'change-password',
     component: ChangePasswordView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/profil',
+    name: 'profile',
+    component: ProfileView,
     meta: {
       requiresAuth: true,
     },
