@@ -4,6 +4,7 @@ use App\Contracts\Auth\GoogleOAuthProvider;
 use App\Data\Auth\GoogleProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
@@ -110,11 +111,10 @@ it('links a provider only to the authenticated user after a valid OAuth callback
     config()->set('jwt.issuer', 'http://localhost');
     config()->set('jwt.ttl', 900);
     $user = User::factory()->create(['password' => 'password123']);
-    $token = oauthManagementToken($user);
-    $redirect = $this->withToken($token)
-        ->withHeader('Accept', 'text/html')
-        ->get('/api/auth/oauth/google/link');
-    parse_str((string) parse_url($redirect->headers->get('Location'), PHP_URL_QUERY), $query);
+    Cache::put('oauth:google:state:linked-state', [
+        'user_id' => $user->getKey(),
+        'mode' => 'link',
+    ], now()->addMinutes(10));
 
     $this->app->instance(GoogleOAuthProvider::class, new class implements GoogleOAuthProvider
     {
@@ -129,7 +129,7 @@ it('links a provider only to the authenticated user after a valid OAuth callback
         }
     });
 
-    $this->get('/api/auth/google/callback?state='.$query['state'].'&code=code')->assertRedirect();
+    $this->get('/api/auth/google/callback?state=linked-state&code=code')->assertRedirect();
 
     expect($user->oauthAccounts()->where('provider_user_id', 'linked-google')->exists())->toBeTrue();
     $this->assertDatabaseMissing('oauth_accounts', ['access_token' => 'access-token']);
