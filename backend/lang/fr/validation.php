@@ -16,6 +16,7 @@ return [
     'attributes' => [
         'name' => 'nom',
         'email' => 'adresse e-mail',
+        'current_password' => 'mot de passe actuel',
         'password' => 'mot de passe',
         'password_confirmation' => 'confirmation du mot de passe',
     ],

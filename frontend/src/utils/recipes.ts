@@ -37,6 +37,7 @@ export type RecipeUser = {
   name: string;
   email?: string;
   avatar_path?: string | null;
+  avatar_url?: string | null;
 };
 
 export type RecipeIngredient = RecipeIngredientInput & {

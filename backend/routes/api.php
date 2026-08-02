@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Controllers\Auth\UpdateProfileController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
@@ -209,6 +210,9 @@ Route::middleware(AuthenticateWithJwt::class)
     ->group(function () {
         Route::get('me', GetCurrentUserController::class)
             ->name('auth.me');
+
+        Route::patch('me', UpdateProfileController::class)
+            ->name('auth.me.update');
 
         Route::post('refresh', RefreshAccessTokenController::class)
             ->name('auth.refresh');

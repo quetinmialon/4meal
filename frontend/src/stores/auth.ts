@@ -9,6 +9,7 @@ export type AuthUser = {
   name: string;
   email: string;
   avatar_path: string | null;
+  avatar_url?: string | null;
   last_login_at: string | null;
   created_at: string | null;
 };
@@ -71,6 +72,16 @@ export type ChangePasswordResult =
       fieldErrors: Partial<Record<'current_password' | 'password' | 'password_confirmation', string>>;
     };
 
+export type UpdateProfileResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+      fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password', string>>;
+    };
+
 type PersistedSession = {
   accessToken: string;
   tokenType: string;
@@ -90,6 +101,9 @@ function isAuthUser(value: unknown): value is AuthUser {
     ((value as AuthUser).avatar_path === undefined ||
       (value as AuthUser).avatar_path === null ||
       typeof (value as AuthUser).avatar_path === 'string') &&
+    ((value as AuthUser).avatar_url === undefined ||
+      (value as AuthUser).avatar_url === null ||
+      typeof (value as AuthUser).avatar_url === 'string') &&
     ((value as AuthUser).last_login_at === undefined ||
       (value as AuthUser).last_login_at === null ||
       typeof (value as AuthUser).last_login_at === 'string') &&
@@ -171,6 +185,23 @@ function extractChangePasswordFieldErrors(
     password: typeof fields.password?.[0] === 'string' ? fields.password[0] : '',
     password_confirmation:
       typeof fields.password_confirmation?.[0] === 'string' ? fields.password_confirmation[0] : '',
+  };
+}
+
+function extractUpdateProfileFieldErrors(
+  payload: ApiErrorPayload | null,
+): Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password', string>> {
+  const fields = payload?.error?.details?.fields;
+
+  if (fields === undefined) {
+    return {};
+  }
+
+  return {
+    name: typeof fields.name?.[0] === 'string' ? fields.name[0] : '',
+    email: typeof fields.email?.[0] === 'string' ? fields.email[0] : '',
+    avatar_path: typeof fields.avatar_path?.[0] === 'string' ? fields.avatar_path[0] : '',
+    current_password: typeof fields.current_password?.[0] === 'string' ? fields.current_password[0] : '',
   };
 }
 
@@ -525,6 +556,90 @@ export const useAuthStore = defineStore('auth', {
           ok: false,
           message: payload?.error?.message ?? 'Une erreur est survenue pendant la modification du mot de passe.',
           fieldErrors: extractChangePasswordFieldErrors(payload),
+        };
+      } catch {
+        this.status = 'authenticated';
+
+        return {
+          ok: false,
+          message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+          fieldErrors: {},
+        };
+      }
+    },
+
+    async updateProfile(
+      name: string,
+      email: string,
+      avatar: File | null,
+      currentPassword: string,
+      originalEmail: string,
+    ): Promise<UpdateProfileResult> {
+      if (this.accessToken === '' || this.tokenType === '' || this.user === null) {
+        return {
+          ok: false,
+          message: 'Une authentification est requise.',
+          fieldErrors: {},
+        };
+      }
+
+      this.status = 'loading';
+      const normalizedEmail = email.trim().toLowerCase();
+      const body = new FormData();
+      body.append('_method', 'PATCH');
+      body.append('name', name.trim());
+
+      if (avatar !== null) body.append('avatar', avatar);
+
+      if (normalizedEmail !== originalEmail) {
+        body.append('email', normalizedEmail);
+        body.append('current_password', currentPassword);
+      }
+
+      try {
+        const response = await fetch('/api/auth/me', {
+          method: 'POST',
+          headers: {
+            ...authHeaders({
+              accessToken: this.accessToken,
+              tokenType: this.tokenType,
+            }),
+          },
+          body,
+        });
+
+        const payload = (await response.json().catch(() => null)) as
+          | { success: true; data: AuthUser }
+          | ApiErrorPayload
+          | null;
+
+        if (response.status === 401) {
+          this.clearSession();
+        }
+
+        if (response.ok && payload?.success === true) {
+          this.user = payload.data;
+          this.status = 'authenticated';
+          persistSession({
+            accessToken: this.accessToken,
+            tokenType: this.tokenType,
+            expiresIn: this.expiresIn,
+            user: payload.data,
+          });
+
+          return { ok: true };
+        }
+
+        if (this.status === 'loading') {
+          this.status = 'authenticated';
+        }
+
+        const errorPayload = payload?.success === false ? payload : null;
+
+        return {
+          ok: false,
+          message: errorPayload?.error?.message ?? 'Une erreur est survenue pendant la modification du profil.',
+          fieldErrors: extractUpdateProfileFieldErrors(errorPayload),
         };
       } catch {
         this.status = 'authenticated';
