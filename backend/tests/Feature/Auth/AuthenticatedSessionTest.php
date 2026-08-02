@@ -42,6 +42,37 @@ it('returns the current authenticated user', function () {
         ->assertJsonPath('data.email', 'jane.doe@example.com');
 });
 
+it('authenticates protected requests from the secure cookie without a bearer header', function (): void {
+    config()->set('jwt.secret', Str::repeat('a', 64));
+    config()->set('jwt.issuer', 'http://localhost');
+    config()->set('jwt.cookie.secure', true);
+    config()->set('jwt.cookie.http_only', true);
+    config()->set('jwt.cookie.same_site', 'lax');
+
+    $user = User::factory()->create([
+        'email' => 'cookie-user@example.com',
+        'password' => 'password123',
+    ]);
+
+    $login = $this->postJson('/api/auth/login', [
+        'email' => $user->email,
+        'password' => 'password123',
+    ])->assertOk();
+
+    $cookie = $login->getCookie('4meal_access_token', false);
+
+    expect($cookie)->not->toBeNull()
+        ->and($cookie->isSecure())->toBeTrue()
+        ->and($cookie->isHttpOnly())->toBeTrue()
+        ->and($cookie->getSameSite())->toBe('lax');
+
+    $this->withUnencryptedCookie('4meal_access_token', $cookie->getValue())
+        ->withCredentials()
+        ->getJson('/api/auth/me')
+        ->assertOk()
+        ->assertJsonPath('data.id', $user->id);
+});
+
 it('rejects an expired token when retrieving the current user', function () {
     Carbon::setTestNow('2026-07-20 09:00:00');
     JWT::$timestamp = Carbon::now()->timestamp;
