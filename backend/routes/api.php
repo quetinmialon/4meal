@@ -4,11 +4,15 @@ use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\GoogleOAuthCallbackController;
 use App\Http\Controllers\Auth\GoogleOAuthRedirectController;
+use App\Http\Controllers\Auth\LinkGoogleOAuthRedirectController;
+use App\Http\Controllers\Auth\LinkMicrosoftOAuthRedirectController;
+use App\Http\Controllers\Auth\ListOAuthAccountsController;
 use App\Http\Controllers\Auth\LoginUserController;
 use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Controllers\Auth\UnlinkOAuthAccountController;
 use App\Http\Controllers\Auth\UpdateProfileController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
@@ -219,6 +223,28 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::put('password', ChangePasswordController::class)
             ->name('auth.password.update');
+
+        Route::get('oauth-accounts', ListOAuthAccountsController::class)
+            ->name('auth.oauth-accounts.index');
+
+        Route::get('oauth', ListOAuthAccountsController::class)
+            ->name('auth.oauth.index');
+
+        Route::get('oauth/accounts', ListOAuthAccountsController::class);
+
+        Route::get('oauth/google/link', LinkGoogleOAuthRedirectController::class)
+            ->name('auth.oauth.google.link');
+
+        Route::post('oauth/google/link', LinkGoogleOAuthRedirectController::class);
+
+        Route::get('oauth/microsoft/link', LinkMicrosoftOAuthRedirectController::class)
+            ->name('auth.oauth.microsoft.link');
+
+        Route::post('oauth/microsoft/link', LinkMicrosoftOAuthRedirectController::class);
+
+        Route::delete('oauth/{provider}', UnlinkOAuthAccountController::class)
+            ->where('provider', 'google|microsoft')
+            ->name('auth.oauth.destroy');
     });
 
 if (app()->environment('testing')) {

@@ -7,7 +7,6 @@ use App\Exceptions\Auth\AmbiguousOAuthAccountException;
 use App\Models\OAuthAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final class OAuthAuthenticator
 {
@@ -41,7 +40,7 @@ final class OAuthAuthenticator
                 throw new AmbiguousOAuthAccountException($provider);
             }
 
-            $user = User::query()->create(['name' => $profile->name, 'email' => $profile->email, 'password' => Str::random(64)]);
+            $user = User::query()->create(['name' => $profile->name, 'email' => $profile->email]);
             $user->forceFill(['email_verified_at' => now()])->save();
             $user->oauthAccounts()->create([
                 'provider' => $provider,
