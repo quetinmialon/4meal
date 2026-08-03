@@ -1,7 +1,9 @@
 <?php
 
 use App\Contracts\Auth\GoogleOAuthProvider;
+use App\Contracts\Auth\MicrosoftOAuthProvider;
 use App\Data\Auth\GoogleProfile;
+use App\Data\Auth\MicrosoftProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -133,4 +135,53 @@ it('links a provider only to the authenticated user after a valid OAuth callback
 
     expect($user->oauthAccounts()->where('provider_user_id', 'linked-google')->exists())->toBeTrue();
     $this->assertDatabaseMissing('oauth_accounts', ['access_token' => 'access-token']);
+});
+
+it('allows the same user to associate multiple OAuth providers through the shared management flow', function () {
+    config()->set('services.google.frontend_url', 'http://frontend.test');
+    config()->set('services.microsoft.frontend_url', 'http://frontend.test');
+    $user = User::factory()->create(['password' => 'password123']);
+
+    Cache::put('oauth:google:state:google-link', [
+        'user_id' => $user->getKey(),
+        'mode' => 'link',
+    ], now()->addMinutes(10));
+    Cache::put('oauth:microsoft:state:microsoft-link', [
+        'user_id' => $user->getKey(),
+        'mode' => 'link',
+    ], now()->addMinutes(10));
+
+    $this->app->instance(GoogleOAuthProvider::class, new class implements GoogleOAuthProvider
+    {
+        public function authorizationUrl(string $state): string
+        {
+            return 'https://google.example/oauth?state='.$state;
+        }
+
+        public function profileFromCode(string $code): GoogleProfile
+        {
+            return new GoogleProfile('google-linked', 'Jane Doe', 'jane@gmail.com', true, 'google-access', null, 3600);
+        }
+    });
+    $this->app->instance(MicrosoftOAuthProvider::class, new class implements MicrosoftOAuthProvider
+    {
+        public function authorizationUrl(string $state): string
+        {
+            return 'https://microsoft.example/oauth?state='.$state;
+        }
+
+        public function profileFromCode(string $code): MicrosoftProfile
+        {
+            return new MicrosoftProfile('microsoft-linked', 'Jane Doe', 'jane@outlook.com', true, 'microsoft-access', null, 3600);
+        }
+    });
+
+    $this->get('/api/auth/google/callback?state=google-link&code=code')->assertRedirect('http://frontend.test/profil?oauth_linked=google');
+    $this->get('/api/auth/microsoft/callback?state=microsoft-link&code=code')->assertRedirect('http://frontend.test/profil?oauth_linked=microsoft');
+
+    $this->withToken(oauthManagementToken($user))->getJson('/api/auth/oauth-accounts')
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonFragment(['provider' => 'google', 'email' => 'jane@gmail.com'])
+        ->assertJsonFragment(['provider' => 'microsoft', 'email' => 'jane@outlook.com']);
 });
