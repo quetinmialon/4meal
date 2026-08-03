@@ -24,6 +24,7 @@ import PublicRecipesView from '@/views/PublicRecipesView.vue';
 import RecipesView from '@/views/RecipesView.vue';
 import SearchView from '@/views/SearchView.vue';
 import PlanningView from '@/views/PlanningView.vue';
+import ShoppingListView from '@/views/ShoppingListView.vue';
 import ProfileView from '@/views/ProfileView.vue';
 
 const routes: RouteRecordRaw[] = [
@@ -127,6 +128,14 @@ const routes: RouteRecordRaw[] = [
     path: '/planning',
     name: 'planning',
     component: PlanningView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/liste-de-courses',
+    name: 'shopping-list',
+    component: ShoppingListView,
     meta: {
       requiresAuth: true,
     },

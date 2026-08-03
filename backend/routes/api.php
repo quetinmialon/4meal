@@ -44,6 +44,7 @@ use App\Http\Controllers\Export\DownloadExportController;
 use App\Http\Controllers\Import\ImportJsonController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Controllers\Planning\DeletePlannedMealController;
+use App\Http\Controllers\Planning\GenerateShoppingListController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
 use App\Http\Controllers\Planning\UpdatePlannedMealController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
@@ -160,6 +161,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('planned-meals', ListPlannedMealsController::class)
             ->name('planned-meals.index');
+
+        Route::get('planned-meals/shopping-list', GenerateShoppingListController::class)
+            ->name('planned-meals.shopping-list');
 
         Route::patch('planned-meals/{plannedMeal}', UpdatePlannedMealController::class)
             ->name('planned-meals.update');

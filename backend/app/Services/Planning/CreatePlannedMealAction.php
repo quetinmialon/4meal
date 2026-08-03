@@ -20,6 +20,7 @@ class CreatePlannedMealAction
                 'meal_type' => $attributes['meal_type'],
                 'note' => $attributes['note'] ?? null,
                 'initial_servings' => $recipe->servings ?? 1,
+                'servings' => $attributes['servings'] ?? ($user->default_servings ?? 1),
             ]);
 
             $cookbook !== null
@@ -27,7 +28,7 @@ class CreatePlannedMealAction
                 : $meal->user()->associate($user);
 
             return tap($meal, fn (PlannedMeal $plannedMeal) => $plannedMeal->save())
-                ->load(['recipe', 'cookbook']);
+                ->load(['recipe.ingredients', 'cookbook']);
         });
     }
 }

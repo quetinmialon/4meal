@@ -11,10 +11,10 @@ class UpdatePlannedMealAction
     public function execute(PlannedMeal $meal, array $attributes): PlannedMeal
     {
         return DB::transaction(function () use ($meal, $attributes): PlannedMeal {
-            $meal->fill(array_intersect_key($attributes, array_flip(['date', 'meal_type', 'note'])));
+            $meal->fill(array_intersect_key($attributes, array_flip(['date', 'meal_type', 'note', 'servings'])));
             $meal->save();
 
-            return $meal->load(['recipe', 'cookbook']);
+            return $meal->load(['recipe.ingredients', 'cookbook']);
         });
     }
 }

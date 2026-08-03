@@ -21,8 +21,8 @@ function plannedMealToken(User $user): string
     ])->json('data.access_token');
 }
 
-it('creates a personal planned meal using the recipe servings as initial servings', function (): void {
-    $user = User::factory()->create(['password' => 'password123']);
+it('creates a personal planned meal using the user default servings', function (): void {
+    $user = User::factory()->create(['password' => 'password123', 'default_servings' => 4]);
     $recipe = Recipe::factory()->create(['user_id' => $user->id, 'servings' => 4]);
 
     $response = $this->withToken(plannedMealToken($user))->postJson('/api/planned-meals', [
@@ -38,6 +38,7 @@ it('creates a personal planned meal using the recipe servings as initial serving
         ->assertJsonPath('data.meal_type', 'dinner')
         ->assertJsonPath('data.note', 'Préparer la veille')
         ->assertJsonPath('data.initial_servings', 4)
+        ->assertJsonPath('data.servings', 4)
         ->assertJsonPath('data.recipe.id', $recipe->public_id);
 
     $this->assertDatabaseHas('planned_meals', [

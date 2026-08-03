@@ -20,6 +20,7 @@ class PlannedMeal extends Model
         'meal_type',
         'note',
         'initial_servings',
+        'servings',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class PlannedMeal extends Model
         return [
             'date' => 'date',
             'initial_servings' => 'integer',
+            'servings' => 'integer',
         ];
     }
 

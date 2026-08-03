@@ -12,7 +12,7 @@ const currentDate = ref(startOfDay(new Date()));
 const meals = ref<PlannedMeal[]>([]);
 const selectedMeal = ref<PlannedMeal | null>(null);
 const isEditing = ref(false);
-const editForm = ref({ date: '', meal_type: 'dinner' as PlannedMeal['meal_type'], note: '' });
+const editForm = ref({ date: '', meal_type: 'dinner' as PlannedMeal['meal_type'], note: '', servings: 1 });
 const editError = ref('');
 const editFieldErrors = ref<Record<string, string>>({});
 const isUpdating = ref(false);
@@ -52,6 +52,10 @@ function mondayOfWeek(date: Date): Date {
 }
 function displayDate(value: string): string {
   return fromDateKey(value).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+function ingredientLabel(quantity: number | null, unit: string | null): string {
+  if (quantity === null && !unit) return '';
+  return [quantity, unit].filter((value) => value !== null && value !== '').join(' ');
 }
 function displayMonth(date: Date): string { return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }); }
 function displayWeek(start: Date): string {
@@ -111,6 +115,7 @@ function startEditing(): void {
     date: selectedMeal.value.date,
     meal_type: selectedMeal.value.meal_type,
     note: selectedMeal.value.note ?? '',
+    servings: selectedMeal.value.servings,
   };
   editError.value = '';
   editFieldErrors.value = {};
@@ -215,6 +220,9 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
           <p v-if="errorFor('meal_type')" class="form-error" role="alert">{{ errorFor('meal_type') }}</p>
           <label for="edit-meal-note">Note</label>
           <textarea id="edit-meal-note" v-model="editForm.note" rows="3" maxlength="5000" />
+          <label for="edit-meal-servings">Portions</label>
+          <input id="edit-meal-servings" v-model.number="editForm.servings" type="number" min="1" max="1000" step="1" />
+          <p v-if="errorFor('servings')" class="form-error" role="alert">{{ errorFor('servings') }}</p>
           <p v-if="editError" class="form-error" role="alert">{{ editError }}</p>
           <div class="detail-actions">
             <button type="submit" class="edit-detail-button" :disabled="isUpdating">{{ isUpdating ? 'Enregistrement...' : 'Enregistrer' }}</button>
@@ -224,9 +232,18 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
         <template v-else>
         <button type="button" class="close-detail" aria-label="Fermer le détail" @click="closeDetail">×</button>
         <p class="kicker">{{ displayDate(selectedMeal.date) }}</p><h3 id="meal-detail-title">{{ selectedMeal.recipe.title }}</h3>
-        <p>{{ mealTypeLabels[selectedMeal.meal_type] }} · {{ selectedMeal.initial_servings }} portion<span v-if="selectedMeal.initial_servings > 1">s</span></p>
+        <p>{{ mealTypeLabels[selectedMeal.meal_type] }} · {{ selectedMeal.servings }} portion<span v-if="selectedMeal.servings > 1">s</span></p>
         <p v-if="selectedMeal.note" class="detail-note">{{ selectedMeal.note }}</p>
         <p v-if="selectedMeal.cookbook_id" class="detail-space">Repas du cookbook</p>
+        <section v-if="selectedMeal.recipe.ingredients?.length" class="meal-ingredients" aria-labelledby="meal-ingredients-title">
+          <h4 id="meal-ingredients-title">Ingrédients</h4>
+          <ul>
+            <li v-for="ingredient in selectedMeal.recipe.ingredients" :key="ingredient.position">
+              <strong>{{ ingredientLabel(ingredient.quantity, ingredient.unit) }}</strong>
+              {{ ingredient.name }}<span v-if="ingredient.preparation" class="ingredient-preparation"> — {{ ingredient.preparation }}</span><span v-if="ingredient.is_optional" class="ingredient-optional"> (facultatif)</span>
+            </li>
+          </ul>
+        </section>
         <div v-if="!isDeleteConfirmationVisible" class="detail-actions">
           <button type="button" class="edit-detail-button" @click="startEditing">Modifier</button>
           <button type="button" class="delete-detail-button" @click="startDeleteConfirmation">Supprimer</button>
@@ -282,6 +299,10 @@ h2, h3 { margin: 0; color: #243127; }
 .close-detail { position: absolute; top: .75rem; right: .75rem; border: 0; background: transparent; color: #395330; font-size: 1.6rem; cursor: pointer; }
 .detail-note { padding: .7rem; border-radius: .5rem; background: #f3f7ef; }
 .detail-space { font-size: .85rem; }
+.meal-ingredients { margin: 1rem 0; padding: .8rem; border-radius: .6rem; background: #f3f7ef; }
+.meal-ingredients h4 { margin: 0 0 .5rem; color: #243127; }
+.meal-ingredients ul { display: grid; gap: .35rem; margin: 0; padding-left: 1.2rem; color: #395330; }
+.ingredient-preparation, .ingredient-optional { color: #6d7768; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
 .edit-detail-button, .delete-detail-button, .cancel-detail-button { padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
 .edit-detail-button { background: #395330; color: #fffdf8; }

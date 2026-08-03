@@ -135,6 +135,7 @@ async function handleLogout(): Promise<void> {
           <RouterLink class="create-button" :to="{ name: 'public-recipes' }">Toutes les recettes</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'search' }">Rechercher</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'planning' }">Mon planning</RouterLink>
+          <RouterLink class="create-button" :to="{ name: 'shopping-list' }">Liste de courses</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'recipes' }">Mes recettes</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'export' }">Exporter mes données</RouterLink>
           <RouterLink class="create-button" :to="{ name: 'import' }">Importer un JSON</RouterLink>

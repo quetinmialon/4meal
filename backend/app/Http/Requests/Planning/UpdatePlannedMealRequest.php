@@ -20,6 +20,7 @@ class UpdatePlannedMealRequest extends FormRequest
             'date' => ['sometimes', 'required', 'date_format:Y-m-d'],
             'meal_type' => ['sometimes', 'required', 'string', Rule::in(['breakfast', 'lunch', 'dinner', 'snack'])],
             'note' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'servings' => ['sometimes', 'required', 'integer', 'min:1', 'max:1000'],
         ];
     }
 }

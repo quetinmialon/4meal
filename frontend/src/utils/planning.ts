@@ -6,6 +6,7 @@ export type PlannedMeal = {
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   note: string | null;
   initial_servings: number;
+  servings: number;
   cookbook_id: string | null;
   recipe: {
     id: string;
@@ -13,8 +14,19 @@ export type PlannedMeal = {
     slug: string | null;
     servings: number | null;
     image_url: string | null;
+    ingredients?: PlannedMealIngredient[];
   };
   created_at: string | null;
+};
+
+export type PlannedMealIngredient = {
+  position: number;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  preparation: string | null;
+  is_optional: boolean;
+  group_name: string | null;
 };
 
 type PlannedMealsPayload = { success: true; data: PlannedMeal[] } | {
@@ -24,6 +36,23 @@ type PlannedMealsPayload = { success: true; data: PlannedMeal[] } | {
 
 export type PlannedMealsResult =
   | { ok: true; meals: PlannedMeal[] }
+  | { ok: false; message: string };
+
+export type ShoppingListItem = {
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  preparation: string | null;
+  is_optional: boolean;
+};
+
+type ShoppingListPayload = { success: true; data: ShoppingListItem[] } | {
+  success: false;
+  error?: { message?: string };
+};
+
+export type ShoppingListResult =
+  | { ok: true; items: ShoppingListItem[] }
   | { ok: false; message: string };
 
 type PlannedMealMutationPayload = {
@@ -51,7 +80,7 @@ function mutationError(payload: PlannedMealMutationPayload | null, fallback: str
 
 export async function updatePlannedMeal(
   id: string,
-  input: Pick<PlannedMeal, 'date' | 'meal_type' | 'note'>,
+  input: Pick<PlannedMeal, 'date' | 'meal_type' | 'note' | 'servings'>,
   tokenType: string,
   accessToken: string,
 ): Promise<PlannedMealMutationResult> {
@@ -123,6 +152,33 @@ export async function fetchPlannedMeals(
       message: payload?.success === false
         ? (payload.error?.message ?? 'Impossible de charger le planning.')
         : 'Impossible de charger le planning.',
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
+  }
+}
+
+export async function fetchShoppingList(
+  from: string,
+  to: string,
+  tokenType: string,
+  accessToken: string,
+): Promise<ShoppingListResult> {
+  const params = new URLSearchParams({ from, to });
+
+  try {
+    const response = await apiFetch(`/api/planned-meals/shopping-list?${params.toString()}`, {
+      headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
+    });
+    const payload = (await response.json().catch(() => null)) as ShoppingListPayload | null;
+
+    if (response.ok && payload?.success === true) return { ok: true, items: payload.data };
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de charger la liste de courses.')
+        : 'Impossible de charger la liste de courses.',
     };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };

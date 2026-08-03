@@ -23,10 +23,12 @@ class AccessiblePlannedMealsQuery
                 'planned_meals.meal_type',
                 'planned_meals.note',
                 'planned_meals.initial_servings',
+                'planned_meals.servings',
                 'planned_meals.created_at',
             ])
             ->with([
                 'recipe:id,public_id,title,slug,image_path,servings',
+                'recipe.ingredients',
                 'cookbook:id,public_id',
             ])
             ->whereDate('planned_meals.date', '>=', $from)
