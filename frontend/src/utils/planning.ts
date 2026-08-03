@@ -6,6 +6,7 @@ export type PlannedMeal = {
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   note: string | null;
   initial_servings: number;
+  servings: number;
   cookbook_id: string | null;
   recipe: {
     id: string;
@@ -13,8 +14,19 @@ export type PlannedMeal = {
     slug: string | null;
     servings: number | null;
     image_url: string | null;
+    ingredients?: PlannedMealIngredient[];
   };
   created_at: string | null;
+};
+
+export type PlannedMealIngredient = {
+  position: number;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  preparation: string | null;
+  is_optional: boolean;
+  group_name: string | null;
 };
 
 type PlannedMealsPayload = { success: true; data: PlannedMeal[] } | {
@@ -51,7 +63,7 @@ function mutationError(payload: PlannedMealMutationPayload | null, fallback: str
 
 export async function updatePlannedMeal(
   id: string,
-  input: Pick<PlannedMeal, 'date' | 'meal_type' | 'note'>,
+  input: Pick<PlannedMeal, 'date' | 'meal_type' | 'note' | 'servings'>,
   tokenType: string,
   accessToken: string,
 ): Promise<PlannedMealMutationResult> {

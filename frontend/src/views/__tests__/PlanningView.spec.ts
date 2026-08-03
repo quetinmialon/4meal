@@ -11,9 +11,12 @@ describe('PlanningView', () => {
   let testPinia: ReturnType<typeof createPinia>;
 
   const meal = {
-    id: 'meal-id', date: '2026-07-28', meal_type: 'dinner', note: 'Prévoir du pain', initial_servings: 4,
+    id: 'meal-id', date: '2026-07-28', meal_type: 'dinner', note: 'Prévoir du pain', initial_servings: 4, servings: 4,
     cookbook_id: null, created_at: null,
-    recipe: { id: 'recipe-id', title: 'Ratatouille', slug: 'ratatouille', servings: 4, image_url: null },
+    recipe: { id: 'recipe-id', title: 'Ratatouille', slug: 'ratatouille', servings: 4, image_url: null, ingredients: [
+      { position: 1, name: 'Tomates', quantity: 150, unit: 'g', preparation: null, is_optional: false, group_name: null },
+      { position: 2, name: 'Sel', quantity: null, unit: null, preparation: 'à votre goût', is_optional: true, group_name: null },
+    ] },
   } as const;
 
   beforeEach(() => {
@@ -60,6 +63,8 @@ describe('PlanningView', () => {
 
     await wrapper.get('.meal-card').trigger('click');
     expect(wrapper.get('[role="dialog"]').text()).toContain('Ratatouille');
+    expect(wrapper.get('[role="dialog"]').text()).toContain('150 g Tomates');
+    expect(wrapper.get('[role="dialog"]').text()).toContain('Sel');
     expect(wrapper.get('[role="dialog"]').text()).toContain('Prévoir du pain');
     await wrapper.get('[aria-label="Fermer le détail"]').trigger('click');
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
@@ -94,12 +99,13 @@ describe('PlanningView', () => {
     await wrapper.get('#edit-meal-date').setValue('2026-07-29');
     await wrapper.get('#edit-meal-type').setValue('lunch');
     await wrapper.get('#edit-meal-note').setValue('Nouvelle note');
+    await wrapper.get('#edit-meal-servings').setValue(6);
     await wrapper.get('.edit-meal-form').trigger('submit');
     await flushPromises();
 
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/planned-meals/meal-id', expect.objectContaining({
       method: 'PATCH',
-      body: JSON.stringify({ date: '2026-07-29', meal_type: 'lunch', note: 'Nouvelle note' }),
+      body: JSON.stringify({ date: '2026-07-29', meal_type: 'lunch', note: 'Nouvelle note', servings: 6 }),
     }));
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/planned-meals?from=2026-07-27&to=2026-08-02', expect.any(Object));
     expect(wrapper.get('[role="status"]').text()).toContain('modifié');

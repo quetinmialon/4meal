@@ -20,7 +20,7 @@ class CreatePlannedMealAction
                 'meal_type' => $attributes['meal_type'],
                 'note' => $attributes['note'] ?? null,
                 'initial_servings' => $recipe->servings ?? 1,
-                'servings' => $attributes['servings'] ?? ($recipe->servings ?? 1),
+                'servings' => $attributes['servings'] ?? ($user->default_servings ?? 1),
             ]);
 
             $cookbook !== null
