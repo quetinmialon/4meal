@@ -9,6 +9,7 @@ import CookbookMessageItem from '@/components/CookbookMessageItem.vue';
 import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe } from '@/utils/cookbooks';
 import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
+import { useDialogFocus } from '@/utils/dialogFocus';
 
 const route = useRoute();
 const router = useRouter();
@@ -41,6 +42,8 @@ const pendingMemberAction = ref<{ type: 'leave' | 'remove'; member: CookbookMemb
 const memberActionLoading = ref(false);
 const memberActionError = ref('');
 const memberActionDialog = ref<HTMLElement | null>(null);
+const isRoleDialogOpen = computed(() => pendingRoleChange.value !== null);
+const isMemberActionDialogOpen = computed(() => pendingMemberAction.value !== null);
 const isEditingName = ref(false);
 const isSavingName = ref(false);
 const editName = reactive({ value: '', slug: '', description: '', image: null as File | null });
@@ -57,6 +60,9 @@ const isDeleting = ref(false);
 const deleteConfirmation = ref('');
 const deleteError = ref('');
 const deleteFieldError = ref('');
+
+useDialogFocus(roleDialog, isRoleDialogOpen, cancelRoleChange);
+useDialogFocus(memberActionDialog, isMemberActionDialogOpen, cancelMemberAction);
 
 function openDeleteConfirmation(): void {
   if (!canDelete.value) return;
@@ -541,7 +547,6 @@ onMounted(async () => {
           aria-labelledby="role-dialog-title"
           aria-describedby="role-dialog-description"
           tabindex="-1"
-          @keydown.esc="cancelRoleChange"
         >
           <h3 id="role-dialog-title">Confirmer le changement de rôle</h3>
           <p id="role-dialog-description">
@@ -565,7 +570,6 @@ onMounted(async () => {
           aria-labelledby="member-action-dialog-title"
           aria-describedby="member-action-dialog-description"
           tabindex="-1"
-          @keydown.esc="cancelMemberAction"
         >
           <h3 id="member-action-dialog-title">
             {{ pendingMemberAction.type === 'leave' ? 'Confirmer votre départ' : 'Confirmer le retrait' }}

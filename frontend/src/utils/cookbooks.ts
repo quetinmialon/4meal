@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type Cookbook = {
   id: string;
   name: string;
@@ -162,7 +164,7 @@ export async function createCookbookInvitation(
   cookbookId: string, email: string, role: 'editor' | 'viewer', tokenType: string, accessToken: string,
 ): Promise<InvitationResult> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/invitations`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/invitations`, {
       method: 'POST',
       headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim().toLowerCase(), role }),
@@ -177,7 +179,7 @@ export async function createCookbookInvitation(
 
 export async function fetchCookbookInvitation(token: string): Promise<InvitationResult> {
   try {
-    const response = await fetch(`/api/invitations/${encodeURIComponent(token)}`, { headers: { Accept: 'application/json' } });
+    const response = await apiFetch(`/api/invitations/${encodeURIComponent(token)}`, { headers: { Accept: 'application/json' } });
     const payload = (await response.json().catch(() => null)) as InvitationPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) return { ok: true, invitation: payload.data };
     return { ok: false, ...invitationError(response, payload?.success === false ? payload : null, 'Impossible de charger cette invitation.') };
@@ -188,7 +190,7 @@ export async function fetchCookbookInvitation(token: string): Promise<Invitation
 
 export async function fetchCookbookInvitations(tokenType: string, accessToken: string): Promise<InvitationListResult> {
   try {
-    const response = await fetch('/api/invitations', { headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` } });
+    const response = await apiFetch('/api/invitations', { headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` } });
     const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookInvitation[] } | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) return { ok: true, invitations: payload.data.filter(isCookbookInvitation) };
     return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de charger les invitations.') : 'Impossible de charger les invitations.' };
@@ -201,7 +203,7 @@ export async function acceptCookbookInvitationById(
   id: number, tokenType: string, accessToken: string,
 ): Promise<AcceptInvitationResult> {
   try {
-    const response = await fetch(`/api/invitations/${id}/accept`, {
+    const response = await apiFetch(`/api/invitations/${id}/accept`, {
       method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });
     const payload = (await response.json().catch(() => null)) as AcceptedInvitationPayload | ApiErrorPayload | null;
@@ -214,7 +216,7 @@ export async function acceptCookbookInvitationById(
 
 export async function declineCookbookInvitation(id: number, tokenType: string, accessToken: string): Promise<{ ok: true } | { ok: false; message: string; expired?: boolean }> {
   try {
-    const response = await fetch(`/api/invitations/${id}/decline`, {
+    const response = await apiFetch(`/api/invitations/${id}/decline`, {
       method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });
     const payload = (await response.json().catch(() => null)) as { success: true } | ApiErrorPayload | null;
@@ -229,7 +231,7 @@ export async function acceptCookbookInvitation(
   token: string, tokenType: string, accessToken: string,
 ): Promise<AcceptInvitationResult> {
   try {
-    const response = await fetch(`/api/invitations/token/${encodeURIComponent(token)}/accept`, {
+    const response = await apiFetch(`/api/invitations/token/${encodeURIComponent(token)}/accept`, {
       method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });
     const payload = (await response.json().catch(() => null)) as AcceptedInvitationPayload | ApiErrorPayload | null;
@@ -274,7 +276,7 @@ export async function createCookbook(
   accessToken: string,
 ): Promise<CreateCookbookResult> {
   try {
-    const response = await fetch('/api/cookbooks', {
+    const response = await apiFetch('/api/cookbooks', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -326,7 +328,7 @@ export async function fetchCookbook(
   accessToken: string,
 ): Promise<{ ok: true; cookbook: Cookbook } | { ok: false; message: string }> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,
@@ -359,7 +361,7 @@ export async function updateCookbook(
   accessToken: string,
 ): Promise<UpdateCookbookResult> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -411,7 +413,7 @@ export async function deleteCookbook(
   accessToken: string,
 ): Promise<DeleteCookbookResult> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: {
         Accept: 'application/json',
@@ -455,7 +457,7 @@ function apiHeaders(tokenType: string, accessToken: string): HeadersInit {
 
 async function fetchPaginated<T>(url: string, tokenType: string, accessToken: string): Promise<ListResult<T>> {
   try {
-    const response = await fetch(url, { headers: apiHeaders(tokenType, accessToken) });
+    const response = await apiFetch(url, { headers: apiHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as PaginatedPayload<T> | ApiErrorPayload | null;
 
     if (response.ok && payload?.success === true) {
@@ -477,7 +479,7 @@ async function fetchCursorPage<T>(url: string, tokenType: string, accessToken: s
   { ok: true; data: T[]; pagination: CursorPagination } | { ok: false; message: string }
 > {
   try {
-    const response = await fetch(url, { headers: apiHeaders(tokenType, accessToken) });
+    const response = await apiFetch(url, { headers: apiHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as CursorPayload<T> | ApiErrorPayload | null;
 
     if (response.ok && payload?.success === true) {
@@ -530,7 +532,7 @@ export async function sendCookbookMessage(
   accessToken: string,
 ): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string; fieldError?: string }> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(id)}/messages`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(id)}/messages`, {
       method: 'POST',
       headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: content.trim() }),
@@ -559,7 +561,7 @@ export async function updateCookbookMessage(
   cookbookId: string, messageId: string, content: string, tokenType: string, accessToken: string,
 ): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string; fieldError?: string }> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
       method: 'PATCH', headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ content: content.trim() }),
     });
     const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookMessage } | ApiErrorPayload | null;
@@ -573,7 +575,7 @@ export async function deleteCookbookMessage(
   cookbookId: string, messageId: string, tokenType: string, accessToken: string,
 ): Promise<{ ok: true; message: CookbookMessage } | { ok: false; message: string }> {
   try {
-    const response = await fetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
+    const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}`, {
       method: 'DELETE', headers: apiHeaders(tokenType, accessToken),
     });
     const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookMessage } | ApiErrorPayload | null;
@@ -610,7 +612,7 @@ export async function addRecipeToCookbook(
   accessToken: string,
 ): Promise<CookbookRecipeActionResult> {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `/api/cookbooks/${encodeURIComponent(cookbookId)}/recipes/${encodeURIComponent(recipeId)}`,
       { method: 'POST', headers: apiHeaders(tokenType, accessToken) },
     );
@@ -634,7 +636,7 @@ export async function removeRecipeFromCookbook(
   accessToken: string,
 ): Promise<CookbookRecipeActionResult> {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `/api/cookbooks/${encodeURIComponent(cookbookId)}/recipes/${encodeURIComponent(recipeId)}`,
       { method: 'DELETE', headers: apiHeaders(tokenType, accessToken) },
     );
@@ -676,7 +678,7 @@ export async function updateCookbookMemberRole(
   accessToken: string,
 ): Promise<UpdateCookbookMemberRoleResult> {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `/api/cookbooks/${encodeURIComponent(cookbookId)}/members/${encodeURIComponent(memberId)}/role`,
       {
         method: 'PATCH',
@@ -714,7 +716,7 @@ async function deleteCookbookMemberAction(
   accessToken: string,
 ): Promise<CookbookMemberActionResult> {
   try {
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: 'DELETE',
       headers: apiHeaders(tokenType, accessToken),
     });

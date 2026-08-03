@@ -61,12 +61,12 @@ describe('RecipeCreateForm', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Pâtes', slug: 'pates' } }),
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'P�tes', slug: 'pates' } }),
       } as Response);
 
     const wrapper = mount(RecipeCreateForm, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('#recipe-title-input').setValue('Pâtes');
+    await wrapper.get('#recipe-title-input').setValue('P�tes');
     await wrapper.get('#ingredient-name-0').setValue('Tomates');
     await wrapper.get('#step-instruction-0').setValue('Cuire.');
     await wrapper.get('#recipe-prep-time-input').setValue('10');
@@ -87,7 +87,7 @@ describe('RecipeCreateForm', () => {
     expect(request?.method).toBe('POST');
     const payload = JSON.parse(String(request?.body));
     expect(payload).toMatchObject({
-      title: 'Pâtes',
+      title: 'P�tes',
       prep_time_minutes: 10,
       servings: 2,
       cookbook_id: null,
@@ -104,11 +104,11 @@ describe('RecipeCreateForm', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Pâtes', slug: 'pates' } }),
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'P�tes', slug: 'pates' } }),
       } as Response);
     const wrapper = mount(RecipeCreateForm, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('#recipe-title-input').setValue('Pâtes');
+    await wrapper.get('#recipe-title-input').setValue('P�tes');
     await wrapper.get('#ingredient-name-0').setValue('Tomates');
     await wrapper.get('#step-instruction-0').setValue('Cuire.');
     await wrapper.find('input[type="radio"][value="cookbook"]').setValue();
@@ -136,7 +136,7 @@ describe('RecipeCreateForm', () => {
       } as Response);
     const wrapper = mount(RecipeCreateForm, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('#recipe-title-input').setValue('Pâtes');
+    await wrapper.get('#recipe-title-input').setValue('P�tes');
     await wrapper.get('#ingredient-name-0').setValue('Tomates');
     await wrapper.get('#step-instruction-0').setValue('Cuire.');
     await wrapper.get('form').trigger('submit.prevent');
@@ -153,11 +153,11 @@ describe('RecipeCreateForm', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Pâtes', slug: 'pates' } }),
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'P�tes', slug: 'pates' } }),
       } as Response);
     const wrapper = mount(RecipeCreateForm, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('#recipe-title-input').setValue('Pâtes');
+    await wrapper.get('#recipe-title-input').setValue('P�tes');
     await wrapper.get('#ingredient-name-0').setValue('Tomates');
     await wrapper.get('#step-instruction-0').setValue('Cuire.');
 

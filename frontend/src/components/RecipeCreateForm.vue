@@ -119,6 +119,7 @@ async function handleSubmit(): Promise<void> {
 
 async function loadCookbooks(): Promise<void> {
   cookbookLoading.value = true;
+  cookbookError.value = '';
   const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
   if (result.ok) cookbooks.value = result.data;
   else cookbookError.value = result.message;

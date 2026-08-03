@@ -17,13 +17,10 @@ describe('auth store session restoration', () => {
     vi.unstubAllGlobals();
   });
 
-  it('restores a persisted session by refreshing the token and fetching the current user', async () => {
+  it('restores a persisted session through the HttpOnly cookie', async () => {
     window.localStorage.setItem(
       '4meal.auth.session',
       JSON.stringify({
-        accessToken: 'stored-token',
-        tokenType: 'Bearer',
-        expiresIn: 900,
         user: {
           id: 7,
           name: 'Cached User',
@@ -33,26 +30,7 @@ describe('auth store session restoration', () => {
       }),
     );
 
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          success: true,
-          data: {
-            access_token: 'renewed-token',
-            token_type: 'Bearer',
-            expires_in: 1200,
-            user: {
-              id: 7,
-              name: 'Jane Doe',
-              email: 'jane.doe@example.com',
-              created_at: '2026-07-17T10:00:00Z',
-            },
-          },
-        }),
-      } as Response)
-      .mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
@@ -70,26 +48,17 @@ describe('auth store session restoration', () => {
 
     await authStore.restoreSession();
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/auth/refresh', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        Authorization: 'Bearer stored-token',
-      },
-    });
-
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/auth/me', {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/auth/me', {
       method: 'GET',
       credentials: 'include',
       headers: {
         Accept: 'application/json',
-        Authorization: 'Bearer renewed-token',
       },
     });
 
     expect(authStore.isAuthenticated).toBe(true);
-    expect(authStore.accessToken).toBe('renewed-token');
-    expect(authStore.expiresIn).toBe(1200);
+    expect(authStore.accessToken).toBe('');
+    expect(authStore.expiresIn).toBe(0);
     expect(authStore.user).toEqual({
       id: 7,
       name: 'Jane Doe',
@@ -98,9 +67,6 @@ describe('auth store session restoration', () => {
     });
 
     expect(JSON.parse(window.localStorage.getItem('4meal.auth.session') ?? 'null')).toEqual({
-      accessToken: 'renewed-token',
-      tokenType: 'Bearer',
-      expiresIn: 1200,
       user: {
         id: 7,
         name: 'Jane Doe',
@@ -110,13 +76,10 @@ describe('auth store session restoration', () => {
     });
   });
 
-  it('clears the persisted session when the backend returns 401 during token renewal', async () => {
+  it('clears the persisted session when the backend returns 401', async () => {
     window.localStorage.setItem(
       '4meal.auth.session',
       JSON.stringify({
-        accessToken: 'stored-token',
-        tokenType: 'Bearer',
-        expiresIn: 900,
         user: {
           id: 7,
           name: 'Cached User',

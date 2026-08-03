@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
 import { deletePlannedMeal, fetchPlannedMeals, updatePlannedMeal, type PlannedMeal } from '@/utils/planning';
+import { useDialogFocus } from '@/utils/dialogFocus';
 
 type CalendarMode = 'week' | 'month';
 const authStore = useAuthStore();
@@ -19,6 +20,7 @@ const isDeleteConfirmationVisible = ref(false);
 const deleteError = ref('');
 const isDeleting = ref(false);
 const feedbackMessage = ref('');
+const mealDialog = ref<HTMLElement | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const mealTypeLabels: Record<PlannedMeal['meal_type'], string> = {
@@ -77,6 +79,7 @@ const mealsByDate = computed(() => meals.value.reduce<Record<string, PlannedMeal
   (groups[meal.date] ??= []).push(meal);
   return groups;
 }, {}));
+const isMealDialogOpen = computed(() => selectedMeal.value !== null);
 function mealsFor(date: Date): PlannedMeal[] { return mealsByDate.value[dateKey(date)] ?? []; }
 function isOutsideCurrentMonth(date: Date): boolean { return mode.value === 'month' && date.getMonth() !== currentDate.value.getMonth(); }
 function movePeriod(direction: number): void {
@@ -169,6 +172,7 @@ async function loadMeals(): Promise<void> {
 }
 watch([mode, currentDate], () => { void loadMeals(); });
 onMounted(() => { void loadMeals(); });
+useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
 </script>
 
 <template>
@@ -198,7 +202,7 @@ onMounted(() => { void loadMeals(); });
       </div>
     </section>
     <div v-if="selectedMeal" class="detail-backdrop" role="presentation" @click.self="closeDetail">
-      <section class="meal-detail" role="dialog" aria-modal="true" aria-labelledby="meal-detail-title">
+      <section ref="mealDialog" class="meal-detail" role="dialog" aria-modal="true" aria-labelledby="meal-detail-title" tabindex="-1">
         <form v-if="isEditing" class="edit-meal-form" @submit.prevent="submitEdit">
           <h3 id="meal-detail-title">Modifier le repas</h3>
           <label for="edit-meal-date">Date</label>

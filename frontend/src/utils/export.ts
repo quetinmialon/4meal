@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type JsonExportResult =
   | { ok: true; filename: string }
   | { ok: false; message: string };
@@ -18,7 +20,7 @@ function safeFilename(contentDisposition: string | null): string {
 
 export async function downloadJsonExport(tokenType: string, accessToken: string): Promise<JsonExportResult> {
   try {
-    const response = await fetch('/api/export', {
+    const response = await apiFetch('/api/export', {
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,

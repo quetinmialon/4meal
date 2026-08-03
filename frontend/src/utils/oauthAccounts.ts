@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type OAuthProvider = 'google' | 'microsoft';
 
 export type OAuthAccount = {
@@ -40,7 +42,7 @@ function providerPath(provider: OAuthProvider): string {
 
 export async function fetchOAuthAccounts(tokenType: string, accessToken: string): Promise<OAuthAccountsResult> {
   try {
-    const response = await fetch('/api/auth/oauth-accounts', { headers: headers(tokenType, accessToken) });
+    const response = await apiFetch('/api/auth/oauth-accounts', { headers: headers(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as OAuthAccountsPayload | ApiErrorPayload | null;
 
     if (response.ok && payload?.success === true && Array.isArray(payload.data)) {
@@ -64,7 +66,7 @@ export async function unlinkOAuthAccount(
   accessToken: string,
 ): Promise<OAuthActionResult> {
   try {
-    const response = await fetch(`/api/auth/oauth/${providerPath(provider)}`, {
+    const response = await apiFetch(`/api/auth/oauth/${providerPath(provider)}`, {
       method: 'DELETE',
       headers: headers(tokenType, accessToken),
     });
@@ -91,7 +93,7 @@ export async function startOAuthLink(
   accessToken: string,
 ): Promise<OAuthActionResult> {
   try {
-    const response = await fetch(oauthLinkUrl(provider), {
+    const response = await apiFetch(oauthLinkUrl(provider), {
       headers: headers(tokenType, accessToken),
     });
 

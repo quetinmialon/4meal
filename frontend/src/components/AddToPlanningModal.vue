@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { createPlannedMeal, type PlannedMealInput, type Recipe } from '@/utils/recipes';
+import { useDialogFocus } from '@/utils/dialogFocus';
 
 const props = defineProps<{ recipe: Recipe }>();
 const emit = defineEmits<{ close: []; added: [] }>();
@@ -18,11 +19,14 @@ const isLoadingCookbooks = ref(false);
 const isSubmitting = ref(false);
 const errorMessage = ref('');
 const fieldErrors = ref<Record<string, string>>({});
+const dialog = ref<HTMLElement | null>(null);
+const isOpen = ref(true);
 
 const cookbookRequired = computed(() => destination.value === 'cookbook' && selectedCookbookId.value === '');
 
 async function loadCookbooks(): Promise<void> {
   isLoadingCookbooks.value = true;
+  errorMessage.value = '';
   const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
   if (result.ok) cookbooks.value = result.data;
   else errorMessage.value = result.message;
@@ -59,11 +63,14 @@ async function submit(): Promise<void> {
 }
 
 onMounted(() => { void loadCookbooks(); });
+useDialogFocus(dialog, isOpen, () => {
+  if (!isSubmitting.value) emit('close');
+});
 </script>
 
 <template>
   <div class="modal-backdrop" role="presentation" @click.self="emit('close')">
-    <section class="planning-modal" role="dialog" aria-modal="true" aria-labelledby="planning-modal-title">
+    <section ref="dialog" class="planning-modal" role="dialog" aria-modal="true" aria-labelledby="planning-modal-title" tabindex="-1">
       <div class="modal-header">
         <div>
           <p class="kicker">Planning</p>

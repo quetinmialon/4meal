@@ -157,11 +157,23 @@ watch(
 
 onMounted(async () => {
   cookbooksLoading.value = true;
+  cookbooksError.value = '';
   const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
   if (result.ok) cookbooks.value = result.data;
   else cookbooksError.value = result.message;
   cookbooksLoading.value = false;
 });
+
+function retryCookbooks(): void {
+  void (async () => {
+    cookbooksLoading.value = true;
+    cookbooksError.value = '';
+    const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+    if (result.ok) cookbooks.value = result.data;
+    else cookbooksError.value = result.message;
+    cookbooksLoading.value = false;
+  })();
+}
 
 onBeforeUnmount(() => {
   if (debounceTimer !== undefined) clearTimeout(debounceTimer);
@@ -188,7 +200,10 @@ onBeforeUnmount(() => {
         <button type="button" class="reset-button" :disabled="isLoading || !hasFilters" @click="resetFilters">Réinitialiser</button>
       </div>
       <p v-if="cookbooksLoading" class="filter-status" role="status">Chargement des cookbooks...</p>
-      <p v-else-if="cookbooksError" class="filter-status filter-error" role="alert">{{ cookbooksError }}</p>
+      <p v-else-if="cookbooksError" class="filter-status filter-error" role="alert">
+        {{ cookbooksError }}
+        <button type="button" @click="retryCookbooks">Réessayer</button>
+      </p>
       <div class="filters-grid">
         <label>
           Cookbook
