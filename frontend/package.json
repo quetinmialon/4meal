@@ -12,9 +12,7 @@
     "lint": "eslint src vite.config.ts --max-warnings=0",
     "openapi:validate": "redocly lint --config ../docs/openapi/redocly.yaml ../docs/openapi/openapi.yaml",
     "typecheck": "vue-tsc --build --force",
-    "test": "vitest run",
-    "e2e": "playwright test",
-    "e2e:install": "playwright install chromium"
+    "test": "vitest run"
   },
   "dependencies": {
     "pinia": "^4.0.2",
@@ -22,7 +20,6 @@
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@redocly/cli": "^2.11.1",
     "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "^6.0.8",

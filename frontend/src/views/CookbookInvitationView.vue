@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
-import { acceptCookbookInvitation, fetchCookbookInvitation, type CookbookInvitation } from '@/utils/cookbooks';
+import { acceptCookbookInvitation, fetchCookbookInvitation, type CookbookInvitation, type CookbookRole } from '@/utils/cookbooks';
 
 const route = useRoute();
 const router = useRouter();
@@ -15,7 +15,7 @@ const isLoading = ref(true);
 const isAccepting = ref(false);
 const accepted = ref(false);
 const acceptError = ref('');
-const acceptedCookbook = ref<{ id: string; name: string; role: 'editor' | 'viewer' } | null>(null);
+const acceptedCookbook = ref<{ id: string; name: string; role: CookbookRole } | null>(null);
 const token = computed(() => String(route.params.token ?? ''));
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const loginTarget = computed(() => ({ name: 'login', query: { redirect: `/invitations/${encodeURIComponent(token.value)}` } }));

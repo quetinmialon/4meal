@@ -7,7 +7,7 @@ import { createCookbookInvitation } from '@/utils/cookbooks';
 const props = defineProps<{ cookbookId: string }>();
 const authStore = useAuthStore();
 const email = ref('');
-const role = ref<'editor' | 'viewer'>('viewer');
+const role = ref<'editor' | 'reader'>('reader');
 const errorMessage = ref('');
 const emailError = ref('');
 const roleError = ref('');
@@ -47,7 +47,7 @@ async function submit(): Promise<void> {
       <p v-if="emailError" class="field-error" role="alert">{{ emailError }}</p>
       <label for="invitation-role">Rôle proposé</label>
       <select id="invitation-role" v-model="role" :disabled="isSubmitting">
-        <option value="viewer">Lecteur</option>
+        <option value="reader">Lecteur</option>
         <option value="editor">Éditeur</option>
       </select>
       <p v-if="roleError" class="field-error" role="alert">{{ roleError }}</p>

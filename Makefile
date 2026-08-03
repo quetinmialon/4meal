@@ -98,9 +98,7 @@ rebuild-volumes: ## Supprime les volumes nommés puis reconstruit toute la stack
 	$(COMPOSE) up -d --build
 
 wait-backend: ## Attend que le conteneur backend réponde aux commandes Artisan
-	@printf "Waiting for backend"
-	@until $(COMPOSE) exec -T backend php artisan about >/dev/null 2>&1; do printf "."; sleep 2; done
-	@printf "\n"
+	$(COMPOSE) up -d --wait backend
 
 backend-up: ## Démarre uniquement le service backend
 	$(COMPOSE) up -d backend
