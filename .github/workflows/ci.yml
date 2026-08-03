@@ -146,8 +146,7 @@ jobs:
       - name: Start the application stack
         run: |
           cp .env.docker.example .env
-          docker compose --env-file .env -f docker-compose.yml up --build -d
-          until curl --fail --silent http://127.0.0.1:8080/up > /dev/null; do sleep 3; done
+          docker compose --env-file .env -f docker-compose.yml up --build -d --wait
           docker compose --env-file .env -f docker-compose.yml exec -T backend php artisan migrate --force
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6

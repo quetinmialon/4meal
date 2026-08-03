@@ -16,7 +16,8 @@ async function registerWithApi(request: APIRequestContext, user: ReturnType<type
     password: user.password,
     password_confirmation: user.password,
   } });
-  expect(response.ok()).toBeTruthy();
+  const responseBody = await response.text();
+  expect(response.ok(), `Registration failed (${response.status()}): ${responseBody}`).toBeTruthy();
 }
 
 async function login(page: Page, user: ReturnType<typeof account>): Promise<void> {
