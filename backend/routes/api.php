@@ -13,6 +13,8 @@ use App\Http\Controllers\Auth\MicrosoftOAuthCallbackController;
 use App\Http\Controllers\Auth\MicrosoftOAuthRedirectController;
 use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
+use App\Http\Controllers\Auth\RequestPasswordResetController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\UnlinkOAuthAccountController;
 use App\Http\Controllers\Auth\UpdateProfileController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
@@ -73,6 +75,20 @@ Route::post('auth/register', RegisterUserController::class)
 Route::post('auth/login', LoginUserController::class)
     ->middleware('throttle:auth.login')
     ->name('auth.login');
+
+Route::post('auth/password/email', RequestPasswordResetController::class)
+    ->middleware('throttle:auth.password.email')
+    ->name('auth.password.email');
+
+Route::post('auth/forgot-password', RequestPasswordResetController::class)
+    ->middleware('throttle:auth.password.email');
+
+Route::post('auth/password/reset', ResetPasswordController::class)
+    ->middleware('throttle:auth.password.reset')
+    ->name('auth.password.reset');
+
+Route::post('auth/reset-password', ResetPasswordController::class)
+    ->middleware('throttle:auth.password.reset');
 
 Route::get('auth/google/redirect', GoogleOAuthRedirectController::class)
     ->name('auth.google.redirect');
