@@ -60,7 +60,7 @@
 
 ### SHOULD
 - [x] REC-14 — Dupliquer une recette
-- [ ] REC-15 — Historique des modifications
+- [x] REC-15 — Historique des modifications
 
 ### COULD
 - [ ] REC-16 — Notation personnelle des recettes
@@ -98,7 +98,7 @@
 
 ### SHOULD
 - [ ] PLAN-05 — Générer automatiquement la liste de courses
-- [ ] PLAN-06 — Gestion des portions dans le planning
+- [x] PLAN-06 — Gestion des portions dans le planning
 
 ### COULD
 - [ ] PLAN-07 — Répéter automatiquement un planning
