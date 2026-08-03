@@ -52,6 +52,16 @@ class AppServiceProvider extends ServiceProvider
                 ));
         });
 
+        RateLimiter::for('auth.password.email', function (Request $request) {
+            $email = Str::lower((string) $request->input('email', 'guest'));
+
+            return Limit::perMinute(3)->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('auth.password.reset', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
         RateLimiter::for('chat.messages', function (Request $request) {
             $userId = $request->user()?->getAuthIdentifier() ?? 'guest';
             $cookbookId = (string) $request->route('cookbook');

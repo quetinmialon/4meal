@@ -8,6 +8,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       APP_NAME: ${BACKEND_APP_NAME:-4meal Backend}
       APP_ENV: ${BACKEND_APP_ENV:-local}
@@ -25,6 +27,15 @@ services:
       SESSION_DRIVER: ${BACKEND_SESSION_DRIVER:-file}
       CACHE_STORE: ${BACKEND_CACHE_STORE:-file}
       QUEUE_CONNECTION: ${BACKEND_QUEUE_CONNECTION:-sync}
+      MAIL_MAILER: smtp
+      MAIL_SCHEME: ""
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_ENCRYPTION: ""
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@4meal.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-4meal}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/up || exit 1"]
       interval: 30s
@@ -39,6 +50,13 @@ services:
       - backend_vendor:/var/www/html/vendor
       - backend_storage:/var/www/html/storage
       - cookbook_images:/var/www/html/storage/app/public/cookbooks
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
     restart: unless-stopped
 
   frontend:

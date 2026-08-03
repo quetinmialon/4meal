@@ -34,7 +34,7 @@ class CookbookInvitationService
         ]);
 
         $invitation->load('cookbook');
-        Mail::to($email)->send(new CookbookInvitationMail($invitation, $token));
+        Mail::mailer('smtp')->to($email)->send(new CookbookInvitationMail($invitation, $token));
 
         return $invitation;
     }
