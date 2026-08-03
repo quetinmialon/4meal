@@ -102,6 +102,21 @@ export type RecipeComment = {
   };
 };
 
+export type RecipeAudit = {
+  id: number;
+  type: 'created' | 'updated' | 'deleted' | string;
+  author: { id: number; name: string } | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  created_at: string | null;
+};
+
+export type RecipeHistoryPagination = {
+  per_page: number;
+  next_cursor: string | null;
+  previous_cursor: string | null;
+};
+
 export type RecipeFilters = {
   cookbook_id?: string;
   tag?: string;
@@ -115,6 +130,7 @@ type RecipePayload = { success: true; data: CreatedRecipe };
 type RecipeListPayload = { success: true; data: Recipe[]; meta: { pagination: RecipePagination } };
 type RecipeDetailPayload = { success: true; data: Recipe };
 type RecipeCommentsPayload = { success: true; data: RecipeComment[]; meta: { pagination: RecipePagination } };
+type RecipeHistoryPayload = { success: true; data: RecipeAudit[]; meta: { pagination: RecipeHistoryPagination } };
 type ApiErrorPayload = {
   success: false;
   error?: {
@@ -138,6 +154,10 @@ export type RecipeDetailResult =
 export type RecipeCommentsResult =
   | { ok: true; comments: RecipeComment[]; pagination: RecipePagination }
   | { ok: false; message: string; unavailable?: boolean };
+
+export type RecipeHistoryResult =
+  | { ok: true; audits: RecipeAudit[]; pagination: RecipeHistoryPagination }
+  | { ok: false; message: string };
 
 function recipeReadHeaders(tokenType: string, accessToken: string): HeadersInit {
   return { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` };
@@ -258,6 +278,28 @@ export async function fetchRecipeComments(
     };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function fetchRecipeHistory(
+  id: string,
+  tokenType: string,
+  accessToken: string,
+  cursor: string | null = null,
+): Promise<RecipeHistoryResult> {
+  try {
+    const params = new URLSearchParams({ per_page: '20' });
+    if (cursor) params.set('cursor', cursor);
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/history?${params.toString()}`, {
+      headers: recipeReadHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as RecipeHistoryPayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true && Array.isArray(payload.data) && payload.meta?.pagination) {
+      return { ok: true, audits: payload.data, pagination: payload.meta.pagination };
+    }
+    return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible de charger l’historique.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
   }
 }
 
