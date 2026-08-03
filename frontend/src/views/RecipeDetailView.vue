@@ -227,6 +227,7 @@ async function confirmDelete(): Promise<void> {
       </form>
       <img v-if="recipe.image_url" class="recipe-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
       <RouterLink class="edit-link" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">Modifier la recette</RouterLink>
+      <RouterLink class="history-link" :to="{ name: 'recipe-history', params: { id: recipe.id } }">Voir l’historique</RouterLink>
       <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" :disabled="isDeleting" @click="openDeleteConfirmation">
         Supprimer la recette
       </button>
@@ -305,6 +306,7 @@ h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .author-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .description, .source, .muted { color: #50634d; line-height: 1.6; }
 .edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
+.history-link { display: inline-block; margin: .7rem 0 0 1rem; color: #395330; font-weight: 700; }
 .cookbook-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .duplicate-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #fffdf8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .planning-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #edf4e8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }

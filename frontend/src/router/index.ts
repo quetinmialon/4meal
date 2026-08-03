@@ -18,6 +18,7 @@ import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
 import RecipeCreateView from '@/views/RecipeCreateView.vue';
 import RecipeDetailView from '@/views/RecipeDetailView.vue';
+import RecipeHistoryView from '@/views/RecipeHistoryView.vue';
 import RecipeEditView from '@/views/RecipeEditView.vue';
 import PublicRecipesView from '@/views/PublicRecipesView.vue';
 import RecipesView from '@/views/RecipesView.vue';
@@ -134,6 +135,14 @@ const routes: RouteRecordRaw[] = [
     path: '/recettes/:id',
     name: 'recipe-detail',
     component: RecipeDetailView,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/recettes/:id/historique',
+    name: 'recipe-history',
+    component: RecipeHistoryView,
     meta: {
       requiresAuth: true,
     },
