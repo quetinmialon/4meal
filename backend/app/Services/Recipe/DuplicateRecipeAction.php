@@ -4,6 +4,7 @@ namespace App\Services\Recipe;
 
 use App\Models\Cookbook;
 use App\Models\Recipe;
+use App\Models\RecipeAudit;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +60,14 @@ class DuplicateRecipeAction
                 )->getKey();
             }
             $copy->tags()->sync($tagIds);
+
+            app(RecipeAuditRecorder::class)->record(
+                $copy,
+                $actor,
+                RecipeAudit::CREATED,
+                null,
+                app(RecipeAuditRecorder::class)->snapshot($copy),
+            );
 
             return $copy->load(['user', 'author', 'cookbook', 'ingredients', 'steps', 'tags']);
         });

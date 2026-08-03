@@ -18,7 +18,7 @@ class DeleteRecipeController extends Controller
         $user = $request->user();
         Gate::forUser($user)->authorize('delete', $recipe);
 
-        $action->execute($recipe);
+        $action->execute($recipe, $user);
 
         return response()->noContent();
     }

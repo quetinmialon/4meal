@@ -4,6 +4,7 @@ namespace App\Services\Recipe;
 
 use App\Models\Cookbook;
 use App\Models\Recipe;
+use App\Models\RecipeAudit;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -15,12 +16,12 @@ use Throwable;
 class CreateRecipeAction
 {
     /** @param array<string, mixed> $attributes */
-    public function execute(User $user, ?Cookbook $cookbook, array $attributes): Recipe
+    public function execute(User $user, ?Cookbook $cookbook, array $attributes, ?RecipeAuditRecorder $audits = null): Recipe
     {
         $storedImagePath = null;
 
         try {
-            return DB::transaction(function () use ($user, $cookbook, $attributes, &$storedImagePath): Recipe {
+            return DB::transaction(function () use ($user, $cookbook, $attributes, $audits, &$storedImagePath): Recipe {
                 $recipe = new Recipe([
                     'author_id' => $user->getKey(),
                     'title' => $attributes['title'],
@@ -67,6 +68,14 @@ class CreateRecipeAction
                     )->getKey())
                     ->all();
                 $recipe->tags()->sync($tagIds);
+
+                ($audits ?? app(RecipeAuditRecorder::class))->record(
+                    $recipe,
+                    $user,
+                    RecipeAudit::CREATED,
+                    null,
+                    ($audits ?? app(RecipeAuditRecorder::class))->snapshot($recipe),
+                );
 
                 return $recipe->load(['user', 'author', 'cookbook', 'ingredients', 'steps', 'tags']);
             });

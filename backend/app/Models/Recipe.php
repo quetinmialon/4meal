@@ -131,4 +131,9 @@ class Recipe extends Model
     {
         return $this->hasMany(RecipeComment::class);
     }
+
+    public function audits(): HasMany
+    {
+        return $this->hasMany(RecipeAudit::class);
+    }
 }

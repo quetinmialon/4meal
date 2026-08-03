@@ -3,6 +3,7 @@
 namespace App\Services\Recipe;
 
 use App\Models\Recipe;
+use App\Models\RecipeAudit;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,8 @@ class UpdateRecipeAction
     /** @param array<string, mixed> $attributes */
     public function execute(User $actor, Recipe $recipe, array $attributes): Recipe
     {
+        $audits = app(RecipeAuditRecorder::class);
+        $before = $audits->snapshot($recipe);
         $newImagePath = null;
         $oldImagePath = $recipe->image_path;
 
@@ -28,7 +31,7 @@ class UpdateRecipeAction
                 }
             }
 
-            $updatedRecipe = DB::transaction(function () use ($actor, $recipe, $attributes, $newImagePath): Recipe {
+            $updatedRecipe = DB::transaction(function () use ($actor, $recipe, $attributes, $newImagePath, $audits, $before): Recipe {
                 $recipe->fill(array_intersect_key($attributes, array_flip([
                     'title',
                     'description',
@@ -75,6 +78,24 @@ class UpdateRecipeAction
                         ->all();
 
                     $recipe->tags()->sync($tagIds);
+                }
+
+                $after = $audits->snapshot($recipe);
+                $changedBefore = array_intersect_key($before, $after);
+                $changedAfter = array_intersect_key($after, $before);
+                foreach (array_keys($changedAfter) as $field) {
+                    if ($changedBefore[$field] === $changedAfter[$field]) {
+                        unset($changedBefore[$field], $changedAfter[$field]);
+                    }
+                }
+                foreach (['ingredients' => 'ingredients_count', 'steps' => 'steps_count', 'tags' => 'tags_count'] as $relation => $field) {
+                    if (array_key_exists($relation, $attributes)) {
+                        $changedBefore[$field] = $before[$field];
+                        $changedAfter[$field] = $after[$field];
+                    }
+                }
+                if ($changedBefore !== []) {
+                    $audits->record($recipe, $actor, RecipeAudit::UPDATED, $changedBefore, $changedAfter);
                 }
 
                 return $recipe->load(['user', 'author', 'cookbook', 'ingredients', 'steps', 'tags']);
