@@ -7,6 +7,8 @@ Structure du monorepo :
 - `docker/` : configuration Docker et Nginx
 - `docs/` : documentation projet
 
+Les parcours critiques E2E et leur exécution locale/CI sont documentés dans [`docs/e2e.md`](./docs/e2e.md).
+
 ## CI
 
 Le workflow GitHub Actions est défini dans [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
