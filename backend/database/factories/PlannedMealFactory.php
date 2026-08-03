@@ -22,6 +22,7 @@ class PlannedMealFactory extends Factory
             'meal_type' => $this->faker->randomElement(['breakfast', 'lunch', 'dinner', 'snack']),
             'note' => null,
             'initial_servings' => 1,
+            'servings' => 1,
         ];
     }
 }

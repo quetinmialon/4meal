@@ -31,6 +31,7 @@ class StorePlannedMealRequest extends FormRequest
             'date' => ['required', 'date_format:Y-m-d'],
             'meal_type' => ['required', 'string', Rule::in(['breakfast', 'lunch', 'dinner', 'snack'])],
             'note' => ['nullable', 'string', 'max:5000'],
+            'servings' => ['sometimes', 'integer', 'min:1', 'max:1000'],
         ];
     }
 }
