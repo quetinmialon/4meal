@@ -86,6 +86,22 @@ services:
       - frontend_node_modules:/app/node_modules
     restart: unless-stopped
 
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    profiles: ["e2e"]
+    working_dir: /app
+    depends_on:
+      reverse-proxy:
+        condition: service_healthy
+    environment:
+      CI: "true"
+      E2E_BASE_URL: http://reverse-proxy
+    volumes:
+      - ./frontend:/app
+      - e2e_node_modules:/app/node_modules
+    command: >-
+      sh -lc "npm ci && npm run e2e"
+
   reverse-proxy:
     image: nginx:1.27-alpine
     depends_on:
@@ -129,4 +145,5 @@ volumes:
   frontend_node_modules:
   postgres_data:
   cookbook_images:
+  e2e_node_modules:
  

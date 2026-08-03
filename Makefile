@@ -51,8 +51,8 @@ endif
 	migrate migrate-fresh seed fresh-seed \
 	backend-install backend-npm-install backend-build-assets backend-pint backend-analyse backend-test backend-quality \
 	backend-migrate backend-migrate-fresh backend-seed backend-fresh-seed \
-	frontend-install frontend-build frontend-lint frontend-typecheck frontend-test frontend-openapi \
-	test ci-backend ci-frontend ci-docker ci
+	frontend-install frontend-build frontend-lint frontend-typecheck frontend-test frontend-openapi frontend-e2e \
+	test ci-backend ci-frontend ci-docker ci-e2e ci
 
 help: ## Affiche les cibles disponibles
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_.-]+:.*## / { printf "%-24s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -98,9 +98,7 @@ rebuild-volumes: ## Supprime les volumes nommés puis reconstruit toute la stack
 	$(COMPOSE) up -d --build
 
 wait-backend: ## Attend que le conteneur backend réponde aux commandes Artisan
-	@printf "Waiting for backend"
-	@until $(COMPOSE) exec -T backend php artisan about >/dev/null 2>&1; do printf "."; sleep 2; done
-	@printf "\n"
+	$(COMPOSE) up -d --wait backend
 
 backend-up: ## Démarre uniquement le service backend
 	$(COMPOSE) up -d backend
@@ -225,6 +223,9 @@ frontend-test: ## Exécute Vitest côté frontend
 frontend-openapi: ## Valide le contrat OpenAPI depuis le frontend
 	$(FRONTEND_NPM) run openapi:validate
 
+frontend-e2e: ## Exécute les tests E2E Playwright dans Docker
+	$(COMPOSE) --profile e2e run --rm e2e
+
 test: ## Lance les tests front et back
 	$(MAKE) backend-test
 	$(MAKE) frontend-test
@@ -243,7 +244,14 @@ ci-docker: ## Rejoue la validation Docker Compose de la CI
 	$(MAKE) config
 	$(TEST_COMPOSE) config
 
+ci-e2e: ## Démarre la stack et exécute les tests E2E Playwright
+	$(MAKE) up
+	$(MAKE) wait-backend
+	$(MAKE) migrate
+	$(MAKE) frontend-e2e
+
 ci: ## Lance l'ensemble des vérifications CI locales
 	$(MAKE) ci-backend
 	$(MAKE) ci-frontend
 	$(MAKE) ci-docker
+	$(MAKE) ci-e2e

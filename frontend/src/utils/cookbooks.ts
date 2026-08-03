@@ -110,10 +110,12 @@ type ApiErrorPayload = {
   };
 };
 
+export type CookbookRole = 'editor' | 'reader' | 'viewer';
+
 export type CookbookInvitation = {
   id: number;
   email: string;
-  role: 'editor' | 'viewer';
+  role: CookbookRole;
   expires_at: string;
   accepted_at: string | null;
   cookbook: { id: string; name: string };
@@ -122,7 +124,7 @@ export type CookbookInvitation = {
 type InvitationPayload = { success: true; data: CookbookInvitation };
 type AcceptedInvitationPayload = {
   success: true;
-  data: { invitation: { id: number; accepted_at: string }; cookbook: { id: string; name: string; role: 'editor' | 'viewer' } };
+  data: { invitation: { id: number; accepted_at: string }; cookbook: { id: string; name: string; role: CookbookRole } };
 };
 
 export type InvitationResult =
@@ -130,7 +132,7 @@ export type InvitationResult =
   | { ok: false; message: string; fieldErrors: { email?: string; role?: string }; expired?: boolean };
 
 export type AcceptInvitationResult =
-  | { ok: true; cookbook: { id: string; name: string; role: 'editor' | 'viewer' }; acceptedAt: string }
+  | { ok: true; cookbook: { id: string; name: string; role: CookbookRole }; acceptedAt: string }
   | { ok: false; message: string; expired?: boolean; unauthorized?: boolean };
 
 export type InvitationListResult =
@@ -142,7 +144,7 @@ function isCookbookInvitation(value: unknown): value is CookbookInvitation {
   const invitation = value as Partial<CookbookInvitation>;
   return typeof invitation.id === 'number'
     && typeof invitation.email === 'string'
-    && (invitation.role === 'editor' || invitation.role === 'viewer')
+    && (invitation.role === 'editor' || invitation.role === 'reader' || invitation.role === 'viewer')
     && typeof invitation.expires_at === 'string'
     && typeof invitation.cookbook?.id === 'string'
     && typeof invitation.cookbook.name === 'string';
@@ -161,7 +163,7 @@ function invitationError(response: Response, payload: ApiErrorPayload | null, fa
 }
 
 export async function createCookbookInvitation(
-  cookbookId: string, email: string, role: 'editor' | 'viewer', tokenType: string, accessToken: string,
+  cookbookId: string, email: string, role: 'editor' | 'reader', tokenType: string, accessToken: string,
 ): Promise<InvitationResult> {
   try {
     const response = await apiFetch(`/api/cookbooks/${encodeURIComponent(cookbookId)}/invitations`, {
