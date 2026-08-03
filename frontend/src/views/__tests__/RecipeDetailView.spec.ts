@@ -100,7 +100,7 @@ describe('RecipeDetailView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/recipes/recipe-id', {
       method: 'POST',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.find('.cookbook-picker').exists()).toBe(false);
   });
@@ -127,7 +127,7 @@ describe('RecipeDetailView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/recipes/recipe-id', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(pushMock).toHaveBeenCalledWith({ name: 'recipes' });
   });

@@ -77,7 +77,7 @@ describe('SearchView', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenLastCalledWith('/api/recipes?page=1&q=curry', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).toContain('Soupe curry');
   });

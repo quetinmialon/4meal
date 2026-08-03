@@ -49,7 +49,7 @@ describe('ExportView', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/export', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(click).toHaveBeenCalled();
     expect(wrapper.text()).toContain('a été téléchargé');

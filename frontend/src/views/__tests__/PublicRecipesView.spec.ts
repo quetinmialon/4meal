@@ -41,7 +41,7 @@ describe('PublicRecipesView', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/recipes?page=1&scope=public', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).toContain('Soupe publique');
     expect(wrapper.get('[aria-label="Pagination des recettes"]').text()).toContain('Page 1 / 2');

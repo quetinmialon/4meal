@@ -38,7 +38,7 @@ describe('RecipeFavoriteButton', () => {
     expect(wrapper.get('button').text()).toContain('Favori');
     expect(fetchMock).toHaveBeenCalledWith('/api/recipes/recipe-id/favorite', {
       method: 'POST',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
 
     resolveRequest({ ok: true, status: 204, json: async () => null } as Response);
@@ -66,7 +66,7 @@ describe('RecipeFavoriteButton', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('Service indisponible');
     expect(fetchMock).toHaveBeenCalledWith('/api/recipes/recipe-id/favorite', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
   });
 });

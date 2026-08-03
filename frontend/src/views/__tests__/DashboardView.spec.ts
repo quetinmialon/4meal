@@ -48,7 +48,7 @@ describe('DashboardView', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/cookbooks?page=1', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).toContain('Vous n’avez encore aucun cookbook.');
   });
