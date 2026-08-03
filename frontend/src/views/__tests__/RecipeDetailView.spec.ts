@@ -104,6 +104,89 @@ describe('RecipeDetailView', () => {
     });
     expect(wrapper.find('.cookbook-picker').exists()).toBe(false);
   });
+
+  it('duplicates the recipe to an authorized cookbook after exact confirmation', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Tarte', is_favorite: false, author: null, ingredients: [], steps: [], tags: [] } }),
+      } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: [
+          { id: 'editor-cookbook', name: 'Mes desserts', member_role: 'editor' },
+          { id: 'reader-cookbook', name: 'Lecture seule', member_role: 'reader' },
+        ], meta: { pagination: { current_page: 1, per_page: 15, total: 2, last_page: 1, from: 1, to: 2, has_more_pages: false } } }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { id: 'copy-id', title: 'Tarte' } }),
+      } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.duplicate-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('#duplicate-destination option[value="reader-cookbook"]').exists()).toBe(false);
+    await wrapper.get('#duplicate-destination').setValue('editor-cookbook');
+    await wrapper.get('#duplicate-confirmation').setValue('Tarte');
+    await wrapper.get('.duplicate-picker').trigger('submit');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/recipes/recipe-id/duplicate', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmation: 'Tarte', cookbook_id: 'editor-cookbook' }),
+    });
+    expect(pushMock).toHaveBeenCalledWith({ name: 'recipe-detail', params: { id: 'copy-id' } });
+  });
+
+  it('requires the exact title before enabling duplication', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Tarte', author: null, ingredients: [], steps: [], tags: [] } }),
+      } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: {} } }) } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.duplicate-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('.duplicate-actions button[type="submit"]').attributes('disabled')).toBeDefined();
+    await wrapper.get('#duplicate-confirmation').setValue('Autre recette');
+    expect(wrapper.get('.duplicate-actions button[type="submit"]').attributes('disabled')).toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('displays duplication authorization errors and keeps the form open', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { id: 'recipe-id', title: 'Protegee', author: null, ingredients: [], steps: [], tags: [] } }),
+      } as Response)
+      .mockResolvedValueOnce(commentsUnavailableResponse())
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: {} } }) } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({ success: false, error: { message: 'Destination non autorisée.' } }) } as Response);
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.duplicate-button').trigger('click');
+    await flushPromises();
+    await wrapper.get('#duplicate-confirmation').setValue('Protegee');
+    await wrapper.get('.duplicate-picker').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Destination non autorisée.');
+    expect(wrapper.find('.duplicate-picker').exists()).toBe(true);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it('requires confirmation, deletes the recipe and redirects to the list', async () => {
     fetchMock
       .mockResolvedValueOnce({

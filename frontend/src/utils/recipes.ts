@@ -471,6 +471,35 @@ export async function deleteRecipe(
   }
 }
 
+export type DuplicateRecipeResult =
+  | { ok: true; recipe: CreatedRecipe }
+  | { ok: false; message: string };
+
+export async function duplicateRecipe(
+  id: string,
+  confirmation: string,
+  cookbookId: string | null,
+  tokenType: string,
+  accessToken: string,
+): Promise<DuplicateRecipeResult> {
+  try {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/duplicate`, {
+      method: 'POST',
+      headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmation: confirmation.trim(), cookbook_id: cookbookId }),
+    });
+    const payload = (await response.json().catch(() => null)) as RecipePayload | ApiErrorPayload | null;
+    if (response.ok && payload?.success === true) return { ok: true, recipe: payload.data };
+
+    return {
+      ok: false,
+      message: readError(payload?.success === false ? payload : null, 'Impossible de dupliquer la recette.'),
+    };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
 export type RecipeFavoriteResult =
   | { ok: true }
   | { ok: false; message: string };

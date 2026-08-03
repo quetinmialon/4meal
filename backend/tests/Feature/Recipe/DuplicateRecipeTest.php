@@ -51,7 +51,9 @@ it('duplicates all recipe data into the user personal space without the image', 
     $source->update(['image_path' => 'recipes/original.jpg']);
 
     $response = $this->withToken(duplicateRecipeToken($owner))
-        ->postJson('/api/recipes/'.$source->public_id.'/duplicate');
+        ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => $source->title,
+        ]);
 
     $response->assertCreated()
         ->assertJsonPath('data.title', 'Recette à copier')
@@ -80,6 +82,7 @@ it('duplicates a recipe into a cookbook only with cookbook create permission', f
 
     $response = $this->withToken(duplicateRecipeToken($actor))
         ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => $source->title,
             'cookbook_id' => $cookbook->public_id,
         ]);
 
@@ -98,6 +101,7 @@ it('rejects duplication when the target cookbook is not writable', function (): 
 
     $this->withToken(duplicateRecipeToken($actor))
         ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => $source->title,
             'cookbook_id' => $cookbook->public_id,
         ])
         ->assertForbidden();
@@ -113,8 +117,41 @@ it('rejects duplication of an inaccessible cookbook recipe', function (): void {
     $source = Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $owner->id]);
 
     $this->withToken(duplicateRecipeToken($actor))
-        ->postJson('/api/recipes/'.$source->public_id.'/duplicate')
+        ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => $source->title,
+        ])
         ->assertForbidden();
+
+    expect(Recipe::query()->count())->toBe(1);
+});
+
+it('requires the exact recipe title as confirmation', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $source = duplicateSourceRecipe($owner);
+
+    $this->withToken(duplicateRecipeToken($owner))
+        ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => 'mauvais titre',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('error.code', 'validation_error')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['confirmation']]]]);
+
+    expect(Recipe::query()->count())->toBe(1);
+});
+
+it('returns a validation error for an invalid destination', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $source = duplicateSourceRecipe($owner);
+
+    $this->withToken(duplicateRecipeToken($owner))
+        ->postJson('/api/recipes/'.$source->public_id.'/duplicate', [
+            'confirmation' => $source->title,
+            'cookbook_id' => 'not-a-uuid',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('error.code', 'validation_error')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['cookbook_id']]]]);
 
     expect(Recipe::query()->count())->toBe(1);
 });

@@ -7,7 +7,7 @@ import AddToPlanningModal from '@/components/AddToPlanningModal.vue';
 import RecipeCommentsSection from '@/components/RecipeCommentsSection.vue';
 import { useAuthStore } from '@/stores/auth';
 import { addRecipeToCookbook, fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
-import { deleteRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
+import { deleteRecipe, duplicateRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
 
 const route = useRoute();
 const router = useRouter();
@@ -24,6 +24,11 @@ const selectedCookbookId = ref('');
 const isLoadingCookbooks = ref(false);
 const isAddingToCookbook = ref(false);
 const cookbookError = ref('');
+const isDuplicatePickerVisible = ref(false);
+const duplicateDestination = ref('personal');
+const duplicateConfirmation = ref('');
+const isDuplicating = ref(false);
+const duplicateError = ref('');
 const isPlanningModalVisible = ref(false);
 const planningSuccessMessage = ref('');
 
@@ -70,6 +75,53 @@ async function addToSelectedCookbook(): Promise<void> {
     cookbookError.value = result.message;
   }
   isAddingToCookbook.value = false;
+}
+
+async function loadCookbooks(): Promise<void> {
+  isLoadingCookbooks.value = true;
+  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  if (result.ok) cookbooks.value = result.data;
+  else duplicateError.value = result.message;
+  isLoadingCookbooks.value = false;
+}
+
+function openDuplicatePicker(): void {
+  duplicateError.value = '';
+  duplicateConfirmation.value = '';
+  duplicateDestination.value = 'personal';
+  isDuplicatePickerVisible.value = true;
+  if (cookbooks.value.length === 0) void loadCookbooks();
+}
+
+function closeDuplicatePicker(): void {
+  if (isDuplicating.value) return;
+  isDuplicatePickerVisible.value = false;
+  duplicateError.value = '';
+}
+
+async function confirmDuplicate(): Promise<void> {
+  if (!recipe.value) return;
+  if (duplicateConfirmation.value.trim() !== recipe.value.title) {
+    duplicateError.value = 'Saisissez exactement le titre de la recette pour confirmer.';
+    return;
+  }
+
+  isDuplicating.value = true;
+  duplicateError.value = '';
+  const result = await duplicateRecipe(
+    recipe.value.id,
+    duplicateConfirmation.value,
+    duplicateDestination.value === 'personal' ? null : duplicateDestination.value,
+    authStore.tokenType,
+    authStore.accessToken,
+  );
+  if (result.ok) {
+    await router.push({ name: 'recipe-detail', params: { id: result.recipe.id } });
+    return;
+  }
+
+  duplicateError.value = result.message;
+  isDuplicating.value = false;
 }
 
 async function loadRecipe(): Promise<void> {
@@ -147,6 +199,31 @@ async function confirmDelete(): Promise<void> {
         </div>
         <p v-if="isLoadingCookbooks" class="muted">Chargement des cookbooks...</p>
         <p v-if="cookbookError" class="delete-error" role="alert">{{ cookbookError }}</p>
+      </form>
+      <button v-if="!isDuplicatePickerVisible" type="button" class="duplicate-button" @click="openDuplicatePicker">
+        Dupliquer la recette
+      </button>
+      <form v-else class="duplicate-picker" @submit.prevent="confirmDuplicate">
+        <h3 id="duplicate-recipe-heading">Dupliquer cette recette</h3>
+        <label for="duplicate-destination">Destination</label>
+        <select id="duplicate-destination" v-model="duplicateDestination" :disabled="isLoadingCookbooks || isDuplicating">
+          <option value="personal">Mes recettes</option>
+          <option
+            v-for="cookbook in cookbooks.filter((item) => item.member_role === 'owner' || item.member_role === 'editor')"
+            :key="cookbook.id"
+            :value="cookbook.id"
+          >{{ cookbook.name }}</option>
+        </select>
+        <label for="duplicate-confirmation">Pour confirmer, saisissez « {{ recipe.title }} »</label>
+        <input id="duplicate-confirmation" v-model="duplicateConfirmation" type="text" :disabled="isDuplicating" autocomplete="off" />
+        <p v-if="isLoadingCookbooks" class="muted">Chargement des destinations...</p>
+        <p v-if="duplicateError" class="delete-error" role="alert">{{ duplicateError }}</p>
+        <div class="duplicate-actions">
+          <button type="submit" :disabled="isDuplicating || duplicateConfirmation.trim() !== recipe.title">
+            {{ isDuplicating ? 'Duplication...' : 'Confirmer la duplication' }}
+          </button>
+          <button type="button" class="cancel-button" :disabled="isDuplicating" @click="closeDuplicatePicker">Annuler</button>
+        </div>
       </form>
       <img v-if="recipe.image_url" class="recipe-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
       <RouterLink class="edit-link" :to="{ name: 'recipe-edit', params: { id: recipe.id } }">Modifier la recette</RouterLink>
@@ -229,12 +306,18 @@ h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); }
 .description, .source, .muted { color: #50634d; line-height: 1.6; }
 .edit-link { display: inline-block; margin-top: .7rem; color: #395330; font-weight: 700; }
 .cookbook-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.duplicate-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #fffdf8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .planning-button { display: block; margin-top: .7rem; padding: .55rem .75rem; border: 1px solid #6b7b57; border-radius: .5rem; background: #edf4e8; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .planning-success { color: #395330; font-weight: 700; }
 .cookbook-picker { display: grid; gap: .55rem; max-width: 24rem; margin-top: .8rem; padding: .9rem; border: 1px solid rgba(86,112,79,.18); border-radius: .7rem; }
 .cookbook-picker select { padding: .5rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
 .cookbook-picker-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
 .cookbook-picker-actions button { padding: .5rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.duplicate-picker { display: grid; gap: .55rem; max-width: 24rem; margin-top: .8rem; padding: .9rem; border: 1px solid rgba(86,112,79,.18); border-radius: .7rem; }
+.duplicate-picker h3 { margin: 0; }
+.duplicate-picker select, .duplicate-picker input { padding: .5rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
+.duplicate-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.duplicate-actions button:first-child { padding: .5rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .delete-button { display: inline-block; margin: .7rem .5rem 0 0; padding: .55rem .75rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: #8f1e1e; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .delete-confirmation { margin-top: 1rem; padding: 1rem; border: 1px solid #e2b3ad; border-radius: .8rem; background: #fff8f6; }
 .delete-confirmation h3 { margin-top: 0; color: #8f1e1e; }
