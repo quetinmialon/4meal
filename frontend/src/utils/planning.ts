@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type PlannedMeal = {
   id: string;
   date: string;
@@ -54,7 +56,7 @@ export async function updatePlannedMeal(
   accessToken: string,
 ): Promise<PlannedMealMutationResult> {
   try {
-    const response = await fetch(`/api/planned-meals/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/planned-meals/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: {
         Accept: 'application/json',
@@ -81,7 +83,7 @@ export async function deletePlannedMeal(
   accessToken: string,
 ): Promise<DeletePlannedMealResult> {
   try {
-    const response = await fetch(`/api/planned-meals/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/planned-meals/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });
@@ -109,7 +111,7 @@ export async function fetchPlannedMeals(
   const params = new URLSearchParams({ from, to });
 
   try {
-    const response = await fetch(`/api/planned-meals?${params.toString()}`, {
+    const response = await apiFetch(`/api/planned-meals?${params.toString()}`, {
       headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });
     const payload = (await response.json().catch(() => null)) as PlannedMealsPayload | null;

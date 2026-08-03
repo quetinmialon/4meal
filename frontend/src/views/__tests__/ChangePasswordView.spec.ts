@@ -68,6 +68,7 @@ describe('ChangePasswordView', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/password', {
       method: 'PUT',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer jwt-token',

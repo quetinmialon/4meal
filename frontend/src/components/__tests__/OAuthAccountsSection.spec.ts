@@ -54,7 +54,7 @@ describe('OAuthAccountsSection', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/oauth-accounts', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).toContain('Google');
     expect(wrapper.text()).toContain('jane@gmail.com');
@@ -93,7 +93,7 @@ describe('OAuthAccountsSection', () => {
     await flushPromises();
 
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/oauth/google/link', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(assign).toHaveBeenCalledWith('https://login.microsoftonline.com/oauth');
   });
@@ -111,7 +111,7 @@ describe('OAuthAccountsSection', () => {
 
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/oauth/google', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).toContain('Google a été dissocié');
     expect(wrapper.text()).not.toContain('jane@gmail.com');

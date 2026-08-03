@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type ImportErrorDetail = {
   path: string;
   code: string;
@@ -48,7 +50,7 @@ export async function importJsonFile(file: File, tokenType: string, accessToken:
   try {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch('/api/import', {
+    const response = await apiFetch('/api/import', {
       method: 'POST',
       headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
       body: formData,

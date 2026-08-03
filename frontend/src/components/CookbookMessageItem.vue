@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 
 import { deleteCookbookMessage, updateCookbookMessage, type CookbookMessage } from '@/utils/cookbooks';
+import { useDialogFocus } from '@/utils/dialogFocus';
 
 const props = defineProps<{ message: CookbookMessage; cookbookId: string; currentUserId: number | null; currentUserRole: string | null; tokenType: string; accessToken: string }>();
 const emit = defineEmits<{ updated: [message: CookbookMessage]; deleted: [message: CookbookMessage] }>();
@@ -10,9 +11,14 @@ const draft = ref(props.message.content);
 const confirmation = ref(false);
 const error = ref('');
 const saving = ref(false);
+const confirmationDialog = ref<HTMLElement | null>(null);
 
 const canEdit = () => !props.message.is_deleted && props.message.author.id === props.currentUserId;
 const canDelete = () => !props.message.is_deleted && (props.message.author.id === props.currentUserId || props.currentUserRole === 'owner' || props.currentUserRole === 'moderator');
+
+useDialogFocus(confirmationDialog, confirmation, () => {
+  if (!saving.value) confirmation.value = false;
+});
 
 async function save(): Promise<void> {
   error.value = '';
@@ -49,8 +55,8 @@ async function remove(): Promise<void> {
           <button v-if="canEdit()" type="button" @click="editing = true; draft = message.content; error = ''">Modifier</button>
           <button v-if="canDelete()" type="button" @click="confirmation = true; error = ''">Supprimer</button>
         </div>
-        <div v-if="confirmation" class="message-confirmation" role="alertdialog" aria-label="Confirmation de suppression">
-          <span>Supprimer ce message ?</span><button type="button" :disabled="saving" @click="remove">Confirmer</button><button type="button" :disabled="saving" @click="confirmation = false">Annuler</button>
+        <div v-if="confirmation" ref="confirmationDialog" class="message-confirmation" role="alertdialog" aria-labelledby="message-delete-title" tabindex="-1">
+          <span id="message-delete-title">Supprimer ce message ?</span><button type="button" :disabled="saving" @click="remove">Confirmer</button><button type="button" :disabled="saving" @click="confirmation = false">Annuler</button>
           <p v-if="error" class="error-summary" role="alert">{{ error }}</p>
         </div>
       </template>

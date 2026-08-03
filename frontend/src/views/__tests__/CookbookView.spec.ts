@@ -85,7 +85,7 @@ describe('CookbookView', () => {
     expect(wrapper.text()).toContain('Propriétaire protégé');
     expect(wrapper.findAll('button').map((button) => button.text())).toContain('Suivant');
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/cookbooks/cookbook-id/recipes?page=1', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
   });
 
@@ -196,7 +196,7 @@ describe('CookbookView', () => {
 
     expect(wrapper.text()).toContain('Sam Dupont');
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/members?page=2', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
   });
 
@@ -276,6 +276,7 @@ describe('CookbookView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/members/8/role', {
       method: 'PATCH',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer jwt-token',
@@ -284,7 +285,7 @@ describe('CookbookView', () => {
       body: JSON.stringify({ role: 'editor' }),
     });
     expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/cookbooks/cookbook-id/members?page=1', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.findAll('.member-item')[1]?.text()).toContain('Éditeur');
     expect(wrapper.text()).toContain('editor');
@@ -358,7 +359,7 @@ describe('CookbookView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/members/me', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(pushMock).toHaveBeenCalledWith({ name: 'dashboard' });
   });
@@ -405,14 +406,14 @@ describe('CookbookView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id/members/8', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/cookbooks/cookbook-id/members/8', {
       method: 'DELETE',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/cookbooks/cookbook-id/members?page=1', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' },
     });
     expect(wrapper.text()).not.toContain('Alex Martin');
   });
@@ -450,6 +451,7 @@ describe('CookbookView', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/cookbooks/cookbook-id', {
       method: 'DELETE',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer jwt-token',

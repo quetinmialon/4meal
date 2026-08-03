@@ -26,6 +26,10 @@ async function loadRecipes(page = 1): Promise<void> {
   isLoading.value = false;
 }
 
+function retry(): void {
+  void loadRecipes(pagination.value?.current_page ?? 1);
+}
+
 onMounted(() => { void loadRecipes(); });
 </script>
 
@@ -41,7 +45,10 @@ onMounted(() => { void loadRecipes(); });
     </div>
 
     <p v-if="isLoading" class="state-message" role="status">Chargement des recettes...</p>
-    <section v-else-if="errorMessage" class="state-message error-summary" role="alert">{{ errorMessage }}</section>
+    <section v-else-if="errorMessage" class="state-message error-summary" role="alert">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="retry">Réessayer</button>
+    </section>
     <section v-else-if="recipes.length === 0" class="empty-state">
       <h3>Aucune recette publique pour le moment</h3>
       <p>Les recettes personnelles apparaîtront ici.</p>

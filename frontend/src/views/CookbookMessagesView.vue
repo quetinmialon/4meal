@@ -17,6 +17,7 @@ const loading = ref(true);
 
 async function loadMessages(cursor: string | null = null): Promise<void> {
   loading.value = true;
+  errorMessage.value = '';
   const result = await fetchCookbookMessages(String(route.params.id), authStore.tokenType, authStore.accessToken, cursor);
   if (result.ok) {
     messages.value = result.messages;
@@ -27,12 +28,9 @@ async function loadMessages(cursor: string | null = null): Promise<void> {
   loading.value = false;
 }
 
-function replaceMessage(message: CookbookMessage): void {
-  const index = messages.value.findIndex((item) => item.id === message.id);
-  if (index !== -1) messages.value[index] = message;
-}
-
-onMounted(async () => {
+async function loadPage(): Promise<void> {
+  loading.value = true;
+  errorMessage.value = '';
   const result = await fetchCookbook(String(route.params.id), authStore.tokenType, authStore.accessToken);
   if (!result.ok) {
     errorMessage.value = result.message;
@@ -41,7 +39,18 @@ onMounted(async () => {
   }
   cookbook.value = result.cookbook;
   await loadMessages();
-});
+}
+
+function retry(): void {
+  void loadPage();
+}
+
+function replaceMessage(message: CookbookMessage): void {
+  const index = messages.value.findIndex((item) => item.id === message.id);
+  if (index !== -1) messages.value[index] = message;
+}
+
+onMounted(() => { void loadPage(); });
 </script>
 
 <template>
@@ -57,7 +66,10 @@ onMounted(async () => {
         @sent="loadMessages"
       />
     </template>
-    <p v-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
+    <p v-if="errorMessage" class="error-summary" role="alert">
+      {{ errorMessage }}
+      <button type="button" @click="retry">Réessayer</button>
+    </p>
     <p v-else-if="loading" role="status">Chargement des messages...</p>
     <p v-else-if="messages.length === 0" class="empty-state">Aucun message.</p>
     <section v-else class="message-list" aria-label="Historique des messages">

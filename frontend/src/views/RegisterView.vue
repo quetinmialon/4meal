@@ -6,6 +6,7 @@ import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
 import MicrosoftAuthButton from '@/components/MicrosoftAuthButton.vue';
 import { useAuthStore } from '@/stores/auth';
 import { handleOAuthCallback } from '@/utils/oauth';
+import { apiFetch } from '@/utils/api';
 
 type FieldName = 'name' | 'email' | 'password' | 'passwordConfirmation';
 
@@ -225,7 +226,7 @@ async function handleSubmit(): Promise<void> {
   isSubmitting.value = true;
 
   try {
-    const response = await fetch('/api/auth/register', {
+    const response = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: {
         Accept: 'application/json',

@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export type RecipeIngredientInput = {
   name: string;
   quantity: number | null;
@@ -208,7 +210,7 @@ export async function fetchRecipes(
     if (filters.max_prep_time !== undefined) params.set('max_prep_time', String(filters.max_prep_time));
     if (filters.max_cook_time !== undefined) params.set('max_cook_time', String(filters.max_cook_time));
     if (filters.favorites) params.set('favorites', 'true');
-    const response = await fetch(`/api/recipes?${params.toString()}`, { headers: recipeReadHeaders(tokenType, accessToken) });
+    const response = await apiFetch(`/api/recipes?${params.toString()}`, { headers: recipeReadHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as RecipeListPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) {
       return { ok: true, recipes: payload.data, pagination: payload.meta.pagination };
@@ -225,7 +227,7 @@ export async function fetchRecipe(
   accessToken: string,
 ): Promise<RecipeDetailResult> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, { headers: recipeReadHeaders(tokenType, accessToken) });
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}`, { headers: recipeReadHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as RecipeDetailPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) return { ok: true, recipe: payload.data };
     return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible de charger la recette.') };
@@ -241,7 +243,7 @@ export async function fetchRecipeComments(
   page = 1,
 ): Promise<RecipeCommentsResult> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/comments?per_page=20&page=${page}`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/comments?per_page=20&page=${page}`, {
       headers: recipeReadHeaders(tokenType, accessToken),
     });
     const payload = (await response.json().catch(() => null)) as RecipeCommentsPayload | ApiErrorPayload | null;
@@ -266,7 +268,7 @@ export async function createRecipeComment(
   accessToken: string,
 ): Promise<{ ok: true; comment: RecipeComment } | { ok: false; message: string; fieldError?: string }> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/comments`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/comments`, {
       method: 'POST',
       headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: content.trim() }),
@@ -300,7 +302,7 @@ export async function updateRecipeComment(
   accessToken: string,
 ): Promise<UpdateRecipeCommentResult> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
       method: 'PATCH',
       headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: content.trim() }),
@@ -325,7 +327,7 @@ export async function deleteRecipeComment(
   accessToken: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}`, {
       method: 'DELETE',
       headers: recipeReadHeaders(tokenType, accessToken),
     });
@@ -347,7 +349,7 @@ export async function createRecipe(
     const hasImage = input.image instanceof File;
     const body = hasImage ? new FormData() : JSON.stringify(normalizedInput);
     if (hasImage) appendRecipeFormData(body as FormData, input);
-    const response = await fetch('/api/recipes', {
+    const response = await apiFetch('/api/recipes', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -396,7 +398,7 @@ export async function updateRecipe(
     const hasImage = input.image instanceof File;
     const body = hasImage ? new FormData() : JSON.stringify(normalizedInput);
     if (hasImage) appendRecipeFormData(body as FormData, input, 'PATCH');
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}`, {
       method: hasImage ? 'POST' : 'PATCH',
       headers: {
         Accept: 'application/json',
@@ -442,7 +444,7 @@ export async function deleteRecipe(
   accessToken: string,
 ): Promise<DeleteRecipeResult> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: {
         Accept: 'application/json',
@@ -490,7 +492,7 @@ export async function createPlannedMeal(
   accessToken: string,
 ): Promise<CreatePlannedMealResult> {
   try {
-    const response = await fetch('/api/planned-meals', {
+    const response = await apiFetch('/api/planned-meals', {
       method: 'POST',
       headers: {
         ...recipeReadHeaders(tokenType, accessToken),
@@ -528,7 +530,7 @@ export async function setRecipeFavorite(
   accessToken: string,
 ): Promise<RecipeFavoriteResult> {
   try {
-    const response = await fetch(`/api/recipes/${encodeURIComponent(id)}/favorite`, {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/favorite`, {
       method: isFavorite ? 'POST' : 'DELETE',
       headers: recipeReadHeaders(tokenType, accessToken),
     });

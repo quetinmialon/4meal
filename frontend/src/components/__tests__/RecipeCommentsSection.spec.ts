@@ -30,7 +30,7 @@ describe('RecipeCommentsSection', () => {
     expect(wrapper.text()).toContain('Jane Doe');
     expect(wrapper.text()).toContain('Commentateur');
     expect(fetchMock).toHaveBeenCalledWith('/api/recipes/recipe-1/comments?per_page=20&page=1', {
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt' },
     });
   });
 
@@ -50,7 +50,7 @@ describe('RecipeCommentsSection', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/recipes/recipe-1/comments', {
       method: 'POST',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt', 'Content-Type': 'application/json' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt', 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: 'Très bon !' }),
     });
     expect(wrapper.text()).toContain('Très bon !');
@@ -89,7 +89,7 @@ describe('RecipeCommentsSection', () => {
 
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/recipes/recipe-1/comments/comment-1', {
       method: 'PATCH',
-      headers: { Accept: 'application/json', Authorization: 'Bearer jwt', 'Content-Type': 'application/json' },
+      credentials: 'include', headers: { Accept: 'application/json', Authorization: 'Bearer jwt', 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: 'Mis à jour' }),
     });
     expect(wrapper.text()).toContain('Mis à jour');

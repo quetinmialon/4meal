@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 
+import { apiFetch } from '@/utils/api';
+
 const AUTH_STORAGE_KEY = '4meal.auth.session';
 
 type AuthStatus = 'idle' | 'loading' | 'restoring' | 'authenticated';
@@ -86,9 +88,6 @@ export type UpdateProfileResult =
     };
 
 type PersistedSession = {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
   user: AuthUser;
 };
 
@@ -128,21 +127,11 @@ function readPersistedSession(): PersistedSession | null {
   try {
     const parsed = JSON.parse(rawSession) as Partial<PersistedSession>;
 
-    if (
-      typeof parsed.accessToken !== 'string' ||
-      typeof parsed.tokenType !== 'string' ||
-      typeof parsed.expiresIn !== 'number' ||
-      !isAuthUser(parsed.user)
-    ) {
+    if (!isAuthUser(parsed.user)) {
       return null;
     }
 
-    return {
-      accessToken: parsed.accessToken,
-      tokenType: parsed.tokenType,
-      expiresIn: parsed.expiresIn,
-      user: parsed.user,
-    };
+    return { user: parsed.user };
   } catch {
     return null;
   }
@@ -158,7 +147,7 @@ function persistSession(session: PersistedSession | null): void {
     return;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: session.user }));
 }
 
 function extractFieldErrors(payload: ApiErrorPayload | null): Partial<Record<'email' | 'password', string>> {
@@ -228,9 +217,9 @@ export const useAuthStore = defineStore('auth', {
     const session = readPersistedSession();
 
     return {
-      accessToken: session?.accessToken ?? '',
-      tokenType: session?.tokenType ?? '',
-      expiresIn: session?.expiresIn ?? 0,
+      accessToken: '',
+      tokenType: '',
+      expiresIn: 0,
       user: session?.user ?? null,
       status: (session === null ? 'idle' : 'restoring') as AuthStatus,
       isRestored: session === null,
@@ -252,9 +241,6 @@ export const useAuthStore = defineStore('auth', {
       this.isRestored = true;
 
       persistSession({
-        accessToken: session.accessToken,
-        tokenType: session.tokenType,
-        expiresIn: session.expiresIn,
         user: session.user,
       });
     },
@@ -276,7 +262,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       try {
-        const response = await fetch('/api/auth/refresh', {
+        const response = await apiFetch('/api/auth/refresh', {
           method: 'POST',
           headers: authHeaders({
             accessToken: this.accessToken,
@@ -312,7 +298,7 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchCurrentUser(): Promise<AuthUser | null> {
       try {
-        const response = await fetch('/api/auth/me', {
+        const response = await apiFetch('/api/auth/me', {
           method: 'GET',
           credentials: 'include',
           headers: authHeaders({
@@ -354,7 +340,7 @@ export const useAuthStore = defineStore('auth', {
           this.user = currentUser;
           this.status = 'authenticated';
           this.isRestored = true;
-          persistSession({ accessToken: '', tokenType: 'Bearer', expiresIn: 3600, user: currentUser });
+          persistSession({ user: currentUser });
           return;
         }
         this.clearSession();
@@ -407,7 +393,7 @@ export const useAuthStore = defineStore('auth', {
       this.status = 'loading';
 
       try {
-        const response = await fetch('/api/auth/login', {
+        const response = await apiFetch('/api/auth/login', {
           method: 'POST',
           headers: {
             Accept: 'application/json',
@@ -540,7 +526,7 @@ export const useAuthStore = defineStore('auth', {
 
     async logout(): Promise<void> {
       try {
-        await fetch('/api/auth/logout', {
+        await apiFetch('/api/auth/logout', {
           method: 'POST',
           credentials: 'include',
           headers: authHeaders({ accessToken: this.accessToken, tokenType: this.tokenType }),
@@ -566,7 +552,7 @@ export const useAuthStore = defineStore('auth', {
       this.status = 'loading';
 
       try {
-        const response = await fetch('/api/auth/password', {
+        const response = await apiFetch('/api/auth/password', {
           method: 'PUT',
           headers: {
             ...authHeaders({
@@ -651,7 +637,7 @@ export const useAuthStore = defineStore('auth', {
       body.append('default_servings', String(defaultServings));
 
       try {
-        const response = await fetch('/api/auth/me', {
+        const response = await apiFetch('/api/auth/me', {
           method: 'POST',
           headers: {
             ...authHeaders({
@@ -675,9 +661,6 @@ export const useAuthStore = defineStore('auth', {
           this.user = payload.data;
           this.status = 'authenticated';
           persistSession({
-            accessToken: this.accessToken,
-            tokenType: this.tokenType,
-            expiresIn: this.expiresIn,
             user: payload.data,
           });
 

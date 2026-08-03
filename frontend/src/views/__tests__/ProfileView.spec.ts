@@ -80,6 +80,7 @@ describe('ProfileView', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/me', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         Authorization: 'Bearer jwt-token',

@@ -77,6 +77,7 @@ describe('RegisterView', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/register', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
