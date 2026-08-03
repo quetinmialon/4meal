@@ -29,7 +29,6 @@ services:
       QUEUE_CONNECTION: ${BACKEND_QUEUE_CONNECTION:-sync}
       MAIL_MAILER: smtp
       MAIL_SCHEME: ""
-      MAIL_URL: ""
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       MAIL_USERNAME: ""

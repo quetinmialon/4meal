@@ -77,6 +77,26 @@ export type ChangePasswordResult =
       fieldErrors: Partial<Record<'current_password' | 'password' | 'password_confirmation', string>>;
     };
 
+export type RequestPasswordResetResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+      fieldErrors: Partial<Record<'email', string>>;
+    };
+
+export type ResetPasswordResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      message: string;
+      fieldErrors: Partial<Record<'email' | 'token' | 'password' | 'password_confirmation', string>>;
+    };
+
 export type UpdateProfileResult =
   | {
       ok: true;
@@ -174,6 +194,24 @@ function extractChangePasswordFieldErrors(
 
   return {
     current_password: typeof fields.current_password?.[0] === 'string' ? fields.current_password[0] : '',
+    password: typeof fields.password?.[0] === 'string' ? fields.password[0] : '',
+    password_confirmation:
+      typeof fields.password_confirmation?.[0] === 'string' ? fields.password_confirmation[0] : '',
+  };
+}
+
+function extractPasswordResetFieldErrors(
+  payload: ApiErrorPayload | null,
+): Partial<Record<'email' | 'token' | 'password' | 'password_confirmation', string>> {
+  const fields = payload?.error?.details?.fields;
+
+  if (fields === undefined) {
+    return {};
+  }
+
+  return {
+    email: typeof fields.email?.[0] === 'string' ? fields.email[0] : '',
+    token: typeof fields.token?.[0] === 'string' ? fields.token[0] : '',
     password: typeof fields.password?.[0] === 'string' ? fields.password[0] : '',
     password_confirmation:
       typeof fields.password_confirmation?.[0] === 'string' ? fields.password_confirmation[0] : '',
@@ -592,6 +630,90 @@ export const useAuthStore = defineStore('auth', {
       } catch {
         this.status = 'authenticated';
 
+        return {
+          ok: false,
+          message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+          fieldErrors: {},
+        };
+      }
+    },
+
+    async requestPasswordReset(email: string): Promise<RequestPasswordResetResult> {
+      this.status = 'loading';
+
+      try {
+        const response = await apiFetch('/api/auth/password/email', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+        if (response.ok && payload?.success !== false) {
+          this.status = this.user === null ? 'idle' : 'authenticated';
+          return { ok: true };
+        }
+
+        this.status = this.user === null ? 'idle' : 'authenticated';
+
+        return {
+          ok: false,
+          message: payload?.error?.message ?? 'Une erreur est survenue pendant la demande de réinitialisation.',
+          fieldErrors: extractPasswordResetFieldErrors(payload),
+        };
+      } catch {
+        this.status = this.user === null ? 'idle' : 'authenticated';
+        return {
+          ok: false,
+          message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+          fieldErrors: {},
+        };
+      }
+    },
+
+    async resetPassword(
+      email: string,
+      token: string,
+      password: string,
+      passwordConfirmation: string,
+    ): Promise<ResetPasswordResult> {
+      this.status = 'loading';
+
+      try {
+        const response = await apiFetch('/api/auth/password/reset', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            token: token.trim(),
+            password,
+            password_confirmation: passwordConfirmation,
+          }),
+        });
+
+        const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+
+        if (response.ok && payload?.success !== false) {
+          this.status = this.user === null ? 'idle' : 'authenticated';
+          return { ok: true };
+        }
+
+        this.status = this.user === null ? 'idle' : 'authenticated';
+
+        return {
+          ok: false,
+          message: payload?.error?.message ?? 'Une erreur est survenue pendant la réinitialisation du mot de passe.',
+          fieldErrors: extractPasswordResetFieldErrors(payload),
+        };
+      } catch {
+        this.status = this.user === null ? 'idle' : 'authenticated';
         return {
           ok: false,
           message: 'Impossible de joindre le serveur. Reessayez dans un instant.',

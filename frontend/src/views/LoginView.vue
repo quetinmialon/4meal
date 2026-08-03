@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
@@ -247,6 +247,8 @@ onMounted(() => {
         </button>
       </fieldset>
     </form>
+
+    <RouterLink class="forgot-link" :to="{ name: 'forgot-password' }">Mot de passe oublié ?</RouterLink>
   </main>
 </template>
 
@@ -370,6 +372,13 @@ button {
 button:disabled {
   cursor: wait;
   opacity: 0.8;
+}
+
+.forgot-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #2f4520;
+  font-weight: 700;
 }
 
 @media (max-width: 640px) {

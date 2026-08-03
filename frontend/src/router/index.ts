@@ -12,6 +12,8 @@ import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
 import CookbookMessagesView from '@/views/CookbookMessagesView.vue';
 import LoginView from '@/views/LoginView.vue';
+import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
+import ResetPasswordView from '@/views/ResetPasswordView.vue';
 import RegisterSuccessView from '@/views/RegisterSuccessView.vue';
 import RegisterView from '@/views/RegisterView.vue';
 import RecipeCreateView from '@/views/RecipeCreateView.vue';
@@ -37,6 +39,16 @@ const routes: RouteRecordRaw[] = [
     meta: {
       guestOnly: true,
     },
+  },
+  {
+    path: '/mot-de-passe-oublie',
+    name: 'forgot-password',
+    component: ForgotPasswordView,
+  },
+  {
+    path: '/nouveau-mot-de-passe',
+    name: 'reset-password',
+    component: ResetPasswordView,
   },
   {
     path: '/dashboard',

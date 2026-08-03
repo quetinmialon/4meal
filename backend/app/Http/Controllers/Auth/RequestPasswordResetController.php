@@ -31,7 +31,7 @@ final class RequestPasswordResetController extends Controller
                 ],
             );
 
-            Mail::to($user)->send(new PasswordResetMail($user, $token, $expiresInMinutes));
+            Mail::mailer('smtp')->to($user)->send(new PasswordResetMail($user, $token, $expiresInMinutes));
         }
 
         return ApiResponse::success($request, [

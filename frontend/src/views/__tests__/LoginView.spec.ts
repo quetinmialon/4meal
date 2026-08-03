@@ -10,6 +10,7 @@ const pushMock = vi.fn();
 const replaceMock = vi.fn();
 
 vi.mock('vue-router', () => ({
+  RouterLink: { template: '<a><slot /></a>' },
   useRouter: () => ({
     push: pushMock,
     replace: replaceMock,
