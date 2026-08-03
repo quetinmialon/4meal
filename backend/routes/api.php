@@ -51,6 +51,7 @@ use App\Http\Controllers\Recipe\CreateRecipeCommentController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
 use App\Http\Controllers\Recipe\DeleteRecipeCommentController;
 use App\Http\Controllers\Recipe\DeleteRecipeController;
+use App\Http\Controllers\Recipe\DuplicateRecipeController;
 use App\Http\Controllers\Recipe\ListRecipeCommentsController;
 use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
@@ -121,6 +122,9 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('recipes/{recipe}', ShowRecipeController::class)
             ->name('recipes.show');
+
+        Route::post('recipes/{recipe}/duplicate', DuplicateRecipeController::class)
+            ->name('recipes.duplicate');
 
         Route::get('recipes/{recipe}/comments', ListRecipeCommentsController::class)
             ->name('recipes.comments.index');
