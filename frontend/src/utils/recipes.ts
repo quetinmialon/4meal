@@ -91,6 +91,7 @@ export type RecipePagination = {
 
 export type RecipeComment = {
   id: string;
+  parent_id: string | null;
   content: string;
   edited_at: string | null;
   created_at: string | null;
@@ -308,12 +309,13 @@ export async function createRecipeComment(
   content: string,
   tokenType: string,
   accessToken: string,
+  parentId: string | null = null,
 ): Promise<{ ok: true; comment: RecipeComment } | { ok: false; message: string; fieldError?: string }> {
   try {
     const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/comments`, {
       method: 'POST',
       headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content.trim() }),
+      body: JSON.stringify({ content: content.trim(), ...(parentId ? { parent_id: parentId } : {}) }),
     });
     const payload = (await response.json().catch(() => null)) as
       | { success: true; data: RecipeComment }
@@ -321,7 +323,9 @@ export async function createRecipeComment(
       | null;
     if (response.ok && payload?.success === true) return { ok: true, comment: payload.data };
 
-    const fieldError = payload?.success === false ? payload.error?.details?.fields?.content?.[0] : undefined;
+    const fieldError = payload?.success === false
+      ? payload.error?.details?.fields?.content?.[0] ?? payload.error?.details?.fields?.parent_id?.[0]
+      : undefined;
     return {
       ok: false,
       message: readError(payload?.success === false ? payload : null, 'Impossible d’ajouter le commentaire.'),
