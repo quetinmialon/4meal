@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import type { ImportErrorDetail, ImportReport } from '@/utils/import';
-import { importCsvFile, importJsonFile } from '@/utils/import';
+import { importCsvFile, importJsonFile, importMealieFile } from '@/utils/import';
 
 const authStore = useAuthStore();
 const selectedFile = ref<File | null>(null);
@@ -12,7 +12,7 @@ const isUploading = ref(false);
 const errorMessage = ref('');
 const errors = ref<ImportErrorDetail[]>([]);
 const report = ref<ImportReport | null>(null);
-const format = ref<'json' | 'csv'>('json');
+const format = ref<'json' | 'csv' | 'mealie'>('json');
 
 function selectFile(event: Event): void {
   const input = event.target as HTMLInputElement;
@@ -39,7 +39,9 @@ async function handleImport(): Promise<void> {
   report.value = null;
   const result = format.value === 'json'
     ? await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
-    : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
+    : format.value === 'mealie'
+      ? await importMealieFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
+      : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
   if (result.ok) report.value = result.report;
   else {
     errorMessage.value = result.message;
@@ -60,11 +62,16 @@ async function handleImport(): Promise<void> {
       <legend>Format du fichier</legend>
       <label><input v-model="format" type="radio" value="json" :disabled="isUploading"> JSON SUPMEAL</label>
       <label><input v-model="format" type="radio" value="csv" :disabled="isUploading"> CSV recettes</label>
+      <label><input v-model="format" type="radio" value="mealie" :disabled="isUploading"> Mealie</label>
     </fieldset>
 
     <aside class="warning" role="note" aria-label="Avertissements d’import">
       <strong>Avant de commencer</strong>
       <ul>
+        <template v-if="format === 'mealie'">
+          <li><strong>Compatibilité :</strong> Mealie Recipe JSON API v1, avec les champs actuels <code>recipeIngredient</code> et <code>recipeInstructions</code>.</li>
+          <li><strong>Limites :</strong> les recettes, ingrédients, étapes, tags/catégories, durées et portions sont importés. Cookbooks, images, nutrition, réglages et identifiants Mealie sont ignorés.</li>
+        </template>
         <li>Les fichiers sont limités à 10 Mo.</li>
         <li>Les données seront attribuées à votre compte ; les identifiants externes ne sont pas conservés comme identifiants internes.</li>
         <li>Les doublons détectés sont ignorés et listés dans le résultat.</li>
@@ -74,7 +81,7 @@ async function handleImport(): Promise<void> {
 
     <div class="file-picker">
       <label for="import-file">Fichier {{ format.toUpperCase() }}</label>
-      <input id="import-file" ref="fileInput" type="file" :accept="format === 'json' ? '.json,application/json' : '.csv,text/csv'" :disabled="isUploading" @change="selectFile">
+      <input id="import-file" ref="fileInput" type="file" :accept="format === 'csv' ? '.csv,text/csv' : '.json,application/json'" :disabled="isUploading" @change="selectFile">
       <div v-if="selectedFile" class="selected-file">
         <span><strong>{{ selectedFile.name }}</strong> · {{ (selectedFile.size / 1024 / 1024).toFixed(2) }} Mo</span>
         <button type="button" :disabled="isUploading" @click="clearFile($refs.fileInput as HTMLInputElement)">Retirer</button>
