@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Recipe;
 
+use App\Events\RecipeCommentCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Recipe\StoreRecipeCommentRequest;
 use App\Http\Resources\RecipeCommentResource;
@@ -32,6 +33,7 @@ class CreateRecipeCommentController extends Controller
                 $cookbook->members()->whereKey($user->getKey())->value('cookbook_members.role'),
             );
         }
+        event(new RecipeCommentCreated($comment));
 
         return ApiResponse::success($request, RecipeCommentResource::make($comment)->resolve($request), 201);
     }

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 
 import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
+import NotificationsPanel from '@/components/NotificationsPanel.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook, CookbookInvitation, Pagination } from '@/utils/cookbooks';
 import { acceptCookbookInvitationById, declineCookbookInvitation, fetchCookbookInvitations, fetchCookbooks } from '@/utils/cookbooks';
@@ -125,6 +126,7 @@ async function handleLogout(): Promise<void> {
       </div>
       <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
     </section>
+    <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
     <section class="cookbooks-section" aria-labelledby="cookbooks-title">
       <div class="section-heading">
         <div>
