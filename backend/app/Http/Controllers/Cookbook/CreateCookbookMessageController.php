@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cookbook;
 
+use App\Events\CookbookMessageCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cookbook\StoreCookbookMessageRequest;
 use App\Http\Resources\CookbookMessageResource;
@@ -20,6 +21,7 @@ class CreateCookbookMessageController extends Controller
         $user = $request->user();
         Gate::forUser($user)->authorize('create', [CookbookMessage::class, $cookbook]);
 
+        /** @var CookbookMessage $message */
         $message = $cookbook->messages()->create([
             'user_id' => $user->getKey(),
             'content' => $request->string('content')->toString(),
@@ -29,6 +31,7 @@ class CreateCookbookMessageController extends Controller
             'member_role',
             $cookbook->members()->whereKey($user->getKey())->value('cookbook_members.role'),
         );
+        event(new CookbookMessageCreated($message));
 
         return ApiResponse::success($request, CookbookMessageResource::make($message)->resolve($request), 201);
     }

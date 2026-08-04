@@ -42,6 +42,8 @@ use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMessageController;
 use App\Http\Controllers\Export\DownloadExportController;
 use App\Http\Controllers\Import\ImportJsonController;
+use App\Http\Controllers\Notification\ListNotificationsController;
+use App\Http\Controllers\Notification\MarkNotificationAsReadController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\GenerateShoppingListController;
@@ -115,6 +117,12 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('cookbooks', ListCookbooksController::class)
             ->name('cookbooks.index');
+
+        Route::get('notifications', ListNotificationsController::class)
+            ->name('notifications.index');
+
+        Route::patch('notifications/{notification}/read', MarkNotificationAsReadController::class)
+            ->name('notifications.read');
 
         Route::post('recipes', CreateRecipeController::class)
             ->name('recipes.store');
