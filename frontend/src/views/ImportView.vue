@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import type { ImportErrorDetail, ImportReport } from '@/utils/import';
-import { importJsonFile } from '@/utils/import';
+import { importCsvFile, importJsonFile } from '@/utils/import';
 
 const authStore = useAuthStore();
 const selectedFile = ref<File | null>(null);
@@ -12,6 +12,7 @@ const isUploading = ref(false);
 const errorMessage = ref('');
 const errors = ref<ImportErrorDetail[]>([]);
 const report = ref<ImportReport | null>(null);
+const format = ref<'json' | 'csv'>('json');
 
 function selectFile(event: Event): void {
   const input = event.target as HTMLInputElement;
@@ -36,7 +37,9 @@ async function handleImport(): Promise<void> {
   errorMessage.value = '';
   errors.value = [];
   report.value = null;
-  const result = await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
+  const result = format.value === 'json'
+    ? await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
+    : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
   if (result.ok) report.value = result.report;
   else {
     errorMessage.value = result.message;
@@ -50,21 +53,28 @@ async function handleImport(): Promise<void> {
   <main class="import-card">
     <RouterLink class="back-link" :to="{ name: 'dashboard' }">← Retour à mon espace</RouterLink>
     <p class="kicker">Mes données</p>
-    <h1>Importer un fichier JSON</h1>
-    <p class="intro">Restaurez des recettes et cookbooks depuis un export SUPMEAL 1.0.0.</p>
+    <h1>Importer un fichier</h1>
+    <p class="intro">Choisissez le format correspondant au fichier à importer.</p>
+
+    <fieldset class="format-choice">
+      <legend>Format du fichier</legend>
+      <label><input v-model="format" type="radio" value="json" :disabled="isUploading"> JSON SUPMEAL</label>
+      <label><input v-model="format" type="radio" value="csv" :disabled="isUploading"> CSV recettes</label>
+    </fieldset>
 
     <aside class="warning" role="note" aria-label="Avertissements d’import">
       <strong>Avant de commencer</strong>
       <ul>
-        <li>Seuls les fichiers JSON de 10 Mo maximum sont acceptés.</li>
+        <li>Les fichiers sont limités à 10 Mo.</li>
         <li>Les données seront attribuées à votre compte ; les identifiants externes ne sont pas conservés comme identifiants internes.</li>
         <li>Les doublons détectés sont ignorés et listés dans le résultat.</li>
+        <li v-if="format === 'csv'">Le CSV ne contient que des recettes : pas de cookbooks, images, favoris, commentaires ou planning. Il utilise des lignes séparées pour les ingrédients, étapes et tags et n’est pas compatible avec le JSON.</li>
       </ul>
     </aside>
 
     <div class="file-picker">
-      <label for="import-file">Fichier JSON</label>
-      <input id="import-file" ref="fileInput" type="file" accept=".json,application/json" :disabled="isUploading" @change="selectFile">
+      <label for="import-file">Fichier {{ format.toUpperCase() }}</label>
+      <input id="import-file" ref="fileInput" type="file" :accept="format === 'json' ? '.json,application/json' : '.csv,text/csv'" :disabled="isUploading" @change="selectFile">
       <div v-if="selectedFile" class="selected-file">
         <span><strong>{{ selectedFile.name }}</strong> · {{ (selectedFile.size / 1024 / 1024).toFixed(2) }} Mo</span>
         <button type="button" :disabled="isUploading" @click="clearFile($refs.fileInput as HTMLInputElement)">Retirer</button>
@@ -90,7 +100,7 @@ async function handleImport(): Promise<void> {
     <section v-if="report" class="result" aria-labelledby="result-title" role="status">
       <h2 id="result-title">Import terminé</h2>
       <dl>
-        <div><dt>Cookbooks importés</dt><dd>{{ report.cookbooks }}</dd></div>
+        <div v-if="report.cookbooks !== undefined"><dt>Cookbooks importés</dt><dd>{{ report.cookbooks }}</dd></div>
         <div><dt>Recettes importées</dt><dd>{{ report.recipes }}</dd></div>
         <div><dt>Doublons ignorés</dt><dd>{{ report.duplicates.length }}</dd></div>
       </dl>
@@ -117,6 +127,9 @@ h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 .warning { margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid #d89b43; border-radius: 0.8rem; background: #fff5df; color: #704414; line-height: 1.5; }
 .warning ul { margin-bottom: 0; padding-left: 1.2rem; }
 .warning li + li { margin-top: 0.35rem; }
+.format-choice { display: flex; gap: 1rem; margin: 1.5rem 0 0; padding: 0; border: 0; color: #243127; font-weight: 700; }
+.format-choice legend { margin-bottom: 0.6rem; }
+.format-choice label { font-weight: 600; cursor: pointer; }
 .file-picker { display: grid; gap: 0.6rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 .file-picker label { color: #243127; font-weight: 700; }
 .file-picker input { width: 100%; padding: 0.65rem; border: 1px solid #b9c5af; border-radius: 0.6rem; background: #fffdf8; font: inherit; }

@@ -3,7 +3,7 @@ import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
-import { downloadJsonExport } from '@/utils/export';
+import { downloadCsvExport, downloadJsonExport } from '@/utils/export';
 
 const authStore = useAuthStore();
 const confirmed = ref(false);
@@ -27,6 +27,17 @@ async function handleDownload(): Promise<void> {
 
   isDownloading.value = false;
 }
+
+async function handleCsvDownload(): Promise<void> {
+  if (!confirmed.value || isDownloading.value) return;
+  isDownloading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+  const result = await downloadCsvExport(authStore.tokenType, authStore.accessToken);
+  if (result.ok) successMessage.value = `Le fichier ${result.filename} a été téléchargé.`;
+  else errorMessage.value = result.message;
+  isDownloading.value = false;
+}
 </script>
 
 <template>
@@ -34,9 +45,7 @@ async function handleDownload(): Promise<void> {
     <RouterLink class="back-link" :to="{ name: 'dashboard' }">← Retour à mon espace</RouterLink>
     <p class="kicker">Mes données</p>
     <h1>Exporter mes données</h1>
-    <p class="intro">
-      Téléchargez une copie JSON de vos recettes personnelles et des recettes et cookbooks auxquels vous avez accès.
-    </p>
+    <p class="intro">Choisissez un format pour télécharger vos données exportables.</p>
 
     <section class="data-section" aria-labelledby="data-title">
       <h2 id="data-title">Ce qui sera exporté</h2>
@@ -46,6 +55,19 @@ async function handleDownload(): Promise<void> {
         <li>Le format JSON versionné SUPMEAL 1.0.0, pour faciliter la conservation ou la réutilisation.</li>
       </ul>
       <p class="not-exported">Les mots de passe, membres, commentaires, favoris, planning et images ne sont pas exportés.</p>
+    </section>
+
+    <section class="format-section" aria-labelledby="format-title">
+      <h2 id="format-title">Format d’export</h2>
+      <div class="format-options">
+        <button class="download-button" type="button" :disabled="!confirmed || isDownloading" @click="handleDownload">
+          {{ isDownloading ? 'Préparation du téléchargement…' : 'Télécharger l’export JSON' }}
+        </button>
+        <button class="download-button secondary-button" type="button" :disabled="!confirmed || isDownloading" @click="handleCsvDownload">
+          {{ isDownloading ? 'Préparation du téléchargement…' : 'Télécharger l’export CSV' }}
+        </button>
+      </div>
+      <p class="format-limit"><strong>Limites CSV :</strong> seules les recettes sont exportées ; les cookbooks, images, favoris, commentaires et planning ne le sont pas. Les ingrédients, étapes et tags sont conservés dans des lignes structurées, sans compatibilité avec le JSON SUPMEAL.</p>
     </section>
 
     <aside class="warning" role="note" aria-label="Avertissement de sécurité">
@@ -77,14 +99,6 @@ async function handleDownload(): Promise<void> {
       <span>Je comprends que ce fichier sera lisible en clair et je confirme son téléchargement.</span>
     </label>
 
-    <button
-      class="download-button"
-      type="button"
-      :disabled="!confirmed || isDownloading"
-      @click="handleDownload"
-    >
-      {{ isDownloading ? 'Préparation du téléchargement…' : 'Télécharger l’export JSON' }}
-    </button>
   </main>
 </template>
 
@@ -105,6 +119,10 @@ h1 { margin: 0 0 1rem; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 h2 { margin: 0; font-size: 1.25rem; }
 .intro { color: #50634d; line-height: 1.6; }
 .data-section { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.format-section { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.format-options { display: grid; gap: 0.75rem; margin-top: 1rem; }
+.secondary-button { background: #6b7b57; border-color: #6b7b57; }
+.format-limit { color: #50634d; line-height: 1.5; font-size: 0.92rem; }
 li, .not-exported { color: #50634d; line-height: 1.55; }
 li + li { margin-top: 0.55rem; }
 .not-exported { margin-bottom: 0; font-size: 0.92rem; }

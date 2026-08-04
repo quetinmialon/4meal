@@ -52,3 +52,34 @@ export async function downloadJsonExport(tokenType: string, accessToken: string)
     return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
   }
 }
+
+export async function downloadCsvExport(tokenType: string, accessToken: string): Promise<JsonExportResult> {
+  try {
+    const response = await apiFetch('/api/export/csv', {
+      headers: { Accept: 'text/csv', Authorization: `${tokenType} ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+      return { ok: false, message: payload?.error?.message ?? 'Impossible de préparer l’export CSV.' };
+    }
+
+    const blob = await response.blob();
+    if (blob.size === 0) return { ok: false, message: 'Le fichier CSV exporté est vide.' };
+
+    const header = response.headers.get('Content-Disposition');
+    const match = header?.match(/filename\s*=\s*"?([^";]+)"?/i);
+    const candidateFilename = match?.[1]?.trim() ?? '';
+    const filename = /^4meal-recipes-\d{8}-\d{6}\.csv$/.test(candidateFilename) ? candidateFilename : '4meal-recipes.csv';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    return { ok: true, filename };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
+  }
+}
