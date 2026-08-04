@@ -322,7 +322,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json: { schema: { $ref: '#/components/schemas/ContentRequest' } }
+          application/json: { schema: { $ref: '#/components/schemas/CreateCommentRequest' } }
       responses:
         '201': { $ref: '#/components/responses/CommentSuccess' }
         '401': { $ref: '#/components/responses/AuthenticationError' }
@@ -1048,6 +1048,12 @@ components:
         deleted_by: { type: object, nullable: true, additionalProperties: true }
         author: { $ref: '#/components/schemas/User' }
         created_at: { type: string, format: date-time, nullable: true }
+    CreateCommentRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        parent_id: { type: string, format: uuid, nullable: true, description: Comment being answered. Maximum reply depth is 3. }
     Invitation:
       type: object
       properties:

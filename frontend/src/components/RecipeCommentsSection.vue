@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 import { createRecipeComment, deleteRecipeComment, fetchRecipeComments, updateRecipeComment, type RecipeComment, type RecipePagination } from '@/utils/recipes';
 
@@ -19,6 +19,30 @@ const editingError = ref('');
 const editSubmitting = ref(false);
 const deletingId = ref<string | null>(null);
 const deleteError = ref('');
+const replyToId = ref<string | null>(null);
+const replyContent = ref('');
+const replyError = ref('');
+const replySubmitting = ref(false);
+const MAX_VISUAL_DEPTH = 3;
+
+const commentRows = computed(() => {
+  const byParent = new Map<string | null, RecipeComment[]>();
+  comments.value.forEach((comment) => {
+    const parent = comment.parent_id && comments.value.some((item) => item.id === comment.parent_id) ? comment.parent_id : null;
+    const siblings = byParent.get(parent) ?? [];
+    siblings.push(comment);
+    byParent.set(parent, siblings);
+  });
+  const rows: Array<{ comment: RecipeComment; depth: number }> = [];
+  const visit = (parentId: string | null, depth: number): void => {
+    (byParent.get(parentId) ?? []).forEach((comment) => {
+      rows.push({ comment, depth: Math.min(depth, MAX_VISUAL_DEPTH) });
+      visit(comment.id, depth + 1);
+    });
+  };
+  visit(null, 0);
+  return rows;
+});
 
 async function loadComments(page = 1): Promise<void> {
   loading.value = true;
@@ -56,6 +80,41 @@ async function submitComment(): Promise<void> {
     fieldError.value = result.fieldError ?? '';
   }
   submitting.value = false;
+}
+
+function startReply(comment: RecipeComment): void {
+  replyToId.value = comment.id;
+  replyContent.value = '';
+  replyError.value = '';
+  editingId.value = null;
+}
+
+function cancelReply(): void {
+  replyToId.value = null;
+  replyContent.value = '';
+  replyError.value = '';
+}
+
+async function submitReply(comment: RecipeComment): Promise<void> {
+  replyError.value = '';
+  const trimmed = replyContent.value.trim();
+  if (trimmed.length === 0) {
+    replyError.value = 'La réponse est requise.';
+    return;
+  }
+  if (trimmed.length > 2000) {
+    replyError.value = 'La réponse ne peut pas dépasser 2000 caractères.';
+    return;
+  }
+  replySubmitting.value = true;
+  const result = await createRecipeComment(props.recipeId, trimmed, props.tokenType, props.accessToken, comment.id);
+  if (result.ok) {
+    cancelReply();
+    await loadComments(1);
+  } else {
+    replyError.value = result.fieldError ?? result.message;
+  }
+  replySubmitting.value = false;
 }
 
 function canManage(comment: RecipeComment): boolean {
@@ -147,29 +206,39 @@ onMounted(() => { void loadComments(); });
     <p v-if="loading" role="status">Chargement des commentaires...</p>
     <p v-else-if="errorMessage" class="comment-error" role="alert">{{ errorMessage }}</p>
     <p v-else-if="comments.length === 0" class="muted">Aucun commentaire pour le moment.</p>
-    <div v-else class="comment-list">
-      <article v-for="comment in comments" :key="comment.id" class="comment-item">
-        <img v-if="comment.author.avatar_url" class="comment-avatar" :src="comment.author.avatar_url" :alt="`Avatar de ${comment.author.name}`" />
-        <div v-else class="comment-avatar avatar-fallback" aria-hidden="true">{{ comment.author.name.charAt(0).toUpperCase() }}</div>
+    <div v-else class="comment-list" role="tree" aria-label="Fil des commentaires">
+      <article v-for="row in commentRows" :key="row.comment.id" class="comment-item" role="treeitem" :aria-level="row.depth + 1" :style="{ '--comment-depth': row.depth }">
+        <span class="sr-only">{{ row.depth ? `Réponse, niveau ${row.depth}` : 'Commentaire principal' }}</span>
+        <img v-if="row.comment.author.avatar_url" class="comment-avatar" :src="row.comment.author.avatar_url" :alt="`Avatar de ${row.comment.author.name}`" />
+        <div v-else class="comment-avatar avatar-fallback" aria-hidden="true">{{ row.comment.author.name.charAt(0).toUpperCase() }}</div>
         <div class="comment-content">
-          <div class="comment-meta"><strong>{{ comment.author.name }}</strong><span>{{ roleLabel(comment.author.role) }}</span><time :datetime="comment.created_at ?? undefined">{{ comment.created_at ? new Date(comment.created_at).toLocaleString() : '' }}</time></div>
-          <template v-if="editingId === comment.id">
-            <form class="comment-edit-form" @submit.prevent="saveEdit(comment)">
-              <label :for="`edit-comment-${comment.id}`">Modifier le commentaire</label>
-              <textarea :id="`edit-comment-${comment.id}`" v-model="editingContent" rows="3" maxlength="2000" :disabled="editSubmitting" />
+          <div class="comment-meta"><strong>{{ row.comment.author.name }}</strong><span>{{ roleLabel(row.comment.author.role) }}</span><time :datetime="row.comment.created_at ?? undefined">{{ row.comment.created_at ? new Date(row.comment.created_at).toLocaleString() : '' }}</time></div>
+          <template v-if="editingId === row.comment.id">
+            <form class="comment-edit-form" @submit.prevent="saveEdit(row.comment)">
+              <label :for="`edit-comment-${row.comment.id}`">Modifier le commentaire</label>
+              <textarea :id="`edit-comment-${row.comment.id}`" v-model="editingContent" rows="3" maxlength="2000" :disabled="editSubmitting" />
               <p v-if="editingError" class="field-error" role="alert">{{ editingError }}</p>
               <div class="comment-actions"><button type="submit" :disabled="editSubmitting">{{ editSubmitting ? 'Enregistrement...' : 'Enregistrer' }}</button><button type="button" :disabled="editSubmitting" @click="cancelEditing">Annuler</button></div>
             </form>
           </template>
           <template v-else>
-            <p>{{ comment.content }} <small v-if="comment.edited_at" class="edited-label">(modifié)</small></p>
-            <div v-if="canManage(comment)" class="comment-actions">
-              <button type="button" @click="startEditing(comment)">Modifier</button>
-              <button type="button" @click="askDelete(comment)">Supprimer</button>
+            <p>{{ row.comment.content }} <small v-if="row.comment.edited_at" class="edited-label">(modifié)</small></p>
+            <div class="comment-actions">
+              <button type="button" @click="startReply(row.comment)">Répondre</button>
+              <template v-if="canManage(row.comment)">
+                <button type="button" @click="startEditing(row.comment)">Modifier</button>
+                <button type="button" @click="askDelete(row.comment)">Supprimer</button>
+              </template>
             </div>
-            <div v-if="deletingId === comment.id" class="delete-comment-confirmation">
+            <form v-if="replyToId === row.comment.id" class="comment-reply-form" @submit.prevent="submitReply(row.comment)">
+              <label :for="`reply-comment-${row.comment.id}`">Répondre à {{ row.comment.author.name }}</label>
+              <textarea :id="`reply-comment-${row.comment.id}`" v-model="replyContent" rows="3" maxlength="2000" :disabled="replySubmitting" />
+              <p v-if="replyError" class="field-error" role="alert">{{ replyError }}</p>
+              <div class="comment-actions"><button type="submit" :disabled="replySubmitting">{{ replySubmitting ? 'Envoi...' : 'Envoyer la réponse' }}</button><button type="button" :disabled="replySubmitting" @click="cancelReply">Annuler</button></div>
+            </form>
+            <div v-if="deletingId === row.comment.id" class="delete-comment-confirmation">
               <span>Supprimer ce commentaire ?</span>
-              <button type="button" @click="confirmDelete(comment)">Confirmer</button>
+              <button type="button" @click="confirmDelete(row.comment)">Confirmer</button>
               <button type="button" @click="cancelDelete">Annuler</button>
               <p v-if="deleteError" class="comment-error" role="alert">{{ deleteError }}</p>
             </div>
@@ -196,6 +265,7 @@ onMounted(() => { void loadComments(); });
 button:disabled { cursor: not-allowed; opacity: .5; }
 .comment-list { display: grid; gap: .7rem; }
 .comment-item { display: flex; gap: .75rem; padding: 1rem; border: 1px solid rgba(86,112,79,.2); border-radius: .8rem; }
+.comment-item { margin-inline-start: min(calc(var(--comment-depth, 0) * 2rem), 6rem); }
 .comment-avatar { flex: 0 0 2.5rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; }
 .avatar-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .comment-content { min-width: 0; flex: 1; }
@@ -204,6 +274,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .comment-meta time { margin-left: auto; }
 .comment-content p { margin: .4rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
 .comment-edit-form { display: grid; gap: .5rem; margin-top: .5rem; }
+.comment-reply-form { display: grid; gap: .5rem; margin-top: .6rem; padding: .7rem; border-inline-start: 3px solid #b9c5af; }
 .comment-edit-form textarea { resize: vertical; padding: .7rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
 .comment-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
 .comment-actions button, .delete-comment-confirmation button { padding: .4rem .6rem; border: 1px solid #395330; border-radius: .4rem; background: transparent; color: #395330; font: inherit; cursor: pointer; }
@@ -211,4 +282,5 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .edited-label { color: #50634d; }
 .comment-error, .field-error { margin: 0; color: #8f1e1e; }
 .muted { color: #50634d; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

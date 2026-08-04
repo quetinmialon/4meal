@@ -9,22 +9,20 @@ use App\Models\Cookbook;
 use App\Models\Recipe;
 use App\Models\RecipeComment;
 use App\Models\User;
+use App\Services\RecipeCommentReplyService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 
 class CreateRecipeCommentController extends Controller
 {
-    public function __invoke(StoreRecipeCommentRequest $request, Recipe $recipe): JsonResponse
+    public function __invoke(StoreRecipeCommentRequest $request, Recipe $recipe, RecipeCommentReplyService $comments): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
         Gate::forUser($user)->authorize('create', [RecipeComment::class, $recipe]);
 
-        $comment = $recipe->comments()->create([
-            'user_id' => $user->getKey(),
-            'content' => $request->string('content')->toString(),
-        ]);
+        $comment = $comments->create($recipe, (int) $user->getKey(), $request->string('content')->toString(), $request->input('parent_id'));
         $comment->load('user');
         /** @var Cookbook|null $cookbook */
         $cookbook = $recipe->cookbook;

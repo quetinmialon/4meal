@@ -23,6 +23,7 @@ class RecipeCommentResource extends JsonResource
 
         return [
             'id' => $comment->public_id,
+            'parent_id' => $comment->parent instanceof RecipeComment ? $comment->parent->public_id : null,
             'content' => $comment->content,
             'author' => [
                 'id' => $author->id,

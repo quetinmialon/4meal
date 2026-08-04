@@ -24,6 +24,7 @@ class StoreRecipeCommentRequest extends FormRequest
     {
         return [
             'content' => ['required', 'string', 'min:1', 'max:2000'],
+            'parent_id' => ['nullable', 'uuid', 'exists:recipe_comments,public_id'],
         ];
     }
 }
