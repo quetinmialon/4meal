@@ -4,6 +4,7 @@ use App\Models\Cookbook;
 use App\Models\Recipe;
 use App\Models\RecipeComment;
 use App\Models\User;
+use App\Services\RecipeCommentReplyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
@@ -49,6 +50,40 @@ it('allows commenter, editor and owner to list and create recipe comments', func
         ->assertJsonPath('data.0.content', 'Très bonne recette !')
         ->assertJsonPath('meta.pagination.per_page', 20);
 })->with(['commenter', 'editor', 'owner']);
+
+it('supports replies, keeps them on the same recipe and enforces depth and cycle limits', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    [$cookbook, $recipe] = commentableRecipe($owner);
+    $otherRecipe = Recipe::factory()->inCookbook($cookbook)->create();
+    $token = recipeCommentToken($owner);
+    $root = RecipeComment::query()->create(['recipe_id' => $recipe->id, 'user_id' => $owner->id, 'content' => 'Racine']);
+    $other = RecipeComment::query()->create(['recipe_id' => $otherRecipe->id, 'user_id' => $owner->id, 'content' => 'Autre']);
+
+    $reply = $this->withToken($token)
+        ->postJson('/api/recipes/'.$recipe->public_id.'/comments', ['content' => 'Réponse', 'parent_id' => $root->public_id])
+        ->assertCreated()
+        ->assertJsonPath('data.parent_id', $root->public_id);
+    expect(RecipeComment::query()->where('public_id', $reply->json('data.id'))->value('parent_id'))->toBe($root->id);
+
+    $this->withToken($token)
+        ->postJson('/api/recipes/'.$recipe->public_id.'/comments', ['content' => 'Mauvais parent', 'parent_id' => $other->public_id])
+        ->assertUnprocessable();
+
+    $cycleChild = RecipeComment::query()->create(['recipe_id' => $recipe->id, 'user_id' => $owner->id, 'content' => 'Cycle', 'parent_id' => $root->id]);
+    $root->update(['parent_id' => $cycleChild->id]);
+    $this->withToken($token)
+        ->postJson('/api/recipes/'.$recipe->public_id.'/comments', ['content' => 'Cycle', 'parent_id' => $cycleChild->public_id])
+        ->assertUnprocessable();
+
+    $root = RecipeComment::query()->create(['recipe_id' => $recipe->id, 'user_id' => $owner->id, 'content' => 'Nouvelle racine']);
+    $parent = $root;
+    for ($depth = 1; $depth <= RecipeCommentReplyService::MAX_REPLY_DEPTH; $depth++) {
+        $parent = RecipeComment::query()->create(['recipe_id' => $recipe->id, 'user_id' => $owner->id, 'content' => 'Niveau '.$depth, 'parent_id' => $parent->id]);
+    }
+    $this->withToken($token)
+        ->postJson('/api/recipes/'.$recipe->public_id.'/comments', ['content' => 'Trop profond', 'parent_id' => $parent->public_id])
+        ->assertUnprocessable();
+});
 
 it('rejects readers, but allows comments on personal recipes', function (): void {
     $owner = User::factory()->create(['password' => 'password123']);

@@ -29,7 +29,7 @@ class ListRecipeCommentsController extends Controller
                     ->whereColumn('cookbook_members.user_id', 'recipe_comments.user_id')
                     ->limit(1),
             ])
-            ->with('user')
+            ->with('user', 'parent')
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate($perPage)
