@@ -70,4 +70,25 @@ describe('ExportView', () => {
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Export temporairement indisponible.');
   });
+
+  it('downloads the CSV recipes export and explains its limits', async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(['format_version,record_type'], { type: 'text/csv' }),
+      headers: new Headers({ 'Content-Disposition': 'attachment; filename=4meal-recipes-20260731-120000.csv' }),
+    } as Response);
+    const wrapper = mount(ExportView);
+
+    expect(wrapper.text()).toContain('Limites CSV');
+    await wrapper.get('input[type="checkbox"]').setValue(true);
+    await wrapper.get('button.secondary-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/export/csv', {
+      credentials: 'include', headers: { Accept: 'text/csv', Authorization: 'Bearer jwt-token' },
+    });
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
+  });
 });

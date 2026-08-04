@@ -41,6 +41,8 @@ use App\Http\Controllers\Cookbook\UpdateCookbookController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMemberRoleController;
 use App\Http\Controllers\Cookbook\UpdateCookbookMessageController;
 use App\Http\Controllers\Export\DownloadExportController;
+use App\Http\Controllers\Export\DownloadRecipeCsvController;
+use App\Http\Controllers\Import\ImportCsvController;
 use App\Http\Controllers\Import\ImportJsonController;
 use App\Http\Controllers\Notification\ListNotificationsController;
 use App\Http\Controllers\Notification\MarkNotificationAsReadController;
@@ -112,8 +114,14 @@ Route::middleware(AuthenticateWithJwt::class)
         Route::post('import', ImportJsonController::class)
             ->name('import.json');
 
+        Route::post('import/csv', ImportCsvController::class)
+            ->name('import.csv');
+
         Route::get('export', DownloadExportController::class)
             ->name('export.download');
+
+        Route::get('export/csv', DownloadRecipeCsvController::class)
+            ->name('export.csv');
 
         Route::get('cookbooks', ListCookbooksController::class)
             ->name('cookbooks.index');

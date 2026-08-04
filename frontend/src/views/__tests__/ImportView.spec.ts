@@ -96,4 +96,34 @@ describe('ImportView', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(wrapper.get('[role="alert"]').text()).toContain('extension .json');
   });
+
+  it('imports a CSV recipe file and shows the CSV limitations', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { report: { recipes: 2, duplicates: [] } } }),
+    } as Response);
+    const wrapper = mount(ImportView);
+    await wrapper.get('input[type="radio"][value="csv"]').setValue(true);
+    expect(wrapper.text()).toContain('pas de cookbooks, images');
+    chooseFile(wrapper, new File(['format_version,record_type'], 'recipes.csv', { type: 'text/csv' }));
+    await flushPromises();
+    await wrapper.get('button.import-button').trigger('click');
+    await flushPromises();
+
+    const request = fetchMock.mock.calls[0]!;
+    expect(request[0]).toBe('/api/import/csv');
+    expect(wrapper.text()).toContain('Recettes importées');
+  });
+
+  it('rejects a non-CSV file before sending it in CSV mode', async () => {
+    const wrapper = mount(ImportView);
+    await wrapper.get('input[type="radio"][value="csv"]').setValue(true);
+    chooseFile(wrapper, new File(['text'], 'backup.txt', { type: 'text/plain' }));
+    await flushPromises();
+    await wrapper.get('button.import-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(wrapper.get('[role="alert"]').text()).toContain('extension .csv');
+  });
 });
