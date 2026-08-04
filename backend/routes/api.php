@@ -45,8 +45,10 @@ use App\Http\Controllers\Export\DownloadRecipeCsvController;
 use App\Http\Controllers\Import\ImportCsvController;
 use App\Http\Controllers\Import\ImportJsonController;
 use App\Http\Controllers\Import\ImportMealieController;
+use App\Http\Controllers\Notification\ListNotificationPreferencesController;
 use App\Http\Controllers\Notification\ListNotificationsController;
 use App\Http\Controllers\Notification\MarkNotificationAsReadController;
+use App\Http\Controllers\Notification\UpdateNotificationPreferencesController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
 use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\GenerateShoppingListController;
@@ -131,6 +133,12 @@ Route::middleware(AuthenticateWithJwt::class)
 
         Route::get('notifications', ListNotificationsController::class)
             ->name('notifications.index');
+
+        Route::get('notifications/preferences', ListNotificationPreferencesController::class)
+            ->name('notifications.preferences.index');
+
+        Route::put('notifications/preferences', UpdateNotificationPreferencesController::class)
+            ->name('notifications.preferences.update');
 
         Route::patch('notifications/{notification}/read', MarkNotificationAsReadController::class)
             ->name('notifications.read');
