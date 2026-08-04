@@ -126,4 +126,23 @@ describe('ImportView', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(wrapper.get('[role="alert"]').text()).toContain('extension .csv');
   });
+
+  it('imports a Mealie recipe and displays its compatibility limits', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }),
+    } as Response);
+    const wrapper = mount(ImportView);
+    await wrapper.get('input[type="radio"][value="mealie"]').setValue(true);
+
+    expect(wrapper.text()).toContain('Mealie Recipe JSON API v1');
+    expect(wrapper.text()).toContain('Cookbooks, images, nutrition');
+    chooseFile(wrapper, new File(['{}'], 'carbonara.json', { type: 'application/json' }));
+    await flushPromises();
+    await wrapper.get('button.import-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/mealie');
+    expect(wrapper.text()).toContain('Recettes import');
+  });
 });
