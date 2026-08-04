@@ -34,9 +34,12 @@ final class NewCookbookMessageNotification extends Notification
 
         return (new MailMessage)
             ->subject('Nouveau message dans '.$cookbook->name)
-            ->greeting('Bonjour '.$user->name.',')
-            ->line($sender->name.' a envoyé un message dans « '.$cookbook->name.' ».')
-            ->line($this->message->content);
+            ->view('emails.notifications.cookbook-message', [
+                'user' => $user,
+                'sender' => $sender,
+                'cookbook' => $cookbook,
+                'cookbookMessage' => $this->message,
+            ]);
     }
 
     private function channelFor(object $notifiable): NotificationChannel
@@ -45,7 +48,7 @@ final class NewCookbookMessageNotification extends Notification
 
         return $channel instanceof NotificationChannel
             ? $channel
-            : ($channel === null ? NotificationChannel::Web : NotificationChannel::from($channel));
+            : ($channel === null ? NotificationChannel::Both : NotificationChannel::from($channel));
     }
 
     /** @return array<string, mixed> */

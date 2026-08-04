@@ -43,6 +43,16 @@ describe('ProfileView', () => {
     return mount(ProfileView, { global: { plugins: [pinia] } });
   }
 
+  function profileRequest(): [RequestInfo | URL, RequestInit | undefined] {
+    const call = fetchMock.mock.calls.find(([input]) => String(input) === '/api/auth/me');
+    if (call === undefined) throw new Error('Profile request was not sent.');
+    return [call[0], call[1]];
+  }
+
+  function profileRequestCount(): number {
+    return fetchMock.mock.calls.filter(([input]) => String(input) === '/api/auth/me').length;
+  }
+
   it('prefills the profile form and confirms a successful update', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
@@ -87,11 +97,47 @@ describe('ProfileView', () => {
       },
       body: expect.any(FormData),
     });
-    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    const body = profileRequest()[1]?.body as FormData;
     expect(body.get('_method')).toBe('PATCH');
     expect(body.get('name')).toBe('Jane Smith');
     expect(body.get('avatar')).toBeInstanceOf(File);
     expect(wrapper.get('[role="status"]').text()).toContain('bien ete modifie');
+  });
+
+  it('loads and saves notification preferences using only supported channels', async () => {
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input) === '/api/notifications/preferences') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, data: [
+            { type: 'recipe_comment', channel: 'mail' },
+            { type: 'recipe_comment_reply', channel: 'none' },
+            { type: 'cookbook_message', channel: 'both' },
+          ] }),
+        } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true, data: {} }) } as Response;
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    expect((wrapper.get('#recipe_comment-notification-input').element as HTMLSelectElement).value).toBe('mail');
+    expect(wrapper.find('#recipe_comment-notification-input option[value="push"]').exists()).toBe(false);
+    await wrapper.get('#cookbook_message-notification-input').setValue('web');
+    const notificationButton = wrapper.findAll('button').find((button) => button.text().includes('notifications'));
+    if (notificationButton === undefined) throw new Error('Notification save button was not rendered.');
+    await notificationButton.trigger('click');
+    await flushPromises();
+
+    const putRequest = fetchMock.mock.calls.find(([input, init]) => String(input) === '/api/notifications/preferences' && init?.method === 'PUT');
+    expect(putRequest).toBeDefined();
+    expect(JSON.parse(String(putRequest?.[1]?.body))).toEqual({ preferences: [
+      { type: 'recipe_comment', channel: 'mail' },
+      { type: 'recipe_comment_reply', channel: 'none' },
+      { type: 'cookbook_message', channel: 'web' },
+    ] });
   });
 
   it('requires the current password and sends it when the email changes', async () => {
@@ -100,7 +146,7 @@ describe('ProfileView', () => {
     await wrapper.get('#email-input').setValue('new@example.com');
     await wrapper.get('form').trigger('submit.prevent');
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(profileRequestCount()).toBe(0);
     expect(wrapper.get('#currentPassword-error').text()).toContain('requis');
 
     await wrapper.get('#currentPassword-input').setValue('password123');
@@ -112,7 +158,7 @@ describe('ProfileView', () => {
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
-    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    const body = profileRequest()[1]?.body as FormData;
     expect(body.get('current_password')).toBe('password123');
   });
 
@@ -137,7 +183,7 @@ describe('ProfileView', () => {
     await wrapper.get('form').trigger('submit.prevent');
     await flushPromises();
 
-    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    const body = profileRequest()[1]?.body as FormData;
     expect(body.get('diet')).toBe('vegan');
     expect(body.getAll('allergies[]')).toEqual(['arachides', 'lait']);
     expect(body.get('default_servings')).toBe('4');
@@ -151,7 +197,7 @@ describe('ProfileView', () => {
     await wrapper.get('#allergy-input').trigger('keydown.enter');
     await wrapper.get('form').trigger('submit.prevent');
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(profileRequestCount()).toBe(0);
     expect(wrapper.get('#defaultServings-error').text()).toContain('entre 1 et 50');
     expect(wrapper.get('#allergy-error').text()).toContain('100 caractères');
   });
@@ -205,7 +251,7 @@ describe('ProfileView', () => {
     await wrapper.get('#email-input').setValue('invalid');
     await wrapper.get('form').trigger('submit.prevent');
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(profileRequestCount()).toBe(0);
     expect(wrapper.text()).toContain('Le nom est requis.');
     expect(wrapper.text()).toContain('adresse e-mail valide');
   });

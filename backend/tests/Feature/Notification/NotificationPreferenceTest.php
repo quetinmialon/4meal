@@ -21,14 +21,14 @@ function preferenceToken(User $user): string
     ])->json('data.access_token');
 }
 
-it('lists web defaults and updates notification preferences by type', function (): void {
+it('lists both-channel defaults and updates notification preferences by type', function (): void {
     $user = User::factory()->create(['password' => 'password123']);
     $token = preferenceToken($user);
 
     $this->withToken($token)
         ->getJson('/api/notifications/preferences')
         ->assertOk()
-        ->assertJsonPath('data.0.channel', 'web')
+        ->assertJsonPath('data.0.channel', 'both')
         ->assertJsonCount(3, 'data');
 
     $this->withToken($token)

@@ -37,9 +37,13 @@ final class RecipeCommentNotification extends Notification
 
         return (new MailMessage)
             ->subject($this->notificationType === 'recipe_comment_reply' ? 'Nouvelle réponse sur votre recette' : 'Nouveau commentaire sur votre recette')
-            ->greeting('Bonjour '.$user->name.',')
-            ->line($sender->name.' a publié un commentaire sur « '.$recipe->title.' ».')
-            ->line($this->comment->content);
+            ->view('emails.notifications.recipe-comment', [
+                'user' => $user,
+                'sender' => $sender,
+                'recipe' => $recipe,
+                'comment' => $this->comment,
+                'isReply' => $this->notificationType === 'recipe_comment_reply',
+            ]);
     }
 
     private function channelFor(object $notifiable): NotificationChannel
@@ -48,7 +52,7 @@ final class RecipeCommentNotification extends Notification
 
         return $channel instanceof NotificationChannel
             ? $channel
-            : ($channel === null ? NotificationChannel::Web : NotificationChannel::from($channel));
+            : ($channel === null ? NotificationChannel::Both : NotificationChannel::from($channel));
     }
 
     /** @return array<string, mixed> */

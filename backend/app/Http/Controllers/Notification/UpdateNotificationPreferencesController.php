@@ -33,6 +33,6 @@ class UpdateNotificationPreferencesController extends Controller
 
     private function channelValue(?NotificationPreference $preference): string
     {
-        return $preference?->channel->value ?? NotificationChannel::Web->value;
+        return $preference?->channel->value ?? NotificationChannel::Both->value;
     }
 }
