@@ -44,6 +44,7 @@ use App\Http\Controllers\Export\DownloadExportController;
 use App\Http\Controllers\Export\DownloadRecipeCsvController;
 use App\Http\Controllers\Import\ImportCsvController;
 use App\Http\Controllers\Import\ImportJsonController;
+use App\Http\Controllers\Import\ImportMealieController;
 use App\Http\Controllers\Notification\ListNotificationsController;
 use App\Http\Controllers\Notification\MarkNotificationAsReadController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
@@ -113,6 +114,8 @@ Route::middleware(AuthenticateWithJwt::class)
     ->group(function () {
         Route::post('import', ImportJsonController::class)
             ->name('import.json');
+        Route::post('import/mealie', ImportMealieController::class)
+            ->name('import.mealie');
 
         Route::post('import/csv', ImportCsvController::class)
             ->name('import.csv');

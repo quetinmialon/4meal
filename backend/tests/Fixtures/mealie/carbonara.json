@@ -1,0 +1,25 @@
+{
+  "id": "7f4db5cb-61d6-4a88-b07b-2d65f3d54fd8",
+  "name": "Pâtes Carbonara",
+  "slug": "pates-carbonara",
+  "description": "La véritable carbonara italienne.",
+  "recipeYield": "4 portions",
+  "prepTime": "PT10M",
+  "cookTime": "PT15M",
+  "recipeCategory": [{"name": "Plat principal"}],
+  "tags": [{"name": "Italie"}, {"name": "Pâtes"}],
+  "recipeIngredient": [
+    {"title": "", "note": "", "unit": "g", "food": "Spaghetti", "quantity": 400},
+    {"title": "", "note": "", "unit": "g", "food": "Guanciale", "quantity": 200},
+    {"title": "", "note": "", "unit": "", "food": "Jaune d'œuf", "quantity": 4},
+    {"title": "", "note": "râpé", "unit": "g", "food": "Pecorino Romano", "quantity": 80}
+  ],
+  "recipeInstructions": [
+    {"title": "Cuisson", "text": "Faire cuire les pâtes."},
+    {"title": "Guanciale", "text": "Faire revenir le guanciale."},
+    {"title": "Assemblage", "text": "Mélanger hors du feu avec les œufs et le fromage."}
+  ],
+  "notes": "Servir immédiatement.",
+  "nutrition": {"calories": 760},
+  "settings": {"public": false, "showNutrition": true}
+}
