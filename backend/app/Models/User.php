@@ -113,6 +113,12 @@ class User extends Authenticatable
         return $this->hasMany(RecipeComment::class);
     }
 
+    /** @return HasMany<NotificationPreference, $this> */
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(

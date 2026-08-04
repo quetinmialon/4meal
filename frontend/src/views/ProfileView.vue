@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, reactive, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
 import OAuthAccountsSection from '@/components/OAuthAccountsSection.vue';
+import { fetchNotificationPreferences, updateNotificationPreferences, type NotificationChannel, type NotificationPreference, type NotificationType } from '@/utils/notificationPreferences';
 
 type TextField = 'name' | 'email' | 'currentPassword' | 'allergyDraft' | 'defaultServings';
 type ErrorField = TextField | 'avatar' | 'diet' | 'allergies' | 'defaultServings';
@@ -35,6 +36,26 @@ const touched = reactive<Record<ErrorField, boolean>>({ name: false, email: fals
 const hasSubmitted = ref(false);
 const globalError = ref('');
 const successMessage = ref('');
+const notificationPreferences = reactive<Record<NotificationType, NotificationChannel>>({
+  recipe_comment: 'both',
+  recipe_comment_reply: 'both',
+  cookbook_message: 'both',
+});
+const notificationLoading = ref(true);
+const notificationSaving = ref(false);
+const notificationError = ref('');
+const notificationSuccess = ref('');
+const notificationTypes: { type: NotificationType; label: string }[] = [
+  { type: 'recipe_comment', label: 'Commentaires sur mes recettes' },
+  { type: 'recipe_comment_reply', label: 'Réponses à mes commentaires' },
+  { type: 'cookbook_message', label: 'Messages de mes cookbooks' },
+];
+const notificationChannels: { value: NotificationChannel; label: string }[] = [
+  { value: 'none', label: 'Aucune notification' },
+  { value: 'web', label: 'Application web' },
+  { value: 'mail', label: 'E-mail' },
+  { value: 'both', label: 'Application web et e-mail' },
+];
 const formErrorSummary = ref<HTMLElement | null>(null);
 const avatarPreview = ref<string | null>(authStore.user?.avatar_url ?? null);
 let objectPreviewUrl: string | null = null;
@@ -162,6 +183,32 @@ async function handleSubmit(): Promise<void> {
 }
 
 onBeforeUnmount(revokeObjectPreview);
+
+onMounted(async () => {
+  if (authStore.user === null) return;
+  const result = await fetchNotificationPreferences(authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    result.preferences.forEach((preference) => { notificationPreferences[preference.type] = preference.channel; });
+  } else {
+    notificationError.value = result.message;
+  }
+  notificationLoading.value = false;
+});
+
+async function saveNotificationPreferences(): Promise<void> {
+  notificationSaving.value = true;
+  notificationError.value = '';
+  notificationSuccess.value = '';
+  const preferences = notificationTypes.map(({ type }): NotificationPreference => ({ type, channel: notificationPreferences[type] }));
+  const result = await updateNotificationPreferences(authStore.tokenType, authStore.accessToken, preferences);
+  if (result.ok) {
+    result.preferences.forEach((preference) => { notificationPreferences[preference.type] = preference.channel; });
+    notificationSuccess.value = 'Vos préférences de notifications ont été enregistrées.';
+  } else {
+    notificationError.value = result.message;
+  }
+  notificationSaving.value = false;
+}
 </script>
 
 <template>
@@ -245,6 +292,23 @@ onBeforeUnmount(revokeObjectPreview);
           </div>
         </section>
 
+        <section class="preferences-section" aria-labelledby="notification-preferences-title">
+          <h3 id="notification-preferences-title">Préférences de notifications</h3>
+          <p class="section-help">Choisissez comment vous souhaitez être informé pour chaque source de notification.</p>
+          <p v-if="notificationLoading" role="status">Chargement des préférences de notifications...</p>
+          <p v-if="notificationError" class="field-error" role="alert">{{ notificationError }}</p>
+          <div v-for="item in notificationTypes" :key="item.type" class="notification-preference">
+            <label :for="`${item.type}-notification-input`">{{ item.label }}</label>
+            <select :id="`${item.type}-notification-input`" v-model="notificationPreferences[item.type]" :disabled="notificationLoading || notificationSaving">
+              <option v-for="channel in notificationChannels" :key="channel.value" :value="channel.value">{{ channel.label }}</option>
+            </select>
+          </div>
+          <button type="button" class="secondary-button" :disabled="notificationLoading || notificationSaving" @click="saveNotificationPreferences">
+            {{ notificationSaving ? 'Enregistrement...' : 'Enregistrer les notifications' }}
+          </button>
+          <p v-if="notificationSuccess" role="status" class="success-message">{{ notificationSuccess }}</p>
+        </section>
+
         <button type="submit">{{ authStore.status === 'loading' ? 'Enregistrement...' : 'Enregistrer le profil' }}</button>
       </fieldset>
     </form>
@@ -264,6 +328,8 @@ fieldset { display: grid; gap: 1.25rem; margin: 0; padding: 0; border: 0; }
 .preferences-section { display: grid; gap: 1.25rem; margin-top: 0.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 h3 { margin: 0; font-size: 1.35rem; }
 .section-help { margin: -0.75rem 0 0; color: #50634d; line-height: 1.5; }
+.notification-preference { display: grid; gap: 0.45rem; padding: 0.9rem 0; border-top: 1px solid rgba(86, 112, 79, 0.12); }
+.notification-preference select { max-width: 30rem; }
 label { font-weight: 700; }
 input, select { width: 100%; padding: 0.9rem 1rem; border: 1px solid #b4bead; border-radius: 0.95rem; background: #fffdfa; color: #243127; font: inherit; }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid rgba(116, 144, 88, 0.32); outline-offset: 2px; }

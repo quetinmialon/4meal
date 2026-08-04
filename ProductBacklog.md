@@ -97,7 +97,7 @@
 - [x] PLAN-04 — Afficher le calendrier
 
 ### SHOULD
-- [ ] PLAN-05 — Générer automatiquement la liste de courses
+- [x] PLAN-05 — Générer automatiquement la liste de courses
 - [x] PLAN-06 — Gestion des portions dans le planning
 
 ### COULD
@@ -116,8 +116,8 @@
 - [x] CHAT-05 — Supprimer son commentaire
 
 ### SHOULD
-- [ ] CHAT-06 — Notification de nouveaux messages
-- [ ] CHAT-07 — Répondre à un commentaire
+- [x] CHAT-06 — Notification de nouveaux messages
+- [x] CHAT-07 — Répondre à un commentaire
 
 ### COULD
 - [ ] CHAT-08 — Réactions emoji
@@ -135,8 +135,8 @@
 - [x] IO-06 — Gestion des erreurs d'import
 
 ### SHOULD
-- [ ] IO-07 — Compatibilité Mealie
-- [ ] IO-08 — Compatibilité CSV
+- [x] IO-07 — Compatibilité Mealie
+- [x] IO-08 — Compatibilité CSV
 
 ### COULD
 - [ ] IO-09 — Prévisualisation avant import
@@ -153,7 +153,7 @@
 - [x] USER-05 — Définir le nombre de portions par défaut
 
 ### SHOULD
-- [ ] USER-06 — Gérer ses notifications
+- [x] USER-06 — Gérer ses notifications
 
 ### COULD
 - [ ] USER-07 — Choisir un thème (clair / sombre)
