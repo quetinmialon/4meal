@@ -10,6 +10,7 @@ export type AuthUser = {
   id: number;
   name: string;
   email: string;
+  email_verified?: boolean;
   avatar_path: string | null;
   avatar_url?: string | null;
   last_login_at: string | null;
@@ -53,6 +54,7 @@ type ApiErrorPayload = {
     message?: string;
     details?: {
       fields?: Record<string, string[]>;
+      [key: string]: unknown;
     };
   };
 };
@@ -96,6 +98,14 @@ export type ResetPasswordResult =
       message: string;
       fieldErrors: Partial<Record<'email' | 'token' | 'password' | 'password_confirmation', string>>;
     };
+
+export type EmailVerificationResult =
+  | { ok: true; user: AuthUser | null }
+  | { ok: false; message: string };
+
+export type ResendEmailVerificationResult =
+  | { ok: true; message: string }
+  | { ok: false; message: string };
 
 export type UpdateProfileResult =
   | {
@@ -478,6 +488,78 @@ export const useAuthStore = defineStore('auth', {
           message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
           fieldErrors: {},
         };
+      }
+    },
+
+    async resendEmailVerification(): Promise<ResendEmailVerificationResult> {
+      if (this.user === null) {
+        return { ok: false, message: 'Une authentification est requise.' };
+      }
+
+      this.status = 'loading';
+
+      try {
+        const response = await apiFetch('/api/auth/email/verification-notification', {
+          method: 'POST',
+          headers: authHeaders({ accessToken: this.accessToken, tokenType: this.tokenType }),
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { success: true; data?: { message?: string } }
+          | ApiErrorPayload
+          | null;
+
+        if (response.status === 401) {
+          this.clearSession();
+          return { ok: false, message: 'Votre session a expire. Reconnectez-vous.' };
+        }
+
+        this.status = 'authenticated';
+
+        if (response.ok && payload?.success === true) {
+          return { ok: true, message: payload.data?.message ?? 'Un email de vérification a été envoyé.' };
+        }
+
+        return {
+          ok: false,
+          message:
+            (payload !== null && 'error' in payload ? payload.error?.message : undefined) ??
+            'Impossible de renvoyer l’email de vérification.',
+        };
+      } catch {
+        this.status = 'authenticated';
+        return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
+      }
+    },
+
+    async verifyEmail(userId: string, token: string): Promise<EmailVerificationResult> {
+      try {
+        const response = await apiFetch(`/api/auth/email/verify/${encodeURIComponent(userId)}/${encodeURIComponent(token)}`, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { success: true; data?: { user?: AuthUser } }
+          | ApiErrorPayload
+          | null;
+
+        if (!response.ok || payload?.success !== true) {
+          return {
+            ok: false,
+            message:
+              (payload !== null && 'error' in payload ? payload.error?.message : undefined) ??
+              'Le lien de vérification est invalide ou expiré.',
+          };
+        }
+
+        const verifiedUser = payload.data?.user ?? null;
+        if (verifiedUser !== null && this.user?.id === verifiedUser.id) {
+          this.user = verifiedUser;
+          persistSession({ user: verifiedUser });
+        }
+
+        return { ok: true, user: verifiedUser };
+      } catch {
+        return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' };
       }
     },
 

@@ -101,6 +101,11 @@ return [
         ],
     ],
 
+    'email_verification' => [
+        'url' => env('AUTH_EMAIL_VERIFICATION_URL', env('APP_URL', 'http://localhost:8080')),
+        'expires' => (int) env('AUTH_EMAIL_VERIFICATION_EXPIRE', 60),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Password Confirmation Timeout

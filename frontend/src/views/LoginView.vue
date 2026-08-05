@@ -140,9 +140,7 @@ async function handleSubmit(): Promise<void> {
   });
 
   if (result.ok) {
-    await router.push({
-      name: 'dashboard',
-    });
+    await router.push({ name: authStore.user?.email_verified === false ? 'email-verification-pending' : 'dashboard' });
 
     return;
   }

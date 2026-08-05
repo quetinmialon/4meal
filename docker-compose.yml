@@ -16,6 +16,7 @@ services:
       APP_KEY: ${BACKEND_APP_KEY:-base64:8CIYh4owmlLz9EJfpbkoC15zHfMkgfSr2FX2Dh6OW40=}
       APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
       APP_URL: ${BACKEND_APP_URL:-http://localhost:${PROXY_PORT:-8080}}
+      AUTH_EMAIL_VERIFICATION_URL: ${AUTH_EMAIL_VERIFICATION_URL:-http://localhost:${PROXY_PORT:-8080}}
       LOG_CHANNEL: ${BACKEND_LOG_CHANNEL:-stack}
       LOG_LEVEL: ${BACKEND_LOG_LEVEL:-debug}
       DB_CONNECTION: pgsql
