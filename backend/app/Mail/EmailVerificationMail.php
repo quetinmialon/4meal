@@ -18,6 +18,11 @@ final class EmailVerificationMail extends Mailable
         public readonly int $expiresInMinutes,
     ) {}
 
+    public function verificationUrl(): string
+    {
+        return rtrim((string) config('auth.email_verification.url'), '/').'/verification-email/'.$this->user->getKey().'/'.$this->token;
+    }
+
     public function envelope(): Envelope
     {
         return new Envelope(subject: 'Vérifiez votre adresse email');
@@ -25,6 +30,9 @@ final class EmailVerificationMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.email-verification');
+        return new Content(
+            view: 'emails.email-verification',
+            with: ['verificationUrl' => $this->verificationUrl()],
+        );
     }
 }

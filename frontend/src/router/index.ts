@@ -8,6 +8,7 @@ import DashboardView from '@/views/DashboardView.vue';
 import ExportView from '@/views/ExportView.vue';
 import ImportView from '@/views/ImportView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
+import EmailVerificationView from '@/views/EmailVerificationView.vue';
 import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
 import CookbookView from '@/views/CookbookView.vue';
 import CookbookMessagesView from '@/views/CookbookMessagesView.vue';
@@ -51,6 +52,16 @@ const routes: RouteRecordRaw[] = [
     path: '/nouveau-mot-de-passe',
     name: 'reset-password',
     component: ResetPasswordView,
+  },
+  {
+    path: '/verification-email',
+    name: 'email-verification-pending',
+    component: EmailVerificationView,
+  },
+  {
+    path: '/verification-email/:id/:token',
+    name: 'email-verification',
+    component: EmailVerificationView,
   },
   {
     path: '/dashboard',
@@ -214,6 +225,15 @@ export function installAuthGuard(router: Router, storePinia: Pinia): void {
       return {
         name: 'login',
       };
+    }
+
+    if (
+      to.meta.requiresAuth &&
+      authStore.user?.email_verified === false &&
+      to.name !== 'email-verification-pending' &&
+      to.name !== 'email-verification'
+    ) {
+      return { name: 'email-verification-pending' };
     }
 
     if (to.meta.guestOnly && authStore.isAuthenticated) {

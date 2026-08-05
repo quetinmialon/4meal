@@ -11,6 +11,7 @@ uses(RefreshDatabase::class);
 
 it('registers users as unverified and sends a one-time expiring token', function () {
     Mail::fake();
+    config()->set('auth.email_verification.url', 'http://localhost:8080');
 
     $response = $this->postJson('/api/auth/register', [
         'name' => 'Jane Doe', 'email' => 'jane@example.com',
@@ -20,7 +21,13 @@ it('registers users as unverified and sends a one-time expiring token', function
     $user = User::query()->where('email', 'jane@example.com')->firstOrFail();
     expect($user->email_verified_at)->toBeNull();
     $response->assertJsonPath('data.email_verified', false);
-    Mail::assertSent(EmailVerificationMail::class, fn (EmailVerificationMail $mail): bool => $mail->user->is($user));
+    Mail::assertSent(EmailVerificationMail::class, function (EmailVerificationMail $mail) use ($user): bool {
+        expect($mail->user->is($user))->toBeTrue()
+            ->and($mail->verificationUrl())->toContain('/verification-email/'.$user->id.'/')
+            ->and($mail->render())->toContain('Vérifier mon adresse email');
+
+        return true;
+    });
     expect((int) DB::table('email_verification_tokens')->where('user_id', $user->id)->count())->toBe(1);
 });
 

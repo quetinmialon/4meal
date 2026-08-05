@@ -13,15 +13,15 @@ const registeredEmail = computed(() => {
 
 <template>
   <main class="success-card">
-    <p class="kicker">Compte cree</p>
-    <h2>Inscription terminee</h2>
+    <p class="kicker">Compte créé</p>
+    <h2>Vérifiez votre adresse email</h2>
     <p class="message">
-      Votre compte a bien ete cree<span v-if="registeredEmail"> pour {{ registeredEmail }}</span>.
+      Votre compte a bien été créé<span v-if="registeredEmail"> pour {{ registeredEmail }}</span>.
     </p>
     <p class="detail">
-      Votre compte est pret. Vous pouvez maintenant vous connecter pour acceder a votre espace.
+      Un email de vérification vient d’être envoyé. Connectez-vous après l’avoir confirmé pour accéder à votre espace.
     </p>
-    <RouterLink class="back-link" :to="{ name: 'login' }">Aller a la connexion</RouterLink>
+    <RouterLink class="back-link" :to="{ name: 'login' }">Aller à la connexion</RouterLink>
   </main>
 </template>
 
