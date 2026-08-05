@@ -28,6 +28,7 @@ class UserResource extends JsonResource
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'email_verified' => $user->email_verified_at !== null,
             'diet' => $diet instanceof Diet ? $diet->value : $diet,
             'allergies' => $user->allergies ?? [],
             'default_servings' => $user->default_servings,

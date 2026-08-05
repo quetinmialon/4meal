@@ -15,8 +15,10 @@ use App\Http\Controllers\Auth\RefreshAccessTokenController;
 use App\Http\Controllers\Auth\RegisterUserController;
 use App\Http\Controllers\Auth\RequestPasswordResetController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\SendEmailVerificationController;
 use App\Http\Controllers\Auth\UnlinkOAuthAccountController;
 use App\Http\Controllers\Auth\UpdateProfileController;
+use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
@@ -68,6 +70,7 @@ use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeCommentController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
 use App\Http\Middleware\AuthenticateWithJwt;
+use App\Http\Middleware\RequireVerifiedEmail;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -100,6 +103,10 @@ Route::post('auth/password/reset', ResetPasswordController::class)
 Route::post('auth/reset-password', ResetPasswordController::class)
     ->middleware('throttle:auth.password.reset');
 
+Route::get('auth/email/verify/{id}/{token}', VerifyEmailController::class)
+    ->whereNumber('id')
+    ->name('auth.verification.verify');
+
 Route::get('auth/google/redirect', GoogleOAuthRedirectController::class)
     ->name('auth.google.redirect');
 
@@ -112,7 +119,7 @@ Route::get('auth/microsoft/redirect', MicrosoftOAuthRedirectController::class)
 Route::get('auth/microsoft/callback', MicrosoftOAuthCallbackController::class)
     ->name('auth.microsoft.callback');
 
-Route::middleware(AuthenticateWithJwt::class)
+Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
     ->group(function () {
         Route::post('import', ImportJsonController::class)
             ->name('import.json');
@@ -272,7 +279,12 @@ Route::middleware(AuthenticateWithJwt::class)
         Route::get('me', GetCurrentUserController::class)
             ->name('auth.me');
 
+        Route::post('email/verification-notification', SendEmailVerificationController::class)
+            ->middleware('throttle:auth.email.verification')
+            ->name('auth.verification.send');
+
         Route::patch('me', UpdateProfileController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.me.update');
 
         Route::post('refresh', RefreshAccessTokenController::class)
@@ -282,27 +294,35 @@ Route::middleware(AuthenticateWithJwt::class)
             ->name('auth.logout');
 
         Route::put('password', ChangePasswordController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.password.update');
 
         Route::get('oauth-accounts', ListOAuthAccountsController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.oauth-accounts.index');
 
         Route::get('oauth', ListOAuthAccountsController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.oauth.index');
 
-        Route::get('oauth/accounts', ListOAuthAccountsController::class);
+        Route::get('oauth/accounts', ListOAuthAccountsController::class)->middleware(RequireVerifiedEmail::class);
 
         Route::get('oauth/google/link', LinkGoogleOAuthRedirectController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.oauth.google.link');
 
-        Route::post('oauth/google/link', LinkGoogleOAuthRedirectController::class);
+        Route::post('oauth/google/link', LinkGoogleOAuthRedirectController::class)
+            ->middleware(RequireVerifiedEmail::class);
 
         Route::get('oauth/microsoft/link', LinkMicrosoftOAuthRedirectController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->name('auth.oauth.microsoft.link');
 
-        Route::post('oauth/microsoft/link', LinkMicrosoftOAuthRedirectController::class);
+        Route::post('oauth/microsoft/link', LinkMicrosoftOAuthRedirectController::class)
+            ->middleware(RequireVerifiedEmail::class);
 
         Route::delete('oauth/{provider}', UnlinkOAuthAccountController::class)
+            ->middleware(RequireVerifiedEmail::class)
             ->where('provider', 'google|microsoft')
             ->name('auth.oauth.destroy');
     });
