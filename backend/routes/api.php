@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\Auth\DisableTwoFactorController;
+use App\Http\Controllers\Auth\EnableTwoFactorController;
 use App\Http\Controllers\Auth\GetCurrentUserController;
 use App\Http\Controllers\Auth\GoogleOAuthCallbackController;
 use App\Http\Controllers\Auth\GoogleOAuthRedirectController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\Auth\SendEmailVerificationController;
 use App\Http\Controllers\Auth\UnlinkOAuthAccountController;
 use App\Http\Controllers\Auth\UpdateProfileController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Auth\VerifyTwoFactorController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
 use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
@@ -88,6 +91,10 @@ Route::post('auth/register', RegisterUserController::class)
 Route::post('auth/login', LoginUserController::class)
     ->middleware('throttle:auth.login')
     ->name('auth.login');
+
+Route::post('auth/2fa/verify', VerifyTwoFactorController::class)
+    ->middleware('throttle:auth.2fa.verify')
+    ->name('auth.2fa.verify');
 
 Route::post('auth/password/email', RequestPasswordResetController::class)
     ->middleware('throttle:auth.password.email')
@@ -296,6 +303,14 @@ Route::middleware(AuthenticateWithJwt::class)
         Route::put('password', ChangePasswordController::class)
             ->middleware(RequireVerifiedEmail::class)
             ->name('auth.password.update');
+
+        Route::post('2fa/enable', EnableTwoFactorController::class)
+            ->middleware(RequireVerifiedEmail::class)
+            ->name('auth.2fa.enable');
+
+        Route::post('2fa/disable', DisableTwoFactorController::class)
+            ->middleware(RequireVerifiedEmail::class)
+            ->name('auth.2fa.disable');
 
         Route::get('oauth-accounts', ListOAuthAccountsController::class)
             ->middleware(RequireVerifiedEmail::class)

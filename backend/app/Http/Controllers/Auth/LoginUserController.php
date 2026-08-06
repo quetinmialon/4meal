@@ -6,6 +6,7 @@ use App\Actions\Auth\AuthenticateUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginUserRequest;
 use App\Http\Resources\Auth\AuthenticatedSessionResource;
+use App\Services\Auth\TwoFactorService;
 use App\Support\ApiResponse;
 use App\Support\Jwt\AccessTokenCookie;
 use App\Support\Jwt\AccessTokenIssuer;
@@ -18,6 +19,7 @@ class LoginUserController extends Controller
         private readonly AuthenticateUser $authenticateUser,
         private readonly AccessTokenIssuer $accessTokenIssuer,
         private readonly AccessTokenCookie $accessTokenCookie,
+        private readonly TwoFactorService $twoFactorService,
     ) {}
 
     public function __invoke(LoginUserRequest $request): JsonResponse
@@ -36,6 +38,14 @@ class LoginUserController extends Controller
                 __('auth.failed'),
                 SymfonyResponse::HTTP_UNAUTHORIZED,
             );
+        }
+
+        if ($user->two_factor_enabled) {
+            return ApiResponse::success($request, [
+                'two_factor_required' => true,
+                'challenge' => $this->twoFactorService->issue($user),
+                'expires_in' => (int) config('two_factor.expires', 10) * 60,
+            ], SymfonyResponse::HTTP_ACCEPTED);
         }
 
         $session = [
