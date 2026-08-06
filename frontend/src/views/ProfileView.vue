@@ -45,6 +45,11 @@ const notificationLoading = ref(true);
 const notificationSaving = ref(false);
 const notificationError = ref('');
 const notificationSuccess = ref('');
+const twoFactorEnabled = ref(authStore.user?.two_factor_enabled ?? false);
+const twoFactorPassword = ref('');
+const twoFactorError = ref('');
+const twoFactorSuccess = ref('');
+const twoFactorLoading = ref(false);
 const notificationTypes: { type: NotificationType; label: string }[] = [
   { type: 'recipe_comment', label: 'Commentaires sur mes recettes' },
   { type: 'recipe_comment_reply', label: 'Réponses à mes commentaires' },
@@ -209,6 +214,21 @@ async function saveNotificationPreferences(): Promise<void> {
   }
   notificationSaving.value = false;
 }
+
+async function toggleTwoFactor(): Promise<void> {
+  twoFactorLoading.value = true;
+  twoFactorError.value = '';
+  twoFactorSuccess.value = '';
+  const result = await authStore.setTwoFactorEnabled(!twoFactorEnabled.value, twoFactorPassword.value);
+  twoFactorLoading.value = false;
+  if (!result.ok) {
+    twoFactorError.value = result.message;
+    return;
+  }
+  twoFactorEnabled.value = result.enabled;
+  twoFactorPassword.value = '';
+  twoFactorSuccess.value = result.enabled ? 'La verification en deux etapes est activee.' : 'La verification en deux etapes est desactivee.';
+}
 </script>
 
 <template>
@@ -313,6 +333,24 @@ async function saveNotificationPreferences(): Promise<void> {
       </fieldset>
     </form>
 
+    <section class="preferences-section" aria-labelledby="two-factor-title">
+      <h3 id="two-factor-title">Verification en deux etapes</h3>
+      <p class="section-help">Recevez un code temporaire par e-mail a chaque nouvelle connexion.</p>
+      <p v-if="twoFactorError" class="error-summary" role="alert">{{ twoFactorError }}</p>
+      <p v-if="twoFactorSuccess" class="success-message" role="status">{{ twoFactorSuccess }}</p>
+      <div v-if="twoFactorEnabled" class="two-factor-enabled">
+        <strong>Protection active</strong>
+        <label class="field" for="two-factor-password-input">Mot de passe actuel pour desactiver</label>
+        <input id="two-factor-password-input" v-model="twoFactorPassword" type="password" autocomplete="current-password" />
+        <button type="button" class="danger-button" :disabled="twoFactorLoading || twoFactorPassword === ''" @click="toggleTwoFactor">
+          {{ twoFactorLoading ? 'Modification...' : 'Desactiver la 2FA' }}
+        </button>
+      </div>
+      <button v-else type="button" class="secondary-button" :disabled="twoFactorLoading" @click="toggleTwoFactor">
+        {{ twoFactorLoading ? 'Activation...' : 'Activer la 2FA par e-mail' }}
+      </button>
+    </section>
+
     <OAuthAccountsSection />
   </main>
 </template>
@@ -350,4 +388,9 @@ small { color: #50634d; }
 button { margin-top: 0.25rem; padding: 0.95rem 1.3rem; border: 0; border-radius: 999px; background: #2f4520; color: #fffdf9; font: inherit; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: wait; opacity: 0.8; }
 .success-message { margin-top: 1.5rem; padding: 1rem; border: 1px solid #bdd0af; border-radius: 1rem; background: #edf4e6; color: #2f4520; }
+.two-factor-enabled { display: grid; gap: .8rem; }
+.two-factor-enabled .field { margin: 0; }
+.secondary-button, .danger-button { width: fit-content; margin-top: 0; padding: .75rem 1rem; }
+.secondary-button { background: #e6efdc; color: #2f4520; }
+.danger-button { background: #fff4f2; color: #8f1e1e; }
 </style>

@@ -134,6 +134,26 @@ describe('LoginView', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it('redirects to the email 2FA screen and preserves the challenge', async () => {
+    fetchMock.mockResolvedValue({
+      status: 202,
+      ok: true,
+      json: async () => ({ success: true, data: { two_factor_required: true, challenge: 'a'.repeat(64), expires_in: 600 } }),
+    } as Response);
+
+    const wrapper = mount(LoginView, { global: { plugins: [createPinia()] } });
+    await wrapper.get('#email-input').setValue('jane@example.com');
+    await wrapper.get('#password-input').setValue('password123');
+    await wrapper.get('form').trigger('submit.prevent');
+    await flushPromises();
+
+    expect(pushMock).toHaveBeenCalledWith({ name: 'two-factor-verification' });
+    expect(JSON.parse(window.sessionStorage.getItem('4meal.auth.two-factor') ?? 'null')).toMatchObject({
+      challenge: 'a'.repeat(64),
+      email: 'jane@example.com',
+    });
+  });
+
   it('starts the Google OAuth flow through the backend endpoint', () => {
     const wrapper = mount(LoginView, {
       global: {
