@@ -6,6 +6,7 @@ use App\Models\Cookbook;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class UpdateCookbookAction
@@ -32,6 +33,11 @@ class UpdateCookbookAction
 
                 if (($attributes['image'] ?? null) instanceof UploadedFile) {
                     $newImagePath = Storage::disk('public')->putFile('cookbooks', $attributes['image']);
+
+                    if (! is_string($newImagePath)) {
+                        throw new RuntimeException('Cookbook image could not be stored.');
+                    }
+
                     $cookbook->image_path = $newImagePath;
                 }
 
@@ -40,7 +46,7 @@ class UpdateCookbookAction
                 return $cookbook->load('owner');
             });
 
-            if (is_string($oldImagePath) && $oldImagePath !== $newImagePath) {
+            if (is_string($oldImagePath) && is_string($newImagePath) && $oldImagePath !== $newImagePath) {
                 Storage::disk('public')->delete($oldImagePath);
             }
 

@@ -26,6 +26,19 @@ function cookbookToken(User $user): string
     return $response->json('data.access_token');
 }
 
+function cookbookPngImage(string $name, int $width = 800, int $height = 600): UploadedFile
+{
+    $png = "\x89PNG\r\n\x1a\n";
+    $header = pack('NNCCCCC', $width, $height, 8, 6, 0, 0, 0);
+    $rows = str_repeat("\x00".str_repeat("\x00", $width * 4), $height);
+    $png .= pack('N', 13).'IHDR'.$header.pack('N', crc32('IHDR'.$header));
+    $compressed = zlib_encode($rows, ZLIB_ENCODING_DEFLATE, 9);
+    $png .= pack('N', strlen($compressed)).'IDAT'.$compressed.pack('N', crc32('IDAT'.$compressed));
+    $png .= pack('N', 0).'IEND'.pack('N', crc32('IEND'));
+
+    return UploadedFile::fake()->createWithContent($name, $png);
+}
+
 it('creates a cookbook with its owner membership in one operation', function () {
     $user = User::factory()->create(['password' => 'password123']);
 
@@ -60,11 +73,11 @@ it('creates cookbooks with the MCD attributes and unique generated slugs', funct
 
     $first = $this->withToken($token)->post('/api/cookbooks', [
         ...$payload,
-        'image' => UploadedFile::fake()->create('cuisine.jpg', 100, 'image/jpeg'),
+        'image' => cookbookPngImage('cuisine.png'),
     ])->assertCreated();
     $second = $this->withToken($token)->post('/api/cookbooks', [
         ...$payload,
-        'image' => UploadedFile::fake()->create('cuisine-2.jpg', 100, 'image/jpeg'),
+        'image' => cookbookPngImage('cuisine-2.png'),
     ])->assertCreated();
 
     expect($first->json('data.slug'))->toBe('cuisine-du-soir')
@@ -226,6 +239,87 @@ it('allows an editor to rename a cookbook', function () {
         ->assertOk()
         ->assertJsonPath('data.name', 'Nom edite')
         ->assertJsonPath('data.member_role', 'editor');
+});
+
+it('allows an editor to update the description and securely replace the cookbook image', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create();
+    $editor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create([
+        'name' => 'Ancien nom',
+        'owner_id' => $owner->id,
+        'description' => 'Ancienne description',
+        'image_path' => 'cookbooks/previous.png',
+    ]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($editor, ['role' => 'editor']);
+    Storage::disk('public')->put('cookbooks/previous.png', 'old image');
+
+    $response = $this->withToken(cookbookToken($editor))->post('/api/cookbooks/'.$cookbook->public_id, [
+        '_method' => 'PATCH',
+        'name' => 'Nouveau nom',
+        'description' => 'Description validée',
+        'image' => cookbookPngImage('replacement.png'),
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.description', 'Description validée')
+        ->assertJsonPath('data.image_path', fn (mixed $path): bool => is_string($path) && str_starts_with($path, 'cookbooks/'))
+        ->assertJsonPath('data.image_url', fn (mixed $url): bool => is_string($url));
+
+    $newPath = $cookbook->refresh()->image_path;
+    expect($newPath)->toBeString()->not->toBe('cookbooks/previous.png');
+    Storage::disk('public')->assertMissing('cookbooks/previous.png');
+    Storage::disk('public')->assertExists($newPath);
+});
+
+it('does not allow a reader to update cookbook description or image', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create();
+    $reader = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Protégé', 'owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($reader, ['role' => 'reader']);
+
+    $this->withToken(cookbookToken($reader))->post('/api/cookbooks/'.$cookbook->public_id, [
+        '_method' => 'PATCH',
+        'name' => 'Interdit',
+        'description' => 'Interdit',
+        'image' => cookbookPngImage('forbidden.png'),
+    ])->assertForbidden()->assertJsonPath('error.code', 'authorization_error');
+
+    expect(Storage::disk('public')->allFiles('cookbooks'))->toBe([]);
+    $this->assertDatabaseHas('cookbooks', ['id' => $cookbook->id, 'name' => 'Protégé', 'description' => null]);
+});
+
+it('rejects invalid cookbook images before storing them', function () {
+    Storage::fake('public');
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(cookbookToken($user))->post('/api/cookbooks', [
+        'name' => 'Images',
+        'image' => UploadedFile::fake()->create('payload.php', 100, 'application/x-php'),
+    ])->assertUnprocessable()
+        ->assertJsonPath('error.code', 'validation_error')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['image']]]]);
+
+    expect(Storage::disk('public')->allFiles('cookbooks'))->toBe([]);
+});
+
+it('keeps the existing cookbook image when updating metadata only', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::query()->create(['name' => 'Nom', 'owner_id' => $owner->id, 'image_path' => 'cookbooks/existing.png']);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    Storage::disk('public')->put('cookbooks/existing.png', 'image');
+
+    $this->withToken(cookbookToken($owner))->patchJson('/api/cookbooks/'.$cookbook->public_id, [
+        'name' => 'Nouveau nom',
+        'description' => 'Description',
+    ])->assertOk();
+
+    Storage::disk('public')->assertExists('cookbooks/existing.png');
+    expect($cookbook->refresh()->image_path)->toBe('cookbooks/existing.png');
 });
 
 it('rejects a reader from renaming a cookbook', function () {
