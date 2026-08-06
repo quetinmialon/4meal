@@ -136,6 +136,44 @@ describe('CookbookView', () => {
     expect(wrapper.find('.edit-name-form').exists()).toBe(false);
   });
 
+  it('updates the cookbook description and image through the shared upload field', async () => {
+    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:cookbook'), revokeObjectURL: vi.fn() });
+    vi.stubGlobal('Image', class {
+      width = 800;
+      height = 600;
+      onload: (() => void) | null = null;
+      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
+    });
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: {
+        id: 'cookbook-id', name: 'Ancien nom', description: 'Ancienne', image_url: '/storage/old.png',
+        owner: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null }, member_role: 'editor', created_at: null,
+      } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: { current_page: 1, per_page: 15, total: 0, last_page: 1, from: null, to: null, has_more_pages: false } } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => membersPage() } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: {
+        id: 'cookbook-id', name: 'Ancien nom', description: 'Nouvelle description', image_url: '/storage/new.png',
+        owner: { id: 7, name: 'Jane Doe', email: 'jane@example.com', created_at: null }, member_role: 'editor', created_at: null,
+      } }) } as Response);
+
+    const wrapper = mount(CookbookView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.edit-button').trigger('click');
+    await wrapper.get('#cookbook-description-edit-input').setValue('Nouvelle description');
+    const image = new File(['image'], 'replacement.png', { type: 'image/png' });
+    const input = wrapper.get('#cookbook-image-edit-input');
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [image] });
+    await input.trigger('change');
+    await flushPromises();
+    await wrapper.get('.edit-name-form').trigger('submit.prevent');
+    await flushPromises();
+
+    const body = fetchMock.mock.calls[3]?.[1]?.body as FormData;
+    expect(body.get('description')).toBe('Nouvelle description');
+    expect(body.get('image')).toBe(image);
+    expect(wrapper.text()).toContain('Nouvelle description');
+  });
+
   it('hides the rename action for a viewer', async () => {
     fetchMock
       .mockResolvedValueOnce({

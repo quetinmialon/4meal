@@ -3,6 +3,7 @@ import { nextTick, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import RecipeImageField from '@/components/RecipeImageField.vue';
 import { createCookbook } from '@/utils/cookbooks';
 
 const router = useRouter();
@@ -12,6 +13,7 @@ const form = reactive<{ name: string; slug: string; description: string; image: 
 });
 const nameError = ref('');
 const imageError = ref('');
+const descriptionError = ref('');
 const globalError = ref('');
 const isSubmitting = ref(false);
 const errorSummary = ref<HTMLElement | null>(null);
@@ -24,6 +26,7 @@ function validate(): boolean {
 function clearErrors(): void {
   nameError.value = '';
   imageError.value = '';
+  descriptionError.value = '';
   globalError.value = '';
 }
 
@@ -44,6 +47,7 @@ async function handleSubmit(): Promise<void> {
     globalError.value = result.message;
     nameError.value = result.fieldErrors.name ?? '';
     imageError.value = result.fieldErrors.image ?? '';
+    descriptionError.value = result.fieldErrors.description ?? '';
     isSubmitting.value = false;
     await nextTick();
     errorSummary.value?.focus();
@@ -57,24 +61,6 @@ function handleInput(): void {
   clearErrors();
 }
 
-function handleImageChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0] ?? null;
-  form.image = file;
-  imageError.value = '';
-
-  if (file === null) return;
-
-  if (!['image/png', 'image/jpeg'].includes(file.type)) {
-    imageError.value = 'Le fichier doit être au format PNG ou JPEG.';
-    input.value = '';
-    form.image = null;
-  } else if (file.size > 5 * 1024 * 1024) {
-    imageError.value = 'L’image ne doit pas dépasser 5 Mo.';
-    input.value = '';
-    form.image = null;
-  }
-}
 </script>
 
 <template>
@@ -123,17 +109,21 @@ function handleImageChange(event: Event): void {
         v-model="form.description"
         name="description"
         rows="4"
+        maxlength="5000"
+        :aria-invalid="descriptionError ? 'true' : 'false'"
+        :aria-describedby="descriptionError ? 'cookbook-description-error' : undefined"
+        @input="handleInput"
       />
+      <p v-if="descriptionError" id="cookbook-description-error" class="field-error" role="alert">{{ descriptionError }}</p>
 
-      <label for="cookbook-image-input">Image du cookbook</label>
-      <input
-        id="cookbook-image-input"
-        name="image"
-        type="file"
-        accept="image/png,image/jpeg"
-        @change="handleImageChange"
+      <RecipeImageField
+        v-model="form.image"
+        input-id="cookbook-image-input"
+        label="Image du cookbook"
+        preview-alt="Aperçu de l’image du cookbook"
+        @update:model-value="imageError = ''"
       />
-      <p v-if="imageError" id="cookbook-image-error" class="field-error" role="alert">{{ imageError }}</p>
+      <p v-if="imageError" id="cookbook-image-server-error" class="field-error" role="alert">{{ imageError }}</p>
 
       <button type="submit">
         {{ isSubmitting ? 'Creation...' : 'Creer le cookbook' }}

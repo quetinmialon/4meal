@@ -5,7 +5,23 @@ const props = withDefaults(defineProps<{
   modelValue: File | null;
   existingImageUrl?: string | null;
   disabled?: boolean;
-}>(), { existingImageUrl: null, disabled: false });
+  label?: string;
+  inputId?: string;
+  helpText?: string;
+  previewAlt?: string;
+}>(), {
+  existingImageUrl: null,
+  disabled: false,
+  label: 'Image de la recette',
+  inputId: 'recipe-image-input',
+  helpText: 'JPEG, PNG ou WebP, 5 Mo maximum, de 200 × 200 à 4000 × 4000 pixels.',
+  previewAlt: 'Aperçu de l’image de la recette',
+});
+
+const inputId = computed(() => props.inputId ?? 'recipe-image-input');
+const label = computed(() => props.label ?? 'Image de la recette');
+const helpText = computed(() => props.helpText ?? 'JPEG, PNG ou WebP, 5 Mo maximum, de 200 × 200 à 4000 × 4000 pixels.');
+const previewAlt = computed(() => props.previewAlt ?? 'Aperçu de l’image de la recette');
 
 const emit = defineEmits<{ 'update:modelValue': [value: File | null] }>();
 const input = ref<HTMLInputElement | null>(null);
@@ -96,22 +112,22 @@ onBeforeUnmount(revokePreview);
 
 <template>
   <div class="recipe-image-field">
-    <label for="recipe-image-input">Image de la recette</label>
+    <label :for="inputId">{{ label }}</label>
     <input
-      id="recipe-image-input"
+      :id="inputId"
       ref="input"
       type="file"
       accept="image/jpeg,image/png,image/webp"
       :disabled="disabled || isChecking"
       :aria-invalid="imageError ? 'true' : 'false'"
-      aria-describedby="recipe-image-help recipe-image-error"
+      :aria-describedby="`${inputId}-help ${inputId}-error`"
       @change="handleChange"
     />
-    <p id="recipe-image-help" class="help-text">JPEG, PNG ou WebP, 5 Mo maximum, de 200 × 200 à 4000 × 4000 pixels.</p>
+    <p :id="`${inputId}-help`" class="help-text">{{ helpText }}</p>
     <p v-if="isChecking" role="status">Vérification de l’image...</p>
-    <p v-if="imageError" id="recipe-image-error" class="field-error" role="alert">{{ imageError }}</p>
+    <p v-if="imageError" :id="`${inputId}-error`" class="field-error" role="alert">{{ imageError }}</p>
     <div v-if="previewUrl" class="image-preview">
-      <img :src="previewUrl" alt="Aperçu de l’image de la recette" />
+      <img :src="previewUrl" :alt="previewAlt" />
       <button v-if="localPreview" type="button" :disabled="disabled || isChecking" @click="removeImage">Retirer l’image sélectionnée</button>
     </div>
   </div>

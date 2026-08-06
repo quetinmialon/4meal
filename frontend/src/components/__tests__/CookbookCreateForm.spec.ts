@@ -77,6 +77,36 @@ describe('CookbookCreateForm', () => {
     expect(pushMock).toHaveBeenCalledWith({ name: 'cookbook', params: { id: '6e3a1d7b-4f48-4b30-9d6e-8cbe91b1bc30' } });
   });
 
+  it('submits the cookbook description and selected image as multipart data', async () => {
+    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:cookbook'), revokeObjectURL: vi.fn() });
+    vi.stubGlobal('Image', class {
+      width = 800;
+      height = 600;
+      onload: (() => void) | null = null;
+      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
+    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ success: true, data: { id: 'cookbook-id', name: 'Cuisine', description: 'Description', image_path: 'cookbooks/image.png', image_url: '/storage/cookbooks/image.png', owner: { id: 7, name: 'Jane Doe' }, created_at: null } }),
+    } as Response);
+
+    const wrapper = mount(CookbookCreateForm, { global: { plugins: [testPinia] } });
+    const image = new File(['image'], 'cookbook.png', { type: 'image/png' });
+    await wrapper.get('#cookbook-name-input').setValue('Cuisine');
+    await wrapper.get('#cookbook-description-input').setValue('Description');
+    const input = wrapper.get('#cookbook-image-input');
+    Object.defineProperty(input.element, 'files', { configurable: true, value: [image] });
+    await input.trigger('change');
+    await flushPromises();
+    await wrapper.get('form').trigger('submit.prevent');
+    await flushPromises();
+
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get('description')).toBe('Description');
+    expect(body.get('image')).toBe(image);
+  });
+
   it('displays API validation errors without redirecting', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
