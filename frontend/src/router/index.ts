@@ -27,6 +27,7 @@ import SearchView from '@/views/SearchView.vue';
 import PlanningView from '@/views/PlanningView.vue';
 import ShoppingListView from '@/views/ShoppingListView.vue';
 import ProfileView from '@/views/ProfileView.vue';
+import TwoFactorVerificationView from '@/views/TwoFactorVerificationView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -42,6 +43,11 @@ const routes: RouteRecordRaw[] = [
     meta: {
       guestOnly: true,
     },
+  },
+  {
+    path: '/verification-2fa',
+    name: 'two-factor-verification',
+    component: TwoFactorVerificationView,
   },
   {
     path: '/mot-de-passe-oublie',

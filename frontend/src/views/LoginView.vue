@@ -140,6 +140,10 @@ async function handleSubmit(): Promise<void> {
   });
 
   if (result.ok) {
+    if (result.twoFactorRequired) {
+      await router.push({ name: 'two-factor-verification' });
+      return;
+    }
     await router.push({ name: authStore.user?.email_verified === false ? 'email-verification-pending' : 'dashboard' });
 
     return;

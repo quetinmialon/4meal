@@ -110,4 +110,23 @@ describe('auth store session restoration', () => {
     expect(authStore.user).toBeNull();
     expect(window.localStorage.getItem('4meal.auth.session')).toBeNull();
   });
+
+  it('activates 2FA and maps backend errors when disabling it', async () => {
+    const authStore = useAuthStore();
+    authStore.applySession({
+      accessToken: 'jwt-token',
+      tokenType: 'Bearer',
+      expiresIn: 900,
+      user: { id: 7, name: 'Jane', email: 'jane@example.com', avatar_path: null, last_login_at: null, created_at: null },
+    });
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, data: { enabled: true } }) } as Response);
+
+    await expect(authStore.setTwoFactorEnabled(true)).resolves.toEqual({ ok: true, enabled: true });
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/2fa/enable', expect.objectContaining({ method: 'POST' }));
+    expect(authStore.user?.two_factor_enabled).toBe(true);
+
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ success: false, error: { message: 'Mot de passe incorrect.' } }) } as Response);
+    await expect(authStore.setTwoFactorEnabled(false, 'wrong')).resolves.toEqual({ ok: false, message: 'Mot de passe incorrect.' });
+    expect(authStore.user?.two_factor_enabled).toBe(true);
+  });
 });

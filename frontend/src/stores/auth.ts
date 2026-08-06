@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { apiFetch } from '@/utils/api';
 
 const AUTH_STORAGE_KEY = '4meal.auth.session';
+const TWO_FACTOR_STORAGE_KEY = '4meal.auth.two-factor';
 
 type AuthStatus = 'idle' | 'loading' | 'restoring' | 'authenticated';
 
@@ -11,6 +12,7 @@ export type AuthUser = {
   name: string;
   email: string;
   email_verified?: boolean;
+  two_factor_enabled?: boolean;
   avatar_path: string | null;
   avatar_url?: string | null;
   last_login_at: string | null;
@@ -42,6 +44,21 @@ type LoginSuccessPayload = {
   };
 };
 
+type TwoFactorRequiredPayload = {
+  success: true;
+  data: {
+    two_factor_required: true;
+    challenge: string;
+    expires_in: number;
+  };
+};
+
+export type PendingTwoFactorChallenge = {
+  challenge: string;
+  expiresIn: number;
+  email: string;
+};
+
 type CurrentUserSuccessPayload = {
   success: true;
   data: AuthUser;
@@ -62,6 +79,11 @@ type ApiErrorPayload = {
 export type LoginResult =
   | {
       ok: true;
+      twoFactorRequired?: false;
+    }
+  | {
+      ok: true;
+      twoFactorRequired: true;
     }
   | {
       ok: false;
@@ -116,6 +138,14 @@ export type UpdateProfileResult =
       message: string;
       fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password' | 'diet' | 'allergies' | 'default_servings', string>>;
     };
+
+export type TwoFactorActionResult =
+  | { ok: true; enabled: boolean }
+  | { ok: false; message: string };
+
+export type VerifyTwoFactorResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
 type PersistedSession = {
   user: AuthUser;
@@ -178,6 +208,24 @@ function persistSession(session: PersistedSession | null): void {
   }
 
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: session.user }));
+}
+
+function readPendingTwoFactor(): PendingTwoFactorChallenge | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(TWO_FACTOR_STORAGE_KEY) ?? 'null') as Partial<PendingTwoFactorChallenge> | null;
+    if (value === null || typeof value.challenge !== 'string' || value.challenge.length !== 64 || typeof value.expiresIn !== 'number' || typeof value.email !== 'string') return null;
+    return { challenge: value.challenge, expiresIn: value.expiresIn, email: value.email };
+  } catch {
+    return null;
+  }
+}
+
+function persistPendingTwoFactor(challenge: PendingTwoFactorChallenge | null): void {
+  if (typeof window === 'undefined') return;
+  if (challenge === null) window.sessionStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
+  else window.sessionStorage.setItem(TWO_FACTOR_STORAGE_KEY, JSON.stringify(challenge));
 }
 
 function extractFieldErrors(payload: ApiErrorPayload | null): Partial<Record<'email' | 'password', string>> {
@@ -269,6 +317,7 @@ export const useAuthStore = defineStore('auth', {
       tokenType: '',
       expiresIn: 0,
       user: session?.user ?? null,
+      pendingTwoFactor: readPendingTwoFactor(),
       status: (session === null ? 'idle' : 'restoring') as AuthStatus,
       isRestored: session === null,
     };
@@ -302,6 +351,11 @@ export const useAuthStore = defineStore('auth', {
       this.isRestored = true;
 
       persistSession(null);
+    },
+
+    clearPendingTwoFactor(): void {
+      this.pendingTwoFactor = null;
+      persistPendingTwoFactor(null);
     },
 
     async refreshSession(): Promise<AuthSession | null> {
@@ -455,10 +509,23 @@ export const useAuthStore = defineStore('auth', {
 
         const payload = (await response.json().catch(() => null)) as
           | LoginSuccessPayload
+          | TwoFactorRequiredPayload
           | ApiErrorPayload
           | null;
 
-        if (response.ok && payload?.success === true) {
+        if (response.status === 202 && payload?.success === true && 'two_factor_required' in payload.data) {
+          const twoFactorPayload = payload as TwoFactorRequiredPayload;
+          this.clearSession();
+          this.pendingTwoFactor = {
+            challenge: twoFactorPayload.data.challenge,
+            expiresIn: twoFactorPayload.data.expires_in,
+            email: credentials.email.trim().toLowerCase(),
+          };
+          persistPendingTwoFactor(this.pendingTwoFactor);
+          return { ok: true, twoFactorRequired: true };
+        }
+
+        if (response.ok && payload?.success === true && 'access_token' in payload.data) {
           this.applySession({
             accessToken: payload.data.access_token,
             tokenType: payload.data.token_type,
@@ -488,6 +555,54 @@ export const useAuthStore = defineStore('auth', {
           message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
           fieldErrors: {},
         };
+      }
+    },
+
+    async verifyTwoFactor(code: string): Promise<VerifyTwoFactorResult> {
+      const challenge = this.pendingTwoFactor;
+      if (challenge === null) return { ok: false, message: 'Votre demande de connexion a expire. Recommencez la connexion.' };
+
+      this.status = 'loading';
+      try {
+        const response = await apiFetch('/api/auth/2fa/verify', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ challenge: challenge.challenge, code }),
+        });
+        const payload = (await response.json().catch(() => null)) as LoginSuccessPayload | ApiErrorPayload | null;
+        if (response.ok && payload?.success === true && 'access_token' in payload.data) {
+          this.clearPendingTwoFactor();
+          this.applySession({ accessToken: payload.data.access_token, tokenType: payload.data.token_type, expiresIn: payload.data.expires_in, user: payload.data.user });
+          return { ok: true };
+        }
+        this.status = 'idle';
+        return { ok: false, message: payload?.success === false ? payload.error?.message ?? 'Le code est invalide ou expire.' : 'Le code est invalide ou expire.' };
+      } catch {
+        this.status = 'idle';
+        return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+      }
+    },
+
+    async setTwoFactorEnabled(enabled: boolean, currentPassword = ''): Promise<TwoFactorActionResult> {
+      if (this.user === null || this.accessToken === '' || this.tokenType === '') return { ok: false, message: 'Votre session a expire. Reconnectez-vous.' };
+      this.status = 'loading';
+      try {
+        const response = await apiFetch(`/api/auth/2fa/${enabled ? 'enable' : 'disable'}`, {
+          method: 'POST',
+          headers: { ...authHeaders({ accessToken: this.accessToken, tokenType: this.tokenType }), 'Content-Type': 'application/json' },
+          ...(enabled ? {} : { body: JSON.stringify({ current_password: currentPassword }) }),
+        });
+        const payload = (await response.json().catch(() => null)) as { success: true; data?: { enabled?: boolean } } | ApiErrorPayload | null;
+        this.status = 'authenticated';
+        if (response.ok && payload?.success === true) {
+          this.user = { ...this.user, two_factor_enabled: enabled };
+          persistSession({ user: this.user });
+          return { ok: true, enabled };
+        }
+        return { ok: false, message: payload?.success === false ? payload.error?.message ?? 'Impossible de modifier la verification en deux etapes.' : 'Impossible de modifier la verification en deux etapes.' };
+      } catch {
+        this.status = 'authenticated';
+        return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
       }
     },
 
