@@ -66,6 +66,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(1)->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip()));
         });
 
+        RateLimiter::for('auth.2fa.verify', function (Request $request) {
+            return Limit::perMinute(10)->by((string) $request->ip().'|'.(string) $request->input('challenge', 'guest'));
+        });
+
         RateLimiter::for('chat.messages', function (Request $request) {
             $userId = $request->user()?->getAuthIdentifier() ?? 'guest';
             $cookbookId = (string) $request->route('cookbook');

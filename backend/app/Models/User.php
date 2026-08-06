@@ -27,6 +27,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'two_factor_enabled',
         'diet',
         'allergies',
         'default_servings',
@@ -58,6 +59,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'two_factor_enabled' => 'boolean',
             'password_hash' => 'hashed',
             'last_login_at' => 'datetime',
             'diet' => Diet::class,
