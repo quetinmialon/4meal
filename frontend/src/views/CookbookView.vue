@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
 import CookbookMessageComposer from '@/components/CookbookMessageComposer.vue';
 import CookbookMessageItem from '@/components/CookbookMessageItem.vue';
+import RecipeImageField from '@/components/RecipeImageField.vue';
 import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe } from '@/utils/cookbooks';
 import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
@@ -165,25 +166,6 @@ async function saveName(): Promise<void> {
     editImageError.value = result.fieldErrors.image ?? '';
   }
   isSavingName.value = false;
-}
-
-function handleEditImageChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0] ?? null;
-  editName.image = file;
-  editImageError.value = '';
-
-  if (file === null) return;
-
-  if (!['image/png', 'image/jpeg'].includes(file.type)) {
-    editImageError.value = 'Le fichier doit être au format PNG ou JPEG.';
-    input.value = '';
-    editName.image = null;
-  } else if (file.size > 5 * 1024 * 1024) {
-    editImageError.value = 'L’image ne doit pas dépasser 5 Mo.';
-    input.value = '';
-    editName.image = null;
-  }
 }
 
 async function loadRecipes(page = 1): Promise<void> {
@@ -437,10 +419,17 @@ onMounted(async () => {
         <input id="cookbook-slug-edit-input" v-model="editName.slug" maxlength="255" />
         <p v-if="editSlugError" class="field-error" role="alert">{{ editSlugError }}</p>
         <label for="cookbook-description-edit-input">Description</label>
-        <textarea id="cookbook-description-edit-input" v-model="editName.description" rows="4" />
+        <textarea id="cookbook-description-edit-input" v-model="editName.description" rows="4" maxlength="5000" />
         <p v-if="editDescriptionError" class="field-error" role="alert">{{ editDescriptionError }}</p>
-        <label for="cookbook-image-edit-input">Nouvelle image (PNG/JPEG, 5 Mo maximum)</label>
-        <input id="cookbook-image-edit-input" type="file" accept="image/png,image/jpeg" @change="handleEditImageChange" />
+        <RecipeImageField
+          v-model="editName.image"
+          input-id="cookbook-image-edit-input"
+          label="Nouvelle image du cookbook"
+          :existing-image-url="cookbook.image_url"
+          preview-alt="Aperçu de la nouvelle image du cookbook"
+          :disabled="isSavingName"
+          @update:model-value="editImageError = ''"
+        />
         <p v-if="editImageError" class="field-error" role="alert">{{ editImageError }}</p>
         <p v-if="editGlobalError" class="error-summary" role="alert">{{ editGlobalError }}</p>
         <div class="edit-actions">

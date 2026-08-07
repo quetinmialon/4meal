@@ -34,7 +34,7 @@ class CookbookResource extends JsonResource
             'slug' => $cookbook->slug,
             'description' => $cookbook->description,
             'image_path' => $cookbook->image_path,
-            'image_url' => is_string($cookbook->image_path)
+            'image_url' => is_string($cookbook->image_path) && Storage::disk('public')->exists($cookbook->image_path)
                 ? Storage::disk('public')->url($cookbook->image_path)
                 : null,
             'owner' => UserResource::make($cookbook->owner)->resolve($request),

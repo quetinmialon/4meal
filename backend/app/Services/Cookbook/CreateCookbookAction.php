@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 class CreateCookbookAction
@@ -28,6 +29,11 @@ class CreateCookbookAction
 
                 if (($attributes['image'] ?? null) instanceof UploadedFile) {
                     $storedImagePath = Storage::disk('public')->putFile('cookbooks', $attributes['image']);
+
+                    if (! is_string($storedImagePath)) {
+                        throw new RuntimeException('Cookbook image could not be stored.');
+                    }
+
                     $cookbook->image_path = $storedImagePath;
                 }
 

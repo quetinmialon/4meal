@@ -34,8 +34,15 @@ class StoreCookbookRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:1', 'max:255'],
             'slug' => ['nullable', 'string', 'min:1', 'max:255', Rule::unique('cookbooks', 'slug')],
-            'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'image' => [
+                'nullable',
+                'file',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'extensions:jpg,jpeg,png,webp',
+                'max:5120',
+                'dimensions:min_width=200,min_height=200,max_width=4000,max_height=4000',
+            ],
         ];
     }
 }
