@@ -70,6 +70,7 @@ export type Recipe = {
   notes?: string | null;
   source: string | null;
   is_favorite?: boolean;
+  personal_rating?: number | null;
   image_path?: string | null;
   image_url?: string | null;
   created_at: string | null;
@@ -550,6 +551,10 @@ export type RecipeFavoriteResult =
   | { ok: true }
   | { ok: false; message: string };
 
+export type RecipeRatingResult =
+  | { ok: true; rating: number | null }
+  | { ok: false; message: string };
+
 export type PlannedMealInput = {
   recipe_id: string;
   date: string;
@@ -623,6 +628,44 @@ export async function setRecipeFavorite(
     return {
       ok: false,
       message: 'Impossible de joindre le serveur. Reessayez dans un instant.',
+    };
+  }
+}
+
+export async function setRecipeRating(
+  id: string,
+  rating: number | null,
+  tokenType: string,
+  accessToken: string,
+): Promise<RecipeRatingResult> {
+  try {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(id)}/rating`, {
+      method: rating === null ? 'DELETE' : 'POST',
+      headers: rating === null
+        ? recipeReadHeaders(tokenType, accessToken)
+        : { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' },
+      ...(rating === null ? {} : { body: JSON.stringify({ rating }) }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { success: true; data?: { rating?: number } }
+      | ApiErrorPayload
+      | null;
+
+    if (response.status === 204 || (response.ok && payload?.success !== false)) {
+      return { ok: true, rating };
+    }
+
+    return {
+      ok: false,
+      message: payload?.success === false
+        ? (payload.error?.message ?? 'Impossible de modifier votre note.')
+        : 'Impossible de modifier votre note.',
+    };
+  } catch {
+    return {
+      ok: false,
+      message: 'Impossible de joindre le serveur. Réessayez dans un instant.',
     };
   }
 }
