@@ -39,6 +39,9 @@ class RecipeResource extends JsonResource
             'notes' => $recipe->notes,
             'source' => $recipe->source,
             'is_favorite' => (bool) ($recipe->getAttribute('is_favorite') ?? false),
+            'personal_rating' => $recipe->getAttribute('personal_rating') === null
+                ? null
+                : (int) $recipe->getAttribute('personal_rating'),
             'author' => $this->whenLoaded('author', fn (): ?array => $recipe->author === null
                 ? null
                 : UserResource::make($recipe->author)->resolve($request)),

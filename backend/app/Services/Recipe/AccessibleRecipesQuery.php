@@ -17,7 +17,10 @@ class AccessibleRecipesQuery
             ->with(['ingredients', 'steps', 'tags', 'author'])
             ->withExists([
                 'favoritedBy as is_favorite' => fn (Builder $query) => $query->whereKey($user->getKey()),
-            ]);
+            ])
+            ->withAggregate([
+                'ratings as personal_rating' => fn (Builder $query) => $query->where('user_id', $user->getKey()),
+            ], 'rating');
 
         if ($scope === 'mine' || $scope === 'public') {
             $query->whereNotNull('user_id');

@@ -25,6 +25,9 @@ class ListCookbookRecipesController extends Controller
             ->withExists([
                 'favoritedBy as is_favorite' => fn (Builder $query) => $query->whereKey($user->getKey()),
             ])
+            ->withAggregate([
+                'ratings as personal_rating' => fn (Builder $query) => $query->where('user_id', $user->getKey()),
+            ], 'rating')
             ->orWhereHas('cookbooks', fn (Builder $query) => $query->whereKey($cookbook->getKey()))
             ->orderByDesc('recipes.created_at')
             ->paginate($perPage)
