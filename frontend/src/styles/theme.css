@@ -1,0 +1,37 @@
+:root {
+  --app-background: linear-gradient(180deg, #f8f5ee 0%, #efe7d7 100%);
+  --app-surface: rgba(255, 253, 248, 0.92);
+  --app-text: #243127;
+  --app-muted: #50634d;
+  --app-border: rgba(86, 112, 79, 0.18);
+}
+
+html[data-theme='dark'] {
+  --app-background: linear-gradient(180deg, #172019 0%, #0e1410 100%);
+  --app-surface: rgba(28, 39, 31, 0.96);
+  --app-text: #edf3e9;
+  --app-muted: #b5c6b0;
+  --app-border: rgba(170, 199, 161, 0.24);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--app-background);
+  color: var(--app-text);
+}
+
+html[data-theme='dark'] .app-shell main,
+html[data-theme='dark'] .app-shell [class$='-card'] {
+  background: var(--app-surface) !important;
+  color: var(--app-text);
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme='dark'] .app-shell input,
+html[data-theme='dark'] .app-shell select,
+html[data-theme='dark'] .app-shell textarea {
+  background: #172219 !important;
+  color: var(--app-text) !important;
+  border-color: #526650 !important;
+}

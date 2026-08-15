@@ -37,6 +37,7 @@ describe('ProfileView', () => {
         diet: 'vegetarian',
         allergies: ['arachides'],
         default_servings: 3,
+        theme: 'light',
       },
     });
 
@@ -187,6 +188,25 @@ describe('ProfileView', () => {
     expect(body.get('diet')).toBe('vegan');
     expect(body.getAll('allergies[]')).toEqual(['arachides', 'lait']);
     expect(body.get('default_servings')).toBe('4');
+  });
+
+  it('changes the theme immediately and synchronizes explicit themes', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: { id: 7, name: 'Jane Doe', email: 'jane@example.com', avatar_path: null, theme: 'dark', last_login_at: null, created_at: null } }),
+    } as Response);
+
+    const wrapper = mountView();
+    await wrapper.get('#theme-input').setValue('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+
+    await wrapper.get('form').trigger('submit.prevent');
+    await flushPromises();
+
+    const body = profileRequest()[1]?.body as FormData;
+    expect(body.get('theme')).toBe('dark');
+    expect(window.localStorage.getItem('4meal.theme.preference')).toBe('dark');
   });
 
   it('validates portions and allergy labels before submitting', async () => {
