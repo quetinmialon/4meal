@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import type { ImportErrorDetail, ImportPreview, ImportReport } from '@/utils/import';
-import { importCsvFile, importJsonFile, importMealieFile, previewJsonFile } from '@/utils/import';
+import { importCsvFile, importJsonFile, importMealieFile, previewImportFile } from '@/utils/import';
 
 const authStore = useAuthStore();
 const selectedFile = ref<File | null>(null);
@@ -41,22 +41,11 @@ async function handleImport(): Promise<void> {
   errors.value = [];
   report.value = null;
   preview.value = null;
-  if (format.value === 'json') {
-    const result = await previewJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
-    if (result.ok) preview.value = result.analysis;
-    else {
-      errorMessage.value = result.message;
-      errors.value = result.errors;
-    }
-  } else {
-    const result = format.value === 'mealie'
-      ? await importMealieFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
-      : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
-    if (result.ok) report.value = result.report;
-    else {
-      errorMessage.value = result.message;
-      errors.value = result.errors;
-    }
+  const result = await previewImportFile(selectedFile.value, format.value, authStore.tokenType, authStore.accessToken);
+  if (result.ok) preview.value = result.analysis;
+  else {
+    errorMessage.value = result.message;
+    errors.value = result.errors;
   }
   isUploading.value = false;
 }
@@ -69,7 +58,9 @@ async function confirmImport(): Promise<void> {
   errors.value = [];
   const result = format.value === 'json'
     ? await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
-    : null;
+    : format.value === 'mealie'
+      ? await importMealieFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
+      : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
   if (result?.ok) report.value = result.report;
   else if (result) {
     errorMessage.value = result.message;
@@ -184,7 +175,7 @@ function cancelPreview(): void {
     </section>
 
     <button v-if="!preview" class="import-button" type="button" :disabled="selectedFile === null || isUploading" @click="handleImport">
-      {{ isUploading ? 'Analyse en cours…' : format === 'json' ? 'Prévisualiser avant import' : 'Importer ce fichier' }}
+      {{ isUploading ? 'Analyse en cours…' : 'Prévisualiser avant import' }}
     </button>
   </main>
 </template>

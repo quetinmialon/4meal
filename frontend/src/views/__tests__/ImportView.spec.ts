@@ -83,13 +83,18 @@ describe('ImportView', () => {
   });
 
   it('keeps CSV and Mealie import flows available', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }) } as Response);
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { analysis: { objects: [{ path: 'recipes.0', type: 'recipe', id: 'r1', title: 'Soupe' }], warnings: [], errors: [], duplicates: [] } } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }) } as Response);
     const wrapper = mount(ImportView);
     await wrapper.get('input[type="radio"][value="csv"]').setValue(true);
     chooseFile(wrapper, new File(['format_version,record_type'], 'recipes.csv', { type: 'text/csv' }));
     await flushPromises();
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/csv');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/preview/csv');
+    await wrapper.get('button.import-button').trigger('click');
+    await flushPromises();
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/import/csv');
   });
 });

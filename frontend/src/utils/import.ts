@@ -88,6 +88,29 @@ export type ImportPreviewResult =
   | { ok: true; analysis: ImportPreview }
   | { ok: false; message: string; errors: ImportErrorDetail[] };
 
+export type ImportFormat = 'json' | 'csv' | 'mealie';
+
+export async function previewImportFile(file: File, format: ImportFormat, tokenType: string, accessToken: string): Promise<ImportPreviewResult> {
+  const isCsv = format === 'csv';
+  const extension = isCsv ? '.csv' : '.json';
+  const acceptedTypes = isCsv ? ['text/csv', 'text/plain', 'application/csv'] : ['application/json', 'application/ld+json', 'text/json'];
+  if (!file.name.toLowerCase().endsWith(extension)) return { ok: false, message: `Sélectionnez un fichier avec l’extension ${extension}.`, errors: [{ path: 'file', code: 'invalid_extension', message: 'L’extension du fichier est invalide.' }] };
+  if (file.size > MAX_IMPORT_SIZE) return { ok: false, message: 'Le fichier ne doit pas dépasser 10 Mo.', errors: [{ path: 'file', code: 'file_too_large', message: 'Le fichier dépasse la taille maximale autorisée.' }] };
+  if (file.type !== '' && !acceptedTypes.includes(file.type)) return { ok: false, message: 'Le type du fichier sélectionné est invalide.', errors: [{ path: 'file', code: 'invalid_mime', message: 'Le type MIME du fichier est invalide.' }] };
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const route = format === 'json' ? '/api/import/preview' : `/api/import/preview/${format}`;
+    const response = await apiFetch(route, { method: 'POST', headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` }, body: formData });
+    const payload = (await response.json().catch(() => null)) as ImportPayload | null;
+    if (response.ok && payload?.success === true && payload.data?.analysis) return { ok: true, analysis: payload.data.analysis };
+    return { ok: false, message: payload?.error?.message ?? 'Impossible d’analyser ce fichier.', errors: normalizeErrors(payload) };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.', errors: [{ path: '', code: 'network_error', message: 'Le serveur est momentanément indisponible.' }] };
+  }
+}
+
 export async function previewJsonFile(file: File, tokenType: string, accessToken: string): Promise<ImportPreviewResult> {
   if (!file.name.toLowerCase().endsWith('.json')) return { ok: false, message: 'Sélectionnez un fichier avec l’extension .json.', errors: [{ path: 'file', code: 'invalid_extension', message: 'Le fichier doit être un JSON.' }] };
   if (file.size > MAX_IMPORT_SIZE) return { ok: false, message: 'Le fichier ne doit pas dépasser 10 Mo.', errors: [{ path: 'file', code: 'file_too_large', message: 'Le fichier dépasse la taille maximale autorisée.' }] };

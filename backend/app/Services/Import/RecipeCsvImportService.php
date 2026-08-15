@@ -31,6 +31,27 @@ final class RecipeCsvImportService
         }
     }
 
+    /** @return array{objects: list<array<string, mixed>>, warnings: list<array{path: string, code: string, message: string}>, errors: list<array{path: string, code: string, message: string}>, duplicates: list<array{path: string, type: string, reason: string}>} */
+    public function analyze(User $user, UploadedFile $file): array
+    {
+        try {
+            $records = $this->parse($file);
+        } catch (ImportException $exception) {
+            return ['objects' => [], 'warnings' => [], 'errors' => $exception->errors, 'duplicates' => []];
+        }
+
+        $objects = [];
+        $duplicates = [];
+        foreach (collect($records)->where('record_type', 'recipe')->values() as $index => $record) {
+            $objects[] = ['path' => "recipes.{$index}", 'type' => 'recipe', 'id' => $record['recipe_key'], 'title' => $record['title']];
+            if (Recipe::query()->where('user_id', $user->id)->where('title', $record['title'])->where('source', $record['source'] ?: null)->exists()) {
+                $duplicates[] = ['path' => "recipes.{$index}", 'type' => 'recipe', 'reason' => 'Même titre et source déjà présents.'];
+            }
+        }
+
+        return ['objects' => $objects, 'warnings' => [], 'errors' => [], 'duplicates' => $duplicates];
+    }
+
     /** @return list<array<string, string>> */
     private function parse(UploadedFile $file): array
     {
