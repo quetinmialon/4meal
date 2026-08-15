@@ -25,6 +25,9 @@ defineProps<{ recipe: Recipe }>();
         <span v-if="recipe.cook_time_minutes !== null">Cuisson : {{ recipe.cook_time_minutes }} min</span>
         <span v-if="recipe.servings !== null">{{ recipe.servings }} portion<span v-if="recipe.servings > 1">s</span></span>
       </div>
+      <p class="recipe-rating" aria-label="Note moyenne">
+        ★ {{ (recipe.average_rating ?? 0).toFixed(1) }}/5 <span>({{ recipe.rating_count ?? 0 }} vote{{ (recipe.rating_count ?? 0) > 1 ? 's' : '' }})</span>
+      </p>
       <div v-if="recipe.tags?.length" class="tags" aria-label="Tags">
         <span v-for="tag in recipe.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
       </div>
@@ -45,6 +48,8 @@ h3 { margin: 0; color: #243127; font-size: 1.3rem; }
 .recipe-author img, .author-fallback { width: 2rem; height: 2rem; border-radius: 50%; object-fit: cover; }
 .author-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .recipe-meta { display: flex; flex-wrap: wrap; gap: .45rem .8rem; color: #50634d; font-size: .9rem; }
+.recipe-rating { margin: .8rem 0 0; color: #a46114; font-weight: 700; }
+.recipe-rating span { color: #50634d; font-size: .85rem; font-weight: 400; }
 .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
 .tag { padding: .25rem .5rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: .8rem; }
 .details-link { width: fit-content; color: #395330; font-weight: 700; text-decoration: none; }

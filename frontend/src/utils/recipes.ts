@@ -71,6 +71,8 @@ export type Recipe = {
   source: string | null;
   is_favorite?: boolean;
   personal_rating?: number | null;
+  average_rating?: number;
+  rating_count?: number;
   image_path?: string | null;
   image_url?: string | null;
   created_at: string | null;
@@ -126,6 +128,8 @@ export type RecipeFilters = {
   max_prep_time?: number;
   max_cook_time?: number;
   favorites?: boolean;
+  min_rating?: number;
+  sort?: 'rating_desc' | 'rating_asc';
 };
 
 type RecipePayload = { success: true; data: CreatedRecipe };
@@ -232,6 +236,8 @@ export async function fetchRecipes(
     if (filters.max_prep_time !== undefined) params.set('max_prep_time', String(filters.max_prep_time));
     if (filters.max_cook_time !== undefined) params.set('max_cook_time', String(filters.max_cook_time));
     if (filters.favorites) params.set('favorites', 'true');
+    if (filters.min_rating !== undefined) params.set('min_rating', String(filters.min_rating));
+    if (filters.sort) params.set('sort', filters.sort);
     const response = await apiFetch(`/api/recipes?${params.toString()}`, { headers: recipeReadHeaders(tokenType, accessToken) });
     const payload = (await response.json().catch(() => null)) as RecipeListPayload | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) {
