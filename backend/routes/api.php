@@ -24,6 +24,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\VerifyTwoFactorController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationByIdController;
 use App\Http\Controllers\Cookbook\AcceptCookbookInvitationController;
+use App\Http\Controllers\Cookbook\AddCookbookMessageReactionController;
 use App\Http\Controllers\Cookbook\AddCookbookRecipeController;
 use App\Http\Controllers\Cookbook\CreateCookbookController;
 use App\Http\Controllers\Cookbook\CreateCookbookInvitationController;
@@ -39,6 +40,7 @@ use App\Http\Controllers\Cookbook\ListCookbookRecipesController;
 use App\Http\Controllers\Cookbook\ListCookbooksController;
 use App\Http\Controllers\Cookbook\ListLatestCookbookMessagesController;
 use App\Http\Controllers\Cookbook\RemoveCookbookMemberController;
+use App\Http\Controllers\Cookbook\RemoveCookbookMessageReactionController;
 use App\Http\Controllers\Cookbook\RemoveCookbookRecipeController;
 use App\Http\Controllers\Cookbook\ShowCookbookController;
 use App\Http\Controllers\Cookbook\ShowCookbookInvitationController;
@@ -260,6 +262,12 @@ Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
 
         Route::delete('cookbooks/{cookbook}/messages/{message}', DeleteCookbookMessageController::class)
             ->name('cookbooks.messages.destroy');
+
+        Route::post('cookbooks/{cookbook}/messages/{message}/reactions', AddCookbookMessageReactionController::class)
+            ->name('cookbooks.messages.reactions.store');
+
+        Route::delete('cookbooks/{cookbook}/messages/{message}/reactions', RemoveCookbookMessageReactionController::class)
+            ->name('cookbooks.messages.reactions.destroy');
 
         Route::get('cookbooks/{cookbook}/messages', ListCookbookMessagesController::class)
             ->name('cookbooks.messages.index');

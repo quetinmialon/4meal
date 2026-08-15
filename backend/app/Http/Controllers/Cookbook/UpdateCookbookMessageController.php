@@ -20,7 +20,7 @@ class UpdateCookbookMessageController extends Controller
         /** @var User $user */ $user = $request->user();
         Gate::forUser($user)->authorize('update', $message);
         $message->update(['content' => $request->string('content')->toString(), 'edited_at' => now()]);
-        $message->load('user', 'deletedBy');
+        $message->load('user', 'deletedBy', 'reactions');
         $message->setAttribute('member_role', $cookbook->members()->whereKey($message->user_id)->value('cookbook_members.role'));
 
         return ApiResponse::success($request, CookbookMessageResource::make($message)->resolve($request));

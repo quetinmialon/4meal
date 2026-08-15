@@ -31,7 +31,7 @@ class ListCookbookMessagesController extends Controller
                     ->whereColumn('cookbook_members.user_id', 'cookbook_messages.user_id')
                     ->limit(1),
             ])
-            ->with('user', 'deletedBy')
+            ->with('user', 'deletedBy', 'reactions')
             ->orderBy('created_at')
             ->orderBy('id')
             ->cursorPaginate($perPage, ['*'], 'cursor', $request->input('cursor'));

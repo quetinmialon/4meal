@@ -20,7 +20,7 @@ class DeleteCookbookMessageController extends Controller
         /** @var User $user */ $user = $request->user();
         Gate::forUser($user)->authorize('delete', $message);
         $message->update(['deleted_at' => now(), 'deleted_by_user_id' => $user->getKey()]);
-        $message->load('user', 'deletedBy');
+        $message->load('user', 'deletedBy', 'reactions');
         $message->setAttribute('member_role', $cookbook->members()->whereKey($message->user_id)->value('cookbook_members.role'));
 
         return ApiResponse::success($request, CookbookMessageResource::make($message)->resolve($request));

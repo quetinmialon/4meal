@@ -32,7 +32,7 @@ class ShowCookbookController extends Controller
 
         $latestMessages = CookbookMessage::query()
             ->where('cookbook_id', $cookbook->getKey())
-            ->with('user')
+            ->with('user', 'deletedBy', 'reactions')
             ->latest('created_at')
             ->latest('id')
             ->limit(3)
