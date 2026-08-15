@@ -28,7 +28,7 @@ class UpdateProfileAction
 
             $updatedUser = DB::transaction(function () use ($user, $attributes, $newAvatarPath): User {
                 $user->forceFill(array_intersect_key($attributes, array_flip([
-                    'name', 'email', 'diet', 'allergies', 'default_servings', 'email_verified_at',
+                    'name', 'email', 'diet', 'allergies', 'default_servings', 'theme', 'email_verified_at',
                 ])));
 
                 if (is_string($newAvatarPath)) {

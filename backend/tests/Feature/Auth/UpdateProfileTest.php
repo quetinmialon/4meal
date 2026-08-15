@@ -58,6 +58,32 @@ it('updates food preferences and exposes them in the user resource', function ()
         ->and($user->fresh()->default_servings)->toBe(4);
 });
 
+it('updates and exposes the validated theme preference', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(profileToken($user))->patchJson('/api/auth/me', [
+        'theme' => 'dark',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.theme', 'dark');
+
+    expect($user->fresh()->theme->value)->toBe('dark');
+});
+
+it('defaults the theme to light and rejects unsupported themes', function () {
+    $user = User::factory()->create(['password' => 'password123']);
+
+    $this->withToken(profileToken($user))
+        ->getJson('/api/auth/me')
+        ->assertOk()
+        ->assertJsonPath('data.theme', 'light');
+
+    $this->withToken(profileToken($user))->patchJson('/api/auth/me', [
+        'theme' => 'system',
+    ])->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['theme']]]]);
+});
+
 it('allows clearing all allergies', function () {
     $user = User::factory()->create([
         'password' => 'password123',

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Enums\Diet;
+use App\Enums\Theme;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -80,6 +81,7 @@ class UpdateProfileRequest extends FormRequest
             'allergies' => ['sometimes', 'array', 'max:50'],
             'allergies.*' => ['string', 'min:1', 'max:100'],
             'default_servings' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'theme' => ['sometimes', Rule::enum(Theme::class)],
         ];
     }
 }
