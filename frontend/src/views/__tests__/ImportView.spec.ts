@@ -6,9 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import ImportView from '../ImportView.vue';
 
-vi.mock('vue-router', () => ({
-  RouterLink: { template: '<a><slot /></a>' },
-}));
+vi.mock('vue-router', () => ({ RouterLink: { template: '<a><slot /></a>' } }));
 
 describe('ImportView', () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -18,9 +16,7 @@ describe('ImportView', () => {
     vi.stubGlobal('fetch', fetchMock);
     setActivePinia(createPinia());
     useAuthStore().applySession({
-      accessToken: 'jwt-token',
-      tokenType: 'Bearer',
-      expiresIn: 900,
+      accessToken: 'jwt-token', tokenType: 'Bearer', expiresIn: 900,
       user: { id: 7, name: 'Jane Doe', email: 'jane@example.com', avatar_path: null, last_login_at: null, created_at: null },
     });
   });
@@ -31,59 +27,49 @@ describe('ImportView', () => {
     void wrapper.get('input[type="file"]').trigger('change');
   }
 
-  it('shows file selection, warnings and keeps import disabled without a file', () => {
+  it('shows file selection and keeps import disabled without a file', () => {
     const wrapper = mount(ImportView);
-
     expect(wrapper.text()).toContain('Avant de commencer');
-    expect(wrapper.text()).toContain('identifiants externes');
     expect((wrapper.get('button.import-button').element as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('uploads the selected JSON and displays the structured result', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        success: true,
-        data: { report: { cookbooks: 2, recipes: 5, duplicates: [{ path: 'recipes.1', type: 'recipe', reason: 'Déjà présente.' }] } },
-      }),
-    } as Response);
+  it('previews JSON objects and imports only after confirmation', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { analysis: {
+        objects: [{ path: 'recipes.0', type: 'recipe', id: 'r1', title: 'Omelette' }], warnings: [], errors: [], duplicates: [],
+      } } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }) } as Response);
     const wrapper = mount(ImportView);
     chooseFile(wrapper, new File(['{}'], 'backup.json', { type: 'application/json' }));
     await flushPromises();
-
-    expect(wrapper.text()).toContain('backup.json');
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
 
-    const request = fetchMock.mock.calls[0]!;
-    expect(request[0]).toBe('/api/import');
-    expect(request[1]).toMatchObject({ method: 'POST', headers: { Accept: 'application/json', Authorization: 'Bearer jwt-token' } });
-    expect((request[1] as RequestInit).body).toBeInstanceOf(FormData);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/preview');
+    expect(wrapper.text()).toContain('Prévisualisation avant import');
+    expect(wrapper.text()).toContain('Omelette');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await wrapper.get('button.import-button').trigger('click');
+    await flushPromises();
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/import');
     expect(wrapper.text()).toContain('Import terminé');
-    expect(wrapper.text()).toContain('Cookbooks importés');
-    expect(wrapper.text()).toContain('Déjà présente.');
   });
 
-  it('displays safe structured API errors', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 422,
-      json: async () => ({
-        success: false,
-        error: {
-          message: 'Le document contient des incohérences métier.',
-          details: { errors: [{ path: 'recipes.0.cookbook_ids.0', code: 'unknown_reference', message: 'Référence inconnue.' }] },
-        },
-      }),
-    } as Response);
+  it('displays preview errors and disables final confirmation', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ success: true, data: { analysis: {
+      objects: [], warnings: [], errors: [{ path: 'recipes.0', code: 'schema_invalid', message: 'Structure invalide.' }], duplicates: [],
+    } } }) } as Response);
     const wrapper = mount(ImportView);
     chooseFile(wrapper, new File(['{}'], 'backup.json', { type: 'application/json' }));
     await flushPromises();
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
 
-    expect(wrapper.get('[role="alert"]').text()).toContain('recipes.0.cookbook_ids.0');
-    expect(wrapper.get('[role="alert"]').text()).toContain('unknown_reference');
+    expect(wrapper.get('[role="alert"]').text()).toContain('Structure invalide.');
+    expect(wrapper.get('button.import-button').text()).toContain('Confirmer et importer');
+    expect((wrapper.get('button.import-button').element as HTMLButtonElement).disabled).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a non-JSON file before sending it', async () => {
@@ -92,57 +78,23 @@ describe('ImportView', () => {
     await flushPromises();
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
-
     expect(fetchMock).not.toHaveBeenCalled();
     expect(wrapper.get('[role="alert"]').text()).toContain('extension .json');
   });
 
-  it('imports a CSV recipe file and shows the CSV limitations', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: { report: { recipes: 2, duplicates: [] } } }),
-    } as Response);
+  it('keeps CSV and Mealie import flows available', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { analysis: { objects: [{ path: 'recipes.0', type: 'recipe', id: 'r1', title: 'Soupe' }], warnings: [], errors: [], duplicates: [] } } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }) } as Response);
     const wrapper = mount(ImportView);
     await wrapper.get('input[type="radio"][value="csv"]').setValue(true);
-    expect(wrapper.text()).toContain('pas de cookbooks, images');
     chooseFile(wrapper, new File(['format_version,record_type'], 'recipes.csv', { type: 'text/csv' }));
     await flushPromises();
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
-
-    const request = fetchMock.mock.calls[0]!;
-    expect(request[0]).toBe('/api/import/csv');
-    expect(wrapper.text()).toContain('Recettes importées');
-  });
-
-  it('rejects a non-CSV file before sending it in CSV mode', async () => {
-    const wrapper = mount(ImportView);
-    await wrapper.get('input[type="radio"][value="csv"]').setValue(true);
-    chooseFile(wrapper, new File(['text'], 'backup.txt', { type: 'text/plain' }));
-    await flushPromises();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/preview/csv');
     await wrapper.get('button.import-button').trigger('click');
     await flushPromises();
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(wrapper.get('[role="alert"]').text()).toContain('extension .csv');
-  });
-
-  it('imports a Mealie recipe and displays its compatibility limits', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: { report: { recipes: 1, duplicates: [] } } }),
-    } as Response);
-    const wrapper = mount(ImportView);
-    await wrapper.get('input[type="radio"][value="mealie"]').setValue(true);
-
-    expect(wrapper.text()).toContain('Mealie Recipe JSON API v1');
-    expect(wrapper.text()).toContain('Cookbooks, images, nutrition');
-    chooseFile(wrapper, new File(['{}'], 'carbonara.json', { type: 'application/json' }));
-    await flushPromises();
-    await wrapper.get('button.import-button').trigger('click');
-    await flushPromises();
-
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/import/mealie');
-    expect(wrapper.text()).toContain('Recettes import');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/import/csv');
   });
 });

@@ -52,6 +52,9 @@ use App\Http\Controllers\Export\DownloadRecipeCsvController;
 use App\Http\Controllers\Import\ImportCsvController;
 use App\Http\Controllers\Import\ImportJsonController;
 use App\Http\Controllers\Import\ImportMealieController;
+use App\Http\Controllers\Import\PreviewCsvImportController;
+use App\Http\Controllers\Import\PreviewImportController;
+use App\Http\Controllers\Import\PreviewMealieImportController;
 use App\Http\Controllers\Notification\ListNotificationPreferencesController;
 use App\Http\Controllers\Notification\ListNotificationsController;
 use App\Http\Controllers\Notification\MarkNotificationAsReadController;
@@ -136,6 +139,12 @@ Route::get('auth/microsoft/callback', MicrosoftOAuthCallbackController::class)
 
 Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
     ->group(function () {
+        Route::post('import/preview', PreviewImportController::class)
+            ->name('import.preview');
+        Route::post('import/preview/csv', PreviewCsvImportController::class)
+            ->name('import.preview.csv');
+        Route::post('import/preview/mealie', PreviewMealieImportController::class)
+            ->name('import.preview.mealie');
         Route::post('import', ImportJsonController::class)
             ->name('import.json');
         Route::post('import/mealie', ImportMealieController::class)

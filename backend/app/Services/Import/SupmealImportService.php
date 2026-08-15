@@ -36,6 +36,52 @@ final class SupmealImportService
         }
     }
 
+    /**
+     * Analyse un document SUPMEAL sans modifier les données persistées.
+     *
+     * @return array{objects: list<array<string, mixed>>, warnings: list<array{path: string, code: string, message: string}>, errors: list<array{path: string, code: string, message: string}>, duplicates: list<array{path: string, type: string, reason: string}>}
+     */
+    public function analyze(User $user, UploadedFile $file): array
+    {
+        try {
+            $document = $this->decode($file);
+            $this->validateSchema($document);
+            $this->validateBusinessRules($document);
+        } catch (ImportException $exception) {
+            return [
+                'objects' => [],
+                'warnings' => [],
+                'errors' => $exception->errors,
+                'duplicates' => [],
+            ];
+        }
+
+        $objects = [];
+        foreach ($document['cookbooks'] as $index => $cookbook) {
+            $objects[] = [
+                'path' => "cookbooks.{$index}",
+                'type' => 'cookbook',
+                'id' => $cookbook['id'],
+                'name' => $cookbook['name'],
+            ];
+        }
+        foreach ($document['recipes'] as $index => $recipe) {
+            $objects[] = [
+                'path' => "recipes.{$index}",
+                'type' => 'recipe',
+                'id' => $recipe['id'],
+                'title' => $recipe['title'],
+            ];
+        }
+
+        return [
+            'objects' => $objects,
+            'warnings' => [],
+            'errors' => [],
+            'duplicates' => $this->findPotentialDuplicates($user, $document),
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function decode(UploadedFile $file): array
     {
@@ -131,6 +177,42 @@ final class SupmealImportService
         if ($errors !== []) {
             throw new ImportException('Le document contient des incohérences métier.', $errors, 'business_invalid');
         }
+    }
+
+    /** @param array<string, mixed> $document @return list<array{path: string, type: string, reason: string}> */
+    private function findPotentialDuplicates(User $user, array $document): array
+    {
+        $duplicates = [];
+        $cookbookMap = [];
+
+        foreach ($document['cookbooks'] as $index => $input) {
+            $cookbook = Cookbook::query()
+                ->where('owner_id', $user->getKey())
+                ->where(function ($query) use ($input): void {
+                    $query->where('slug', $input['slug'] ?? Str::slug($input['name']))
+                        ->orWhere('name', $input['name']);
+                })
+                ->first();
+
+            if ($cookbook !== null) {
+                $cookbookMap[$input['id']] = $cookbook;
+                $duplicates[] = ['path' => "cookbooks.{$index}", 'type' => 'cookbook', 'reason' => 'Même nom ou slug déjà présent dans vos cookbooks.'];
+            }
+        }
+
+        foreach ($document['recipes'] as $index => $input) {
+            $duplicateQuery = Recipe::query()->where('title', $input['title'])->where('source', $input['source'] ?? null);
+            $primaryCookbook = collect($input['cookbook_ids'])->map(fn (string $id): ?Cookbook => $cookbookMap[$id] ?? null)->filter()->first();
+            $primaryCookbook !== null
+                ? $duplicateQuery->where('cookbook_id', $primaryCookbook->getKey())
+                : $duplicateQuery->where('user_id', $user->getKey());
+
+            if ($duplicateQuery->exists()) {
+                $duplicates[] = ['path' => "recipes.{$index}", 'type' => 'recipe', 'reason' => 'Même titre et source dans le même périmètre.'];
+            }
+        }
+
+        return $duplicates;
     }
 
     /** @param array<string, mixed> $document */

@@ -3,10 +3,40 @@
 namespace App\Services\Import;
 
 use App\Exceptions\ImportException;
+use App\Models\Recipe;
+use App\Models\User;
+use Illuminate\Http\UploadedFile;
 
 /** Converts the Mealie API recipe representation into application import data. */
 final class MealieRecipeAdapter
 {
+    /** @return array{objects: list<array<string, mixed>>, warnings: list<array{path: string, code: string, message: string}>, errors: list<array{path: string, code: string, message: string}>, duplicates: list<array{path: string, type: string, reason: string}>} */
+    public function analyze(User $user, UploadedFile $file): array
+    {
+        try {
+            $document = json_decode((string) file_get_contents($file->getRealPath()), true, 512, JSON_THROW_ON_ERROR);
+            if (! is_array($document)) {
+                throw new ImportException('Le document Mealie doit être un objet.', [['path' => '', 'code' => 'root_not_object', 'message' => 'La racine JSON doit être un objet.']], 'import_invalid');
+            }
+            $recipes = $this->adapt($document);
+        } catch (ImportException $exception) {
+            return ['objects' => [], 'warnings' => [], 'errors' => $exception->errors, 'duplicates' => []];
+        } catch (\Throwable) {
+            return ['objects' => [], 'warnings' => [], 'errors' => [['path' => '', 'code' => 'invalid_json', 'message' => 'Le document JSON est syntaxiquement invalide.']], 'duplicates' => []];
+        }
+
+        $objects = [];
+        $duplicates = [];
+        foreach ($recipes as $index => $recipe) {
+            $objects[] = ['path' => "recipes.{$index}", 'type' => 'recipe', 'id' => (string) $index, 'title' => $recipe['title']];
+            if (Recipe::query()->where('user_id', $user->id)->where('title', $recipe['title'])->whereNull('source')->exists()) {
+                $duplicates[] = ['path' => "recipes.{$index}", 'type' => 'recipe', 'reason' => 'Même titre déjà présent.'];
+            }
+        }
+
+        return ['objects' => $objects, 'warnings' => [], 'errors' => [], 'duplicates' => $duplicates];
+    }
+
     /** @return list<array<string, mixed>> */
     public function adapt(array $document): array
     {

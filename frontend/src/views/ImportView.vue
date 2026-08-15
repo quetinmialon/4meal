@@ -3,8 +3,8 @@ import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
-import type { ImportErrorDetail, ImportReport } from '@/utils/import';
-import { importCsvFile, importJsonFile, importMealieFile } from '@/utils/import';
+import type { ImportErrorDetail, ImportPreview, ImportReport } from '@/utils/import';
+import { importCsvFile, importJsonFile, importMealieFile, previewImportFile } from '@/utils/import';
 
 const authStore = useAuthStore();
 const selectedFile = ref<File | null>(null);
@@ -12,6 +12,7 @@ const isUploading = ref(false);
 const errorMessage = ref('');
 const errors = ref<ImportErrorDetail[]>([]);
 const report = ref<ImportReport | null>(null);
+const preview = ref<ImportPreview | null>(null);
 const format = ref<'json' | 'csv' | 'mealie'>('json');
 
 function selectFile(event: Event): void {
@@ -20,6 +21,7 @@ function selectFile(event: Event): void {
   errorMessage.value = '';
   errors.value = [];
   report.value = null;
+  preview.value = null;
 }
 
 function clearFile(input?: HTMLInputElement): void {
@@ -27,6 +29,7 @@ function clearFile(input?: HTMLInputElement): void {
   errorMessage.value = '';
   errors.value = [];
   report.value = null;
+  preview.value = null;
   if (input) input.value = '';
 }
 
@@ -37,17 +40,39 @@ async function handleImport(): Promise<void> {
   errorMessage.value = '';
   errors.value = [];
   report.value = null;
-  const result = format.value === 'json'
-    ? await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
-    : format.value === 'mealie'
-      ? await importMealieFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
-      : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
-  if (result.ok) report.value = result.report;
+  preview.value = null;
+  const result = await previewImportFile(selectedFile.value, format.value, authStore.tokenType, authStore.accessToken);
+  if (result.ok) preview.value = result.analysis;
   else {
     errorMessage.value = result.message;
     errors.value = result.errors;
   }
   isUploading.value = false;
+}
+
+async function confirmImport(): Promise<void> {
+  if (selectedFile.value === null || isUploading.value || (format.value === 'json' && preview.value === null)) return;
+
+  isUploading.value = true;
+  errorMessage.value = '';
+  errors.value = [];
+  const result = format.value === 'json'
+    ? await importJsonFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
+    : format.value === 'mealie'
+      ? await importMealieFile(selectedFile.value, authStore.tokenType, authStore.accessToken)
+      : await importCsvFile(selectedFile.value, authStore.tokenType, authStore.accessToken);
+  if (result?.ok) report.value = result.report;
+  else if (result) {
+    errorMessage.value = result.message;
+    errors.value = result.errors;
+  }
+  isUploading.value = false;
+}
+
+function cancelPreview(): void {
+  preview.value = null;
+  errorMessage.value = '';
+  errors.value = [];
 }
 </script>
 
@@ -104,6 +129,37 @@ async function handleImport(): Promise<void> {
       Validation et import du fichier en cours…
     </div>
 
+    <section v-if="preview" class="preview" aria-labelledby="preview-title">
+      <h2 id="preview-title">Prévisualisation avant import</h2>
+      <p>Vérifiez les éléments détectés avant de confirmer l’écriture dans votre compte.</p>
+      <table>
+        <caption>Objets reconnus</caption>
+        <thead><tr><th>Type</th><th>Nom</th><th>Chemin</th></tr></thead>
+        <tbody>
+          <tr v-for="object in preview.objects" :key="object.path">
+            <td>{{ object.type }}</td><td>{{ object.title ?? object.name ?? object.id }}</td><td><code>{{ object.path }}</code></td>
+          </tr>
+          <tr v-if="preview.objects.length === 0"><td colspan="3">Aucun objet reconnu.</td></tr>
+        </tbody>
+      </table>
+      <div v-if="preview.warnings.length" class="preview-warnings" role="note">
+        <strong>Avertissements</strong>
+        <ul><li v-for="warning in preview.warnings" :key="`${warning.path}-${warning.code}`"><code>{{ warning.path || 'document' }}</code> — {{ warning.message }}</li></ul>
+      </div>
+      <div v-if="preview.errors.length" class="error-summary" role="alert">
+        <strong>Import impossible tant que ces erreurs ne sont pas corrigées</strong>
+        <ul class="error-list"><li v-for="error in preview.errors" :key="`${error.path}-${error.code}`"><code>{{ error.path || 'document' }}</code> — {{ error.message }}</li></ul>
+      </div>
+      <div v-if="preview.duplicates.length" class="preview-duplicates" role="note">
+        <strong>Doublons potentiels</strong>
+        <ul class="duplicate-list"><li v-for="duplicate in preview.duplicates" :key="`${duplicate.path}-${duplicate.type}`"><code>{{ duplicate.path }}</code> — {{ duplicate.reason }}</li></ul>
+      </div>
+      <div class="preview-actions">
+        <button type="button" class="secondary-button" :disabled="isUploading" @click="cancelPreview">Modifier le fichier</button>
+        <button type="button" class="import-button" :disabled="isUploading || preview.errors.length > 0" @click="confirmImport">Confirmer et importer</button>
+      </div>
+    </section>
+
     <section v-if="report" class="result" aria-labelledby="result-title" role="status">
       <h2 id="result-title">Import terminé</h2>
       <dl>
@@ -118,8 +174,8 @@ async function handleImport(): Promise<void> {
       </ul>
     </section>
 
-    <button class="import-button" type="button" :disabled="selectedFile === null || isUploading" @click="handleImport">
-      {{ isUploading ? 'Import en cours…' : 'Importer ce fichier' }}
+    <button v-if="!preview" class="import-button" type="button" :disabled="selectedFile === null || isUploading" @click="handleImport">
+      {{ isUploading ? 'Analyse en cours…' : 'Prévisualiser avant import' }}
     </button>
   </main>
 </template>
@@ -151,6 +207,17 @@ code { padding: 0.1rem 0.25rem; border-radius: 0.25rem; background: rgba(36, 49,
 .upload-status { display: flex; align-items: center; gap: 0.65rem; background: #f1f8ed; color: #395330; }
 .spinner { width: 1rem; height: 1rem; border: 2px solid #b9c5af; border-top-color: #395330; border-radius: 50%; animation: spin 0.8s linear infinite; }
 .result { border: 1px solid #8ca17b; background: #f1f8ed; color: #395330; }
+.preview { margin-top: 1.25rem; padding: 1rem; border: 1px solid #8ca17b; border-radius: 0.7rem; background: #f8fcf5; color: #395330; }
+.preview p { margin-top: -0.35rem; }
+.preview table { width: 100%; border-collapse: collapse; background: #fffdf8; }
+.preview caption { padding: 0.7rem; text-align: left; font-weight: 800; }
+.preview th, .preview td { padding: 0.6rem; border: 1px solid #d8e1d2; text-align: left; }
+.preview th { background: #eef5ea; }
+.preview-warnings, .preview-duplicates { margin-top: 1rem; padding: 0.75rem; border-radius: 0.55rem; background: #fff5df; color: #704414; }
+.preview-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+.preview-actions .import-button { width: auto; margin-top: 0; }
+.secondary-button { padding: 0.85rem 1rem; border: 1px solid #395330; border-radius: 0.65rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.secondary-button:disabled { cursor: not-allowed; opacity: 0.5; }
 .result dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin: 0; }
 .result dl div { padding: 0.7rem; border-radius: 0.55rem; background: rgba(255, 253, 248, 0.7); text-align: center; }
 .result dt { font-size: 0.85rem; }
