@@ -24,6 +24,9 @@ class AccessiblePlannedMealsQuery
                 'planned_meals.note',
                 'planned_meals.initial_servings',
                 'planned_meals.servings',
+                'planned_meals.recurrence_id',
+                'planned_meals.recurrence_frequency',
+                'planned_meals.recurrence_until',
                 'planned_meals.created_at',
             ])
             ->with([

@@ -21,6 +21,9 @@ class PlannedMeal extends Model
         'note',
         'initial_servings',
         'servings',
+        'recurrence_id',
+        'recurrence_frequency',
+        'recurrence_until',
     ];
 
     protected function casts(): array
@@ -29,6 +32,7 @@ class PlannedMeal extends Model
             'date' => 'date',
             'initial_servings' => 'integer',
             'servings' => 'integer',
+            'recurrence_until' => 'date',
         ];
     }
 

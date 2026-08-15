@@ -21,6 +21,7 @@ class PlannedMealResource extends JsonResource
         /** @var PlannedMeal $meal */
         $meal = $this->resource;
         $date = $meal->getAttribute('date');
+        $recurrenceUntil = $meal->getAttribute('recurrence_until');
         $recipe = $meal->getRelation('recipe');
         $cookbook = $meal->getRelation('cookbook');
 
@@ -33,6 +34,13 @@ class PlannedMealResource extends JsonResource
             'note' => $meal->note,
             'initial_servings' => $meal->initial_servings,
             'servings' => $meal->servings,
+            'recurrence' => $meal->recurrence_id === null ? null : [
+                'id' => $meal->recurrence_id,
+                'frequency' => $meal->recurrence_frequency,
+                'until' => $recurrenceUntil instanceof DateTimeInterface
+                    ? $recurrenceUntil->format('Y-m-d')
+                    : (is_string($recurrenceUntil) ? substr($recurrenceUntil, 0, 10) : null),
+            ],
             'recipe' => $this->whenLoaded('recipe', fn (): array => $recipe instanceof Recipe ? [
                 'id' => $recipe->public_id,
                 'title' => $recipe->title,
