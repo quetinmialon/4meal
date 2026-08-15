@@ -13,6 +13,7 @@ describe('PlanningView', () => {
   const meal = {
     id: 'meal-id', date: '2026-07-28', meal_type: 'dinner', note: 'Prévoir du pain', initial_servings: 4, servings: 4,
     cookbook_id: null, created_at: null,
+    recurrence: null,
     recipe: { id: 'recipe-id', title: 'Ratatouille', slug: 'ratatouille', servings: 4, image_url: null, ingredients: [
       { position: 1, name: 'Tomates', quantity: 150, unit: 'g', preparation: null, is_optional: false, group_name: null },
       { position: 2, name: 'Sel', quantity: null, unit: null, preparation: 'à votre goût', is_optional: true, group_name: null },
@@ -149,5 +150,23 @@ describe('PlanningView', () => {
 
     expect(wrapper.get('.edit-meal-form').text()).toContain('Date invalide.');
     expect(wrapper.get('.edit-meal-form').text()).toContain('La date est invalide.');
+  });
+
+  it('allows deleting either one occurrence or the complete series', async () => {
+    const recurringMeal = { ...meal, recurrence: { id: 'series-id', frequency: 'weekly' as const, until: '2026-08-24' } };
+    fetchMock
+      .mockResolvedValueOnce(successResponse([recurringMeal]))
+      .mockResolvedValueOnce({ ok: true, status: 204, json: async () => null } as Response)
+      .mockResolvedValueOnce(successResponse([]));
+
+    const wrapper = mount(PlanningView, { global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('.meal-card').trigger('click');
+    await wrapper.get('.delete-detail-button').trigger('click');
+    await wrapper.get('input[value="series"]').setValue();
+    await wrapper.get('.delete-confirmation .delete-detail-button').trigger('click');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/planned-meals/meal-id?scope=series', expect.objectContaining({ method: 'DELETE' }));
   });
 });

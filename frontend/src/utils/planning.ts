@@ -8,6 +8,7 @@ export type PlannedMeal = {
   initial_servings: number;
   servings: number;
   cookbook_id: string | null;
+  recurrence: { id: string; frequency: 'weekly'; until: string } | null;
   recipe: {
     id: string;
     title: string;
@@ -110,9 +111,11 @@ export async function deletePlannedMeal(
   id: string,
   tokenType: string,
   accessToken: string,
+  scope: 'occurrence' | 'series' = 'occurrence',
 ): Promise<DeletePlannedMealResult> {
   try {
-    const response = await apiFetch(`/api/planned-meals/${encodeURIComponent(id)}`, {
+    const query = scope === 'series' ? '?scope=series' : '';
+    const response = await apiFetch(`/api/planned-meals/${encodeURIComponent(id)}${query}`, {
       method: 'DELETE',
       headers: { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` },
     });

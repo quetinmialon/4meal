@@ -17,6 +17,7 @@ const editError = ref('');
 const editFieldErrors = ref<Record<string, string>>({});
 const isUpdating = ref(false);
 const isDeleteConfirmationVisible = ref(false);
+const deleteScope = ref<'occurrence' | 'series'>('occurrence');
 const deleteError = ref('');
 const isDeleting = ref(false);
 const feedbackMessage = ref('');
@@ -145,6 +146,7 @@ async function submitEdit(): Promise<void> {
 }
 function startDeleteConfirmation(): void {
   deleteError.value = '';
+  deleteScope.value = 'occurrence';
   isDeleteConfirmationVisible.value = true;
 }
 function cancelDelete(): void {
@@ -156,7 +158,7 @@ async function confirmDelete(): Promise<void> {
   if (!selectedMeal.value) return;
   deleteError.value = '';
   isDeleting.value = true;
-  const result = await deletePlannedMeal(selectedMeal.value.id, authStore.tokenType, authStore.accessToken);
+  const result = await deletePlannedMeal(selectedMeal.value.id, authStore.tokenType, authStore.accessToken, deleteScope.value);
   if (result.ok) {
     await loadMeals();
     feedbackMessage.value = 'Le repas planifié a été supprimé.';
@@ -251,6 +253,11 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
         <section v-else class="delete-confirmation" aria-labelledby="delete-meal-heading">
           <h4 id="delete-meal-heading">Supprimer ce repas planifié ?</h4>
           <p>Cette action est définitive.</p>
+          <fieldset v-if="selectedMeal.recurrence" class="delete-scope">
+            <legend>Portée de la suppression</legend>
+            <label><input v-model="deleteScope" type="radio" value="occurrence" /> Cette occurrence uniquement</label>
+            <label><input v-model="deleteScope" type="radio" value="series" /> Toute la série</label>
+          </fieldset>
           <p v-if="deleteError" class="form-error" role="alert">{{ deleteError }}</p>
           <div class="detail-actions">
             <button type="button" class="delete-detail-button" :disabled="isDeleting" @click="confirmDelete">{{ isDeleting ? 'Suppression...' : 'Confirmer la suppression' }}</button>
@@ -313,6 +320,7 @@ h2, h3 { margin: 0; color: #243127; }
 .edit-meal-form input, .edit-meal-form select, .edit-meal-form textarea { box-sizing: border-box; width: 100%; padding: .6rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; font: inherit; }
 .form-error { margin: 0; padding: .55rem; border-radius: .5rem; background: #fff0ee; color: #8f1e1e; font-size: .9rem; }
 .delete-confirmation { margin-top: 1rem; padding: .8rem; border: 1px solid #e2b3ad; border-radius: .7rem; background: #fff8f6; }
+.delete-scope { display: grid; gap: .45rem; margin: .7rem 0; padding: .6rem; border: 1px solid #e2b3ad; border-radius: .5rem; color: #6d4140; }
 .delete-confirmation h4 { margin: 0; color: #8f1e1e; }
 .delete-confirmation p { color: #6d4140; }
 .feedback-message { margin: 1rem 0 0; color: #395330; font-weight: 700; text-align: center; }
