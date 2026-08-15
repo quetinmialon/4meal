@@ -58,6 +58,43 @@ describe('AddToPlanningModal', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('asks for confirmation and submits a weekly series with its end date', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: {} } }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { id: 'planned-id' } }) } as Response);
+
+    const added = vi.fn();
+    const wrapper = mount(AddToPlanningModal, { props: { recipe, onAdded: added }, global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('#planning-date').setValue('2026-08-10');
+    await wrapper.get('#planning-recurrence-frequency').setValue('weekly');
+    await wrapper.get('#planning-recurrence-until').setValue('2026-08-24');
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.text()).toContain('Confirmer la série');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/planned-meals', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ recipe_id: 'recipe-id', date: '2026-08-10', meal_type: 'dinner', cookbook_id: null, recurrence: { frequency: 'weekly', until: '2026-08-24' } }),
+    }));
+    expect(added).toHaveBeenCalledOnce();
+  });
+
+  it('requires a series end date when repetition is enabled', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: {} } }) } as Response);
+
+    const wrapper = mount(AddToPlanningModal, { props: { recipe }, global: { plugins: [testPinia] } });
+    await flushPromises();
+    await wrapper.get('#planning-recurrence-frequency').setValue('weekly');
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('fin de la série');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('shows API errors and keeps the modal open', async () => {
     fetchMock
       .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [], meta: { pagination: {} } }) } as Response)

@@ -7,10 +7,12 @@ use Illuminate\Support\Facades\DB;
 
 class DeletePlannedMealAction
 {
-    public function execute(PlannedMeal $meal): void
+    public function execute(PlannedMeal $meal, bool $series = false): void
     {
-        DB::transaction(static function () use ($meal): void {
-            $meal->delete();
+        DB::transaction(static function () use ($meal, $series): void {
+            $series && $meal->recurrence_id !== null
+                ? PlannedMeal::query()->where('recurrence_id', $meal->recurrence_id)->delete()
+                : $meal->delete();
         });
     }
 }

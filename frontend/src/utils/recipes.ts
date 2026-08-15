@@ -566,6 +566,7 @@ export type PlannedMealInput = {
   date: string;
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   cookbook_id: string | null;
+  recurrence?: { frequency: 'weekly'; until: string } | null;
 };
 
 export type CreatePlannedMealResult =

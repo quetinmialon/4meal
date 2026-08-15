@@ -13,6 +13,9 @@ const authStore = useAuthStore();
 const cookbooks = ref<Cookbook[]>([]);
 const date = ref(new Date().toISOString().slice(0, 10));
 const mealType = ref<PlannedMealInput['meal_type']>('dinner');
+const recurrenceFrequency = ref<'none' | 'weekly'>('none');
+const recurrenceUntil = ref('');
+const isRecurrenceConfirmationVisible = ref(false);
 const destination = ref<'personal' | 'cookbook'>('personal');
 const selectedCookbookId = ref('');
 const isLoadingCookbooks = ref(false);
@@ -23,6 +26,7 @@ const dialog = ref<HTMLElement | null>(null);
 const isOpen = ref(true);
 
 const cookbookRequired = computed(() => destination.value === 'cookbook' && selectedCookbookId.value === '');
+const hasRecurrence = computed(() => recurrenceFrequency.value !== 'none');
 
 async function loadCookbooks(): Promise<void> {
   isLoadingCookbooks.value = true;
@@ -37,6 +41,29 @@ function errorFor(field: string): string {
   return fieldErrors.value[field] ?? '';
 }
 
+function validateRecurrence(): boolean {
+  if (!hasRecurrence.value) return true;
+  if (!recurrenceUntil.value) {
+    fieldErrors.value.recurrence_until = 'Choisissez la fin de la série.';
+    return false;
+  }
+  if (recurrenceUntil.value < date.value) {
+    fieldErrors.value.recurrence_until = 'La fin doit être postérieure ou égale à la date de début.';
+    return false;
+  }
+  return true;
+}
+
+function input(): PlannedMealInput {
+  return {
+    recipe_id: props.recipe.id,
+    date: date.value,
+    meal_type: mealType.value,
+    cookbook_id: destination.value === 'cookbook' ? selectedCookbookId.value : null,
+    ...(hasRecurrence.value ? { recurrence: { frequency: 'weekly' as const, until: recurrenceUntil.value } } : {}),
+  };
+}
+
 async function submit(): Promise<void> {
   errorMessage.value = '';
   fieldErrors.value = {};
@@ -46,13 +73,14 @@ async function submit(): Promise<void> {
     return;
   }
 
+  if (!validateRecurrence()) return;
+  if (hasRecurrence.value && !isRecurrenceConfirmationVisible.value) {
+    isRecurrenceConfirmationVisible.value = true;
+    return;
+  }
+
   isSubmitting.value = true;
-  const result = await createPlannedMeal({
-    recipe_id: props.recipe.id,
-    date: date.value,
-    meal_type: mealType.value,
-    cookbook_id: destination.value === 'cookbook' ? selectedCookbookId.value : null,
-  }, authStore.tokenType, authStore.accessToken);
+  const result = await createPlannedMeal(input(), authStore.tokenType, authStore.accessToken);
 
   if (result.ok) emit('added');
   else {
@@ -61,6 +89,8 @@ async function submit(): Promise<void> {
   }
   isSubmitting.value = false;
 }
+
+function cancelRecurrenceConfirmation(): void { isRecurrenceConfirmationVisible.value = false; }
 
 onMounted(() => { void loadCookbooks(); });
 useDialogFocus(dialog, isOpen, () => {
@@ -109,8 +139,31 @@ useDialogFocus(dialog, isOpen, () => {
           <p v-if="errorFor('cookbook_id')" class="field-error" role="alert">{{ errorFor('cookbook_id') }}</p>
         </template>
 
+        <fieldset aria-labelledby="planning-recurrence-title">
+          <legend id="planning-recurrence-title">Répétition</legend>
+          <label for="planning-recurrence-frequency">Fréquence</label>
+          <select id="planning-recurrence-frequency" v-model="recurrenceFrequency" :disabled="isSubmitting">
+            <option value="none">Aucune</option>
+            <option value="weekly">Chaque semaine</option>
+          </select>
+          <template v-if="hasRecurrence">
+            <label for="planning-recurrence-until">Fin de la série</label>
+            <input id="planning-recurrence-until" v-model="recurrenceUntil" type="date" :min="date" :disabled="isSubmitting" :aria-invalid="errorFor('recurrence_until') ? 'true' : 'false'" />
+            <p v-if="errorFor('recurrence_until')" class="field-error" role="alert">{{ errorFor('recurrence_until') }}</p>
+          </template>
+        </fieldset>
+
+        <section v-if="isRecurrenceConfirmationVisible" class="recurrence-confirmation" aria-labelledby="planning-recurrence-confirm-title">
+          <h4 id="planning-recurrence-confirm-title">Confirmer la série ?</h4>
+          <p>Ce repas sera ajouté chaque semaine jusqu’au {{ recurrenceUntil }}.</p>
+          <div class="modal-actions">
+            <button type="button" class="cancel-button" :disabled="isSubmitting" @click="cancelRecurrenceConfirmation">Modifier</button>
+            <button type="submit" class="confirm-button" :disabled="isSubmitting">Confirmer la série</button>
+          </div>
+        </section>
+
         <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
-        <div class="modal-actions">
+        <div v-if="!isRecurrenceConfirmationVisible" class="modal-actions">
           <button type="button" class="cancel-button" :disabled="isSubmitting" @click="emit('close')">Annuler</button>
           <button type="submit" class="confirm-button" :disabled="isSubmitting || isLoadingCookbooks">
             {{ isSubmitting ? 'Ajout...' : 'Confirmer l’ajout' }}
@@ -135,6 +188,9 @@ legend { padding: 0 .3rem; font-weight: 700; }
 .radio-label { display: flex; gap: .5rem; align-items: center; }
 .field-error, .form-error { margin: 0; color: #8f1e1e; font-size: .9rem; }
 .form-error { padding: .7rem; border-radius: .5rem; background: #fff0ee; font-weight: 700; }
+.recurrence-confirmation { margin-top: .5rem; padding: .8rem; border: 1px solid #b9c5af; border-radius: .6rem; background: #f3f7ef; }
+.recurrence-confirmation h4 { margin: 0; color: #243127; }
+.recurrence-confirmation p { margin-bottom: 0; color: #50634d; }
 .muted { margin: 0; color: #50634d; }
 .modal-actions { display: flex; justify-content: end; gap: .6rem; margin-top: 1rem; }
 .cancel-button, .confirm-button { padding: .6rem .8rem; border: 1px solid #395330; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
