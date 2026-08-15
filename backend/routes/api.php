@@ -74,6 +74,10 @@ use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeCommentController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
 use App\Http\Controllers\Recipe\UpsertRecipeRatingController;
+use App\Http\Controllers\Search\CreateSavedSearchController;
+use App\Http\Controllers\Search\DeleteSavedSearchController;
+use App\Http\Controllers\Search\ExecuteSavedSearchController;
+use App\Http\Controllers\Search\ListSavedSearchesController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use App\Http\Middleware\RequireVerifiedEmail;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -164,6 +168,18 @@ Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
 
         Route::get('recipes', ListRecipesController::class)
             ->name('recipes.index');
+
+        Route::post('saved-searches', CreateSavedSearchController::class)
+            ->name('saved-searches.store');
+
+        Route::get('saved-searches', ListSavedSearchesController::class)
+            ->name('saved-searches.index');
+
+        Route::get('saved-searches/{savedSearch}/execute', ExecuteSavedSearchController::class)
+            ->name('saved-searches.execute');
+
+        Route::delete('saved-searches/{savedSearch}', DeleteSavedSearchController::class)
+            ->name('saved-searches.destroy');
 
         Route::get('recipes/{recipe}', ShowRecipeController::class)
             ->name('recipes.show');

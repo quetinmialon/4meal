@@ -116,6 +116,11 @@ class User extends Authenticatable
         return $this->hasMany(PlannedMeal::class);
     }
 
+    public function savedSearches(): HasMany
+    {
+        return $this->hasMany(SavedSearch::class);
+    }
+
     public function recipeComments(): HasMany
     {
         return $this->hasMany(RecipeComment::class);
