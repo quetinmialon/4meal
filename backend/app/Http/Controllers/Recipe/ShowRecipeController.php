@@ -26,6 +26,8 @@ class ShowRecipeController extends Controller
             'personal_rating',
             $recipe->ratings()->where('user_id', $user->getKey())->value('rating'),
         );
+        $recipe->setAttribute('average_rating', $recipe->ratings()->avg('rating') ?? 0);
+        $recipe->setAttribute('rating_count', $recipe->ratings()->count());
         $recipe->load(['ingredients', 'steps', 'tags', 'author']);
 
         return ApiResponse::success(

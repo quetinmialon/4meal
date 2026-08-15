@@ -183,6 +183,9 @@ async function confirmDelete(): Promise<void> {
     <article v-else-if="recipe" class="recipe-detail">
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
+      <p class="recipe-average-rating" aria-label="Note moyenne">
+        ★ {{ (recipe.average_rating ?? 0).toFixed(1) }}/5 ({{ recipe.rating_count ?? 0 }} vote{{ (recipe.rating_count ?? 0) > 1 ? 's' : '' }})
+      </p>
       <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
       <RecipeRating
         :recipe-id="recipe.id"
@@ -303,6 +306,7 @@ async function confirmDelete(): Promise<void> {
 
 <style scoped>
 .detail-page { max-width: 48rem; margin: 0 auto; }
+.recipe-average-rating { margin: .5rem 0 1rem; color: #a46114; font-weight: 700; }
 .back-link { color: #395330; font-weight: 700; }
 .state-message { margin-top: 2rem; color: #50634d; }
 .error-summary { padding: 1rem; border-radius: .8rem; color: #8f1e1e; background: #fff0ee; }

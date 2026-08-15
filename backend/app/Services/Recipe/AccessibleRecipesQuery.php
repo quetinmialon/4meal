@@ -21,6 +21,8 @@ class AccessibleRecipesQuery
             ->withAggregate([
                 'ratings as personal_rating' => fn (Builder $query) => $query->where('user_id', $user->getKey()),
             ], 'rating');
+        $query->withAvg('ratings as average_rating', 'rating')
+            ->withCount('ratings');
 
         if ($scope === 'mine' || $scope === 'public') {
             $query->whereNotNull('user_id');
@@ -99,6 +101,22 @@ class AccessibleRecipesQuery
 
         if (filter_var($filters['favorites'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $query->whereHas('favoritedBy', fn (Builder $favorites): Builder => $favorites->whereKey($user->getKey()));
+        }
+
+        if (isset($filters['min_rating'])) {
+            $query->whereRaw(<<<'SQL'
+                COALESCE((SELECT AVG(rating) FROM recipe_ratings WHERE recipe_ratings.recipe_id = recipes.id), 0) >= ?
+            SQL, [$filters['min_rating']]);
+        }
+
+        if (($filters['sort'] ?? null) === 'rating_desc') {
+            $query->orderByRaw(<<<'SQL'
+                (SELECT COALESCE(AVG(rating), 0) FROM recipe_ratings WHERE recipe_ratings.recipe_id = recipes.id) DESC
+            SQL);
+        } elseif (($filters['sort'] ?? null) === 'rating_asc') {
+            $query->orderByRaw(<<<'SQL'
+                (SELECT COALESCE(AVG(rating), 0) FROM recipe_ratings WHERE recipe_ratings.recipe_id = recipes.id) ASC
+            SQL);
         }
     }
 

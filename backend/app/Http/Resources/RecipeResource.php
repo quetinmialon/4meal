@@ -42,6 +42,8 @@ class RecipeResource extends JsonResource
             'personal_rating' => $recipe->getAttribute('personal_rating') === null
                 ? null
                 : (int) $recipe->getAttribute('personal_rating'),
+            'average_rating' => (float) ($recipe->getAttribute('average_rating') ?? 0),
+            'rating_count' => (int) ($recipe->getAttribute('rating_count') ?? $recipe->getAttribute('ratings_count') ?? 0),
             'author' => $this->whenLoaded('author', fn (): ?array => $recipe->author === null
                 ? null
                 : UserResource::make($recipe->author)->resolve($request)),

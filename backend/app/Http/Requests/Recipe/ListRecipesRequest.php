@@ -48,6 +48,8 @@ class ListRecipesRequest extends FormRequest
             'max_prep_time' => ['sometimes', 'integer', 'min:0', 'max:10080'],
             'max_cook_time' => ['sometimes', 'integer', 'min:0', 'max:10080'],
             'favorites' => ['sometimes', 'boolean'],
+            'min_rating' => ['sometimes', 'numeric', 'min:0', 'max:5'],
+            'sort' => ['sometimes', 'string', Rule::in(['rating_desc', 'rating_asc'])],
         ];
     }
 }

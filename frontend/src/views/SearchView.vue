@@ -26,6 +26,8 @@ const ingredient = ref('');
 const maxPrepTime = ref('');
 const maxCookTime = ref('');
 const favorites = ref(false);
+const minRating = ref('');
+const ratingSort = ref('');
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let requestId = 0;
 
@@ -48,7 +50,7 @@ function queryBoolean(value: unknown): boolean {
 }
 
 const hasFilters = computed(() => Boolean(
-  cookbookId.value || tag.value.trim() || ingredient.value.trim() || maxPrepTime.value || maxCookTime.value || favorites.value,
+  cookbookId.value || tag.value.trim() || ingredient.value.trim() || maxPrepTime.value || maxCookTime.value || favorites.value || minRating.value || ratingSort.value,
 ));
 
 function filtersForRequest(): RecipeFilters {
@@ -59,6 +61,8 @@ function filtersForRequest(): RecipeFilters {
     ...(maxPrepTime.value ? { max_prep_time: Number(maxPrepTime.value) } : {}),
     ...(maxCookTime.value ? { max_cook_time: Number(maxCookTime.value) } : {}),
     ...(favorites.value ? { favorites: true } : {}),
+    ...(minRating.value ? { min_rating: Number(minRating.value) } : {}),
+    ...(ratingSort.value ? { sort: ratingSort.value as 'rating_desc' | 'rating_asc' } : {}),
   };
 }
 
@@ -72,6 +76,8 @@ function queryForCurrentState(page?: string) {
     max_prep_time: maxPrepTime.value || undefined,
     max_cook_time: maxCookTime.value || undefined,
     favorites: favorites.value ? 'true' : undefined,
+    min_rating: minRating.value || undefined,
+    sort: ratingSort.value || undefined,
     page,
   };
 }
@@ -132,6 +138,8 @@ function resetFilters(): void {
   maxPrepTime.value = '';
   maxCookTime.value = '';
   favorites.value = false;
+  minRating.value = '';
+  ratingSort.value = '';
   void router.replace({ query: {} });
   scheduleLoad();
 }
@@ -141,7 +149,7 @@ function retry(): void {
 }
 
 watch(
-  () => [route.query.q, route.query.page, route.query.cookbook_id, route.query.tag, route.query.ingredient, route.query.max_prep_time, route.query.max_cook_time, route.query.favorites],
+  () => [route.query.q, route.query.page, route.query.cookbook_id, route.query.tag, route.query.ingredient, route.query.max_prep_time, route.query.max_cook_time, route.query.favorites, route.query.min_rating, route.query.sort],
   () => {
     search.value = queryString(route.query.q);
     cookbookId.value = queryString(route.query.cookbook_id);
@@ -150,6 +158,8 @@ watch(
     maxPrepTime.value = queryNumber(route.query.max_prep_time);
     maxCookTime.value = queryNumber(route.query.max_cook_time);
     favorites.value = queryBoolean(route.query.favorites);
+    minRating.value = queryNumber(route.query.min_rating);
+    ratingSort.value = queryString(route.query.sort);
     scheduleLoad();
   },
   { immediate: true },
@@ -231,6 +241,24 @@ onBeforeUnmount(() => {
         <label class="checkbox-filter">
           <input v-model="favorites" type="checkbox" :disabled="isLoading" @change="syncFilters" />
           <span>Mes favoris uniquement</span>
+        </label>
+        <label>
+          Note minimale
+          <select v-model="minRating" :disabled="isLoading" @change="syncFilters">
+            <option value="">Toutes les notes</option>
+            <option value="4">4/5 et plus</option>
+            <option value="3">3/5 et plus</option>
+            <option value="2">2/5 et plus</option>
+            <option value="1">Au moins une note</option>
+          </select>
+        </label>
+        <label>
+          Trier par note
+          <select v-model="ratingSort" :disabled="isLoading" @change="syncFilters">
+            <option value="">Plus récentes</option>
+            <option value="rating_desc">Note décroissante</option>
+            <option value="rating_asc">Note croissante</option>
+          </select>
         </label>
       </div>
     </section>
