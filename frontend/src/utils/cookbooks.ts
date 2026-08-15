@@ -58,12 +58,19 @@ export type CookbookMessage = {
   deleted_at: string | null;
   deleted_by: { id: number; name: string } | null;
   created_at: string | null;
+  reactions?: CookbookMessageReaction[];
   author: {
     id: number;
     name: string;
     avatar_url: string | null;
     role: string | null;
   };
+};
+
+export type CookbookMessageReaction = {
+  emoji: string;
+  count: number;
+  reacted: boolean;
 };
 
 export type CursorPagination = {
@@ -583,6 +590,38 @@ export async function deleteCookbookMessage(
     const payload = (await response.json().catch(() => null)) as { success: true; data: CookbookMessage } | ApiErrorPayload | null;
     if (response.ok && payload?.success === true) return { ok: true, message: payload.data };
     return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de supprimer le message.') : 'Impossible de supprimer le message.' };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' }; }
+}
+
+export type CookbookMessageReactionResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export async function addCookbookMessageReaction(
+  cookbookId: string, messageId: string, emoji: string, tokenType: string, accessToken: string,
+): Promise<CookbookMessageReactionResult> {
+  try {
+    const response = await apiFetch(
+      `/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}/reactions`,
+      { method: 'POST', headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji }) },
+    );
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.ok && payload?.success !== false) return { ok: true };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible d’ajouter la réaction.') : 'Impossible d’ajouter la réaction.' };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' }; }
+}
+
+export async function removeCookbookMessageReaction(
+  cookbookId: string, messageId: string, emoji: string, tokenType: string, accessToken: string,
+): Promise<CookbookMessageReactionResult> {
+  try {
+    const response = await apiFetch(
+      `/api/cookbooks/${encodeURIComponent(cookbookId)}/messages/${encodeURIComponent(messageId)}/reactions`,
+      { method: 'DELETE', headers: { ...apiHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji }) },
+    );
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.status === 204 || (response.ok && payload?.success !== false)) return { ok: true };
+    return { ok: false, message: payload?.success === false ? (payload.error?.message ?? 'Impossible de retirer la réaction.') : 'Impossible de retirer la réaction.' };
   } catch { return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' }; }
 }
 
