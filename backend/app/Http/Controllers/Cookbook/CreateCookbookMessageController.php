@@ -26,7 +26,7 @@ class CreateCookbookMessageController extends Controller
             'user_id' => $user->getKey(),
             'content' => $request->string('content')->toString(),
         ]);
-        $message->load('user', 'deletedBy');
+        $message->load('user', 'deletedBy', 'reactions');
         $message->setAttribute(
             'member_role',
             $cookbook->members()->whereKey($user->getKey())->value('cookbook_members.role'),

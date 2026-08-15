@@ -24,6 +24,8 @@ class CookbookMessageResource extends JsonResource
         $isDeleted = $message->deleted_at !== null;
         $editedAt = $message->getAttribute('edited_at');
         $deletedAt = $message->getAttribute('deleted_at');
+        $reactions = $message->relationLoaded('reactions') ? $message->reactions : collect();
+        $viewerId = $request->user()?->getAuthIdentifier();
 
         return [
             'id' => $message->public_id,
@@ -41,6 +43,11 @@ class CookbookMessageResource extends JsonResource
                 'role' => $message->getAttribute('member_role'),
             ],
             'created_at' => $message->created_at?->toJSON(),
+            'reactions' => $reactions->groupBy('emoji')->map(fn ($items, $emoji): array => [
+                'emoji' => $emoji,
+                'count' => $items->count(),
+                'reacted' => $viewerId !== null && $items->contains('user_id', (int) $viewerId),
+            ])->values()->all(),
         ];
     }
 }

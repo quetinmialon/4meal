@@ -30,7 +30,7 @@ class ListLatestCookbookMessagesController extends Controller
                     ->whereColumn('cookbook_members.user_id', 'cookbook_messages.user_id')
                     ->limit(1),
             ])
-            ->with('user', 'deletedBy')
+            ->with('user', 'deletedBy', 'reactions')
             ->latest('created_at')
             ->latest('id')
             ->limit(3)

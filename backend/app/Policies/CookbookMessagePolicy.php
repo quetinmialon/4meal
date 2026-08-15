@@ -42,6 +42,20 @@ class CookbookMessagePolicy
         return CookbookPermissions::allows(is_string($role) ? $role : null, CookbookPermissions::MODERATE_MESSAGES);
     }
 
+    public function react(User $user, CookbookMessage $message): bool
+    {
+        /** @var Cookbook $cookbook */
+        $cookbook = $message->cookbook;
+
+        return $message->deleted_at === null
+            && $this->isMember($user, $cookbook);
+    }
+
+    public function unreact(User $user, CookbookMessage $message): bool
+    {
+        return $this->react($user, $message);
+    }
+
     private function isMember(User $user, Cookbook $cookbook): bool
     {
         return $cookbook->members()->whereKey($user->getKey())->exists();

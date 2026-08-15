@@ -2,6 +2,7 @@
 
 use App\Models\Cookbook;
 use App\Models\CookbookMessage;
+use App\Models\CookbookMessageReaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -180,4 +181,57 @@ it('prevents regular members from moderating other messages and lets the owner m
         ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id)
         ->assertOk()
         ->assertJsonPath('data.deleted_by.name', $owner->name);
+});
+
+it('allows members to add one controlled reaction per emoji and remove their own reaction', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $member = User::factory()->create(['password' => 'password123']);
+    $cookbook = messageCookbook($owner);
+    $cookbook->members()->attach($member, ['role' => 'commenter']);
+    $message = CookbookMessage::query()->create(['cookbook_id' => $cookbook->id, 'user_id' => $owner->id, 'content' => 'Message']);
+    $token = cookbookMessageToken($member);
+
+    $this->withToken($token)
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '👍'])
+        ->assertCreated()
+        ->assertJsonPath('data.emoji', '👍');
+
+    $this->withToken($token)
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '👍'])
+        ->assertOk();
+
+    expect(CookbookMessageReaction::query()->count())->toBe(1);
+
+    $this->withToken($token)
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '🚀'])
+        ->assertUnprocessable();
+
+    $this->withToken($token)
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '👍'])
+        ->assertNoContent();
+
+    expect(CookbookMessageReaction::query()->count())->toBe(0);
+});
+
+it('authorizes reactions only for members and active messages', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $external = User::factory()->create(['password' => 'password123']);
+    $cookbook = messageCookbook($owner);
+    $message = CookbookMessage::query()->create(['cookbook_id' => $cookbook->id, 'user_id' => $owner->id, 'content' => 'Message']);
+    $externalToken = cookbookMessageToken($external);
+
+    $this->withToken($externalToken)
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '❤️'])
+        ->assertForbidden();
+
+    $message->update(['deleted_at' => now()]);
+
+    $this->withToken(cookbookMessageToken($owner))
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '❤️'])
+        ->assertForbidden();
+
+    $otherCookbook = messageCookbook($owner);
+    $this->withToken(cookbookMessageToken($owner))
+        ->postJson('/api/cookbooks/'.$otherCookbook->public_id.'/messages/'.$message->public_id.'/reactions', ['emoji' => '❤️'])
+        ->assertNotFound();
 });
