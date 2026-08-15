@@ -69,9 +69,11 @@ use App\Http\Controllers\Recipe\ListRecipeAuditsController;
 use App\Http\Controllers\Recipe\ListRecipeCommentsController;
 use App\Http\Controllers\Recipe\ListRecipesController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
+use App\Http\Controllers\Recipe\RemoveRecipeRatingController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
 use App\Http\Controllers\Recipe\UpdateRecipeCommentController;
 use App\Http\Controllers\Recipe\UpdateRecipeController;
+use App\Http\Controllers\Recipe\UpsertRecipeRatingController;
 use App\Http\Middleware\AuthenticateWithJwt;
 use App\Http\Middleware\RequireVerifiedEmail;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -190,6 +192,12 @@ Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
 
         Route::delete('recipes/{recipe}/favorite', RemoveRecipeFavoriteController::class)
             ->name('recipes.favorite.destroy');
+
+        Route::match(['post', 'put'], 'recipes/{recipe}/rating', UpsertRecipeRatingController::class)
+            ->name('recipes.rating.upsert');
+
+        Route::delete('recipes/{recipe}/rating', RemoveRecipeRatingController::class)
+            ->name('recipes.rating.destroy');
 
         Route::patch('recipes/{recipe}', UpdateRecipeController::class)
             ->name('recipes.update');

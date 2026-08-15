@@ -122,6 +122,12 @@ class Recipe extends Model
         return $this->belongsToMany(User::class, 'recipe_favorites')->withTimestamps();
     }
 
+    /** @return HasMany<RecipeRating, $this> */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(RecipeRating::class);
+    }
+
     public function plannedMeals(): HasMany
     {
         return $this->hasMany(PlannedMeal::class);

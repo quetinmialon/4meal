@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import RecipeFavoriteButton from '@/components/RecipeFavoriteButton.vue';
+import RecipeRating from '@/components/RecipeRating.vue';
 import AddToPlanningModal from '@/components/AddToPlanningModal.vue';
 import RecipeCommentsSection from '@/components/RecipeCommentsSection.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -44,6 +45,10 @@ function closePlanningModal(): void {
 function handlePlanningAdded(): void {
   isPlanningModalVisible.value = false;
   planningSuccessMessage.value = 'La recette a été ajoutée au planning.';
+}
+
+function updatePersonalRating(value: number | null): void {
+  if (recipe.value) recipe.value.personal_rating = value;
 }
 
 async function openCookbookPicker(): Promise<void> {
@@ -179,6 +184,11 @@ async function confirmDelete(): Promise<void> {
       <p class="kicker">Recette</p>
       <h2>{{ recipe.title }}</h2>
       <RecipeFavoriteButton :recipe-id="recipe.id" :is-favorite="recipe.is_favorite ?? false" />
+      <RecipeRating
+        :recipe-id="recipe.id"
+        :personal-rating="recipe.personal_rating ?? null"
+        @update:personal-rating="updatePersonalRating"
+      />
       <button type="button" class="planning-button" @click="openPlanningModal">Ajouter au planning</button>
       <p v-if="planningSuccessMessage" class="planning-success" role="status">{{ planningSuccessMessage }}</p>
       <AddToPlanningModal v-if="isPlanningModalVisible" :recipe="recipe" @close="closePlanningModal" @added="handlePlanningAdded" />

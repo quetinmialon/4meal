@@ -22,6 +22,10 @@ class ShowRecipeController extends Controller
         $recipe->loadExists([
             'favoritedBy as is_favorite' => fn ($query) => $query->whereKey($user->getKey()),
         ]);
+        $recipe->setAttribute(
+            'personal_rating',
+            $recipe->ratings()->where('user_id', $user->getKey())->value('rating'),
+        );
         $recipe->load(['ingredients', 'steps', 'tags', 'author']);
 
         return ApiResponse::success(
