@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\Diet;
+use App\Enums\Theme;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class UserResource extends JsonResource
         $user = $this->resource;
         $lastLoginAt = $user->getAttribute('last_login_at');
         $diet = $user->getAttribute('diet');
+        $theme = $user->getAttribute('theme');
 
         return [
             'id' => $user->id,
@@ -32,6 +34,7 @@ class UserResource extends JsonResource
             'diet' => $diet instanceof Diet ? $diet->value : $diet,
             'allergies' => $user->allergies ?? [],
             'default_servings' => $user->default_servings,
+            'theme' => $theme instanceof Theme ? $theme->value : $theme,
             'avatar_path' => $user->avatar_path,
             'avatar_url' => is_string($user->avatar_path) && Storage::disk('public')->exists($user->avatar_path)
                 ? Storage::disk('public')->url($user->avatar_path)

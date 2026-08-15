@@ -4,9 +4,10 @@ import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import OAuthAccountsSection from '@/components/OAuthAccountsSection.vue';
 import { fetchNotificationPreferences, updateNotificationPreferences, type NotificationChannel, type NotificationPreference, type NotificationType } from '@/utils/notificationPreferences';
+import { applyThemePreference, initialThemePreference, type ThemePreference } from '@/utils/theme';
 
 type TextField = 'name' | 'email' | 'currentPassword' | 'allergyDraft' | 'defaultServings';
-type ErrorField = TextField | 'avatar' | 'diet' | 'allergies' | 'defaultServings';
+type ErrorField = TextField | 'avatar' | 'diet' | 'allergies' | 'defaultServings' | 'theme';
 
 const dietOptions = [
   { value: 'omnivore', label: 'Omnivore' },
@@ -16,6 +17,12 @@ const dietOptions = [
   { value: 'flexitarian', label: 'Flexitarien' },
   { value: 'halal', label: 'Halal' },
   { value: 'kosher', label: 'Casher' },
+];
+
+const themeOptions: { value: ThemePreference; label: string }[] = [
+  { value: 'light', label: 'Thème clair' },
+  { value: 'dark', label: 'Thème sombre' },
+  { value: 'system', label: 'Selon les réglages du système' },
 ];
 
 const authStore = useAuthStore();
@@ -28,11 +35,12 @@ const form = reactive({
   diet: authStore.user?.diet ?? null,
   allergies: [...(authStore.user?.allergies ?? [])],
   defaultServings: authStore.user?.default_servings ?? 2,
+  theme: initialThemePreference(authStore.user?.theme),
 });
 const allergyDraft = ref('');
-const clientErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', allergyDraft: '' });
-const apiErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', allergyDraft: '' });
-const touched = reactive<Record<ErrorField, boolean>>({ name: false, email: false, avatar: false, currentPassword: false, diet: false, allergies: false, defaultServings: false, allergyDraft: false });
+const clientErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', theme: '', allergyDraft: '' });
+const apiErrors = reactive<Record<ErrorField, string>>({ name: '', email: '', avatar: '', currentPassword: '', diet: '', allergies: '', defaultServings: '', theme: '', allergyDraft: '' });
+const touched = reactive<Record<ErrorField, boolean>>({ name: false, email: false, avatar: false, currentPassword: false, diet: false, allergies: false, defaultServings: false, theme: false, allergyDraft: false });
 const hasSubmitted = ref(false);
 const globalError = ref('');
 const successMessage = ref('');
@@ -84,6 +92,13 @@ function validateField(field: ErrorField): string {
   if (field === 'allergies' && form.allergies.length > 50) return 'Vous pouvez renseigner au maximum 50 allergies.';
   if (field === 'defaultServings' && (!Number.isInteger(form.defaultServings) || form.defaultServings < 1 || form.defaultServings > 50)) return 'Indiquez un nombre de portions entre 1 et 50.';
   return '';
+}
+
+function selectTheme(theme: ThemePreference): void {
+  form.theme = theme;
+  applyThemePreference(theme);
+  apiErrors.theme = '';
+  successMessage.value = '';
 }
 
 function visibleError(field: ErrorField): string { return apiErrors[field] || clientErrors[field]; }
@@ -148,16 +163,16 @@ function handleAvatarChange(event: Event): void {
 }
 
 function validateForm(): boolean {
-  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'allergyDraft'] as ErrorField[]).forEach((field) => {
+  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'theme', 'allergyDraft'] as ErrorField[]).forEach((field) => {
     touched[field] = true;
     validateAndStore(field);
   });
-  return (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'allergyDraft'] as ErrorField[]).every((field) => visibleError(field) === '');
+  return (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'theme', 'allergyDraft'] as ErrorField[]).every((field) => visibleError(field) === '');
 }
 
 async function focusFirstError(): Promise<void> {
   await nextTick();
-  const field = (['name', 'email', 'avatar', 'diet', 'allergies', 'defaultServings', 'allergyDraft', 'currentPassword'] as ErrorField[]).find((item) => visibleError(item) !== '');
+  const field = (['name', 'email', 'avatar', 'diet', 'allergies', 'defaultServings', 'theme', 'allergyDraft', 'currentPassword'] as ErrorField[]).find((item) => visibleError(item) !== '');
   if (field !== undefined) document.getElementById(`${field === 'allergyDraft' ? 'allergy' : field}-input`)?.focus();
   else formErrorSummary.value?.focus();
 }
@@ -166,10 +181,10 @@ async function handleSubmit(): Promise<void> {
   hasSubmitted.value = true;
   globalError.value = '';
   successMessage.value = '';
-  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings'] as ErrorField[]).forEach((field) => { apiErrors[field] = ''; });
+  (['name', 'email', 'avatar', 'currentPassword', 'diet', 'allergies', 'defaultServings', 'theme'] as ErrorField[]).forEach((field) => { apiErrors[field] = ''; });
   if (!validateForm()) { await focusFirstError(); return; }
 
-  const result = await authStore.updateProfile(form.name, form.email, form.avatar, form.currentPassword, originalEmail, form.diet, form.allergies, form.defaultServings);
+  const result = await authStore.updateProfile(form.name, form.email, form.avatar, form.currentPassword, originalEmail, form.diet, form.allergies, form.defaultServings, form.theme);
   if (result.ok) {
     successMessage.value = 'Votre profil a bien ete modifie.';
     form.currentPassword = '';
@@ -184,6 +199,7 @@ async function handleSubmit(): Promise<void> {
   apiErrors.diet = result.fieldErrors.diet ?? '';
   apiErrors.allergies = result.fieldErrors.allergies ?? '';
   apiErrors.defaultServings = result.fieldErrors.default_servings ?? '';
+  apiErrors.theme = result.fieldErrors.theme ?? '';
   await focusFirstError();
 }
 
@@ -271,6 +287,19 @@ async function toggleTwoFactor(): Promise<void> {
           <small>Requis uniquement si vous modifiez votre adresse e-mail.</small>
           <p v-if="visibleError('currentPassword')" id="currentPassword-error" class="field-error" role="alert">{{ visibleError('currentPassword') }}</p>
         </div>
+
+        <section class="preferences-section" aria-labelledby="theme-preferences-title">
+          <h3 id="theme-preferences-title">Thème</h3>
+          <p class="section-help">Choisissez l’apparence de l’application. Le mode système suit automatiquement les réglages de votre appareil.</p>
+          <div class="field">
+            <label for="theme-input">Apparence</label>
+            <select id="theme-input" v-model="form.theme" name="theme" :aria-invalid="visibleError('theme') ? 'true' : 'false'" aria-describedby="theme-help theme-error" @change="selectTheme(form.theme)">
+              <option v-for="option in themeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+            <small id="theme-help">Le choix est conservé sur cet appareil et les modes clair/sombre sont synchronisés avec votre profil.</small>
+            <p v-if="visibleError('theme')" id="theme-error" class="field-error" role="alert">{{ visibleError('theme') }}</p>
+          </div>
+        </section>
 
         <section class="preferences-section" aria-labelledby="food-preferences-title">
           <h3 id="food-preferences-title">Préférences culinaires</h3>

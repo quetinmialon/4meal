@@ -21,10 +21,8 @@ import { RouterView } from 'vue-router';
 .app-shell {
   min-height: 100vh;
   padding: 3rem 1.5rem;
-  background:
-    radial-gradient(circle at top, #f2f7ea 0, #f2f7ea 18%, transparent 18%),
-    linear-gradient(180deg, #f8f5ee 0%, #efe7d7 100%);
-  color: #243127;
+  background: var(--app-background);
+  color: var(--app-text);
   font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
 }
 
@@ -39,7 +37,7 @@ import { RouterView } from 'vue-router';
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #56704f;
+  color: var(--app-muted);
 }
 
 h1 {
@@ -53,6 +51,6 @@ h1 {
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.6;
-  color: #4b5e49;
+  color: var(--app-muted);
 }
 </style>

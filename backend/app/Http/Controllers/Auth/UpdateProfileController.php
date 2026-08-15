@@ -34,7 +34,7 @@ class UpdateProfileController extends Controller
         }
 
         $attributes = $request->safe()->only([
-            'name', 'email', 'avatar', 'diet', 'allergies', 'default_servings',
+            'name', 'email', 'avatar', 'diet', 'allergies', 'default_servings', 'theme',
         ]);
         $emailChanged = array_key_exists('email', $attributes)
             && $attributes['email'] !== $user->email;

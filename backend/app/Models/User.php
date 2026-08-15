@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Diet;
+use App\Enums\Theme;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -31,6 +32,7 @@ class User extends Authenticatable
         'diet',
         'allergies',
         'default_servings',
+        'theme',
         'password', // API/application alias for password_hash.
         'password_hash',
         'avatar_path',
@@ -65,6 +67,7 @@ class User extends Authenticatable
             'diet' => Diet::class,
             'allergies' => 'array',
             'default_servings' => 'integer',
+            'theme' => Theme::class,
         ];
     }
 

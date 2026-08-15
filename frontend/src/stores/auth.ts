@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 
 import { apiFetch } from '@/utils/api';
+import { applyUserTheme, type ThemeMode, type ThemePreference } from '@/utils/theme';
 
 const AUTH_STORAGE_KEY = '4meal.auth.session';
 const TWO_FACTOR_STORAGE_KEY = '4meal.auth.two-factor';
@@ -20,6 +21,7 @@ export type AuthUser = {
   diet?: string | null;
   allergies?: string[];
   default_servings?: number;
+  theme?: ThemeMode;
 };
 
 type AuthSession = {
@@ -136,7 +138,7 @@ export type UpdateProfileResult =
   | {
       ok: false;
       message: string;
-      fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password' | 'diet' | 'allergies' | 'default_servings', string>>;
+      fieldErrors: Partial<Record<'name' | 'email' | 'avatar_path' | 'current_password' | 'diet' | 'allergies' | 'default_servings' | 'theme', string>>;
     };
 
 export type TwoFactorActionResult =
@@ -336,6 +338,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = session.user;
       this.status = 'authenticated';
       this.isRestored = true;
+      applyUserTheme(session.user.theme);
 
       persistSession({
         user: session.user,
@@ -351,6 +354,7 @@ export const useAuthStore = defineStore('auth', {
       this.isRestored = true;
 
       persistSession(null);
+      applyUserTheme();
     },
 
     clearPendingTwoFactor(): void {
@@ -442,6 +446,7 @@ export const useAuthStore = defineStore('auth', {
           this.user = currentUser;
           this.status = 'authenticated';
           this.isRestored = true;
+          applyUserTheme(currentUser.theme);
           persistSession({ user: currentUser });
           return;
         }
@@ -928,6 +933,7 @@ export const useAuthStore = defineStore('auth', {
       diet: string | null,
       allergies: string[],
       defaultServings: number,
+      theme: ThemePreference,
     ): Promise<UpdateProfileResult> {
       if (this.user === null) {
         return {
@@ -954,6 +960,7 @@ export const useAuthStore = defineStore('auth', {
       allergies.forEach((allergy) => body.append('allergies[]', allergy));
       if (allergies.length === 0) body.append('allergies[]', '');
       body.append('default_servings', String(defaultServings));
+      if (theme !== 'system') body.append('theme', theme);
 
       try {
         const response = await apiFetch('/api/auth/me', {
@@ -979,6 +986,7 @@ export const useAuthStore = defineStore('auth', {
         if (response.ok && payload?.success === true) {
           this.user = payload.data;
           this.status = 'authenticated';
+          applyUserTheme(payload.data.theme);
           persistSession({
             user: payload.data,
           });

@@ -15,8 +15,8 @@
 - [x] AUTH-08 — Réinitialisation du mot de passe par email
 
 ### COULD
-- [ ] AUTH-09 — Vérification de l'adresse email
-- [ ] AUTH-10 — Authentification à deux facteurs (validation par email)
+- [x] AUTH-09 — Vérification de l'adresse email
+- [x] AUTH-10 — Authentification à deux facteurs (validation par email)
 
 ---
 
@@ -36,8 +36,8 @@
 - [x] COOK-09 — Transférer la propriété
 
 ### COULD
-- [ ] COOK-10 — Personnaliser l'image du CookBook
-- [ ] COOK-11 — Ajouter une description
+- [x] COOK-10 — Personnaliser l'image du CookBook
+- [x] COOK-11 — Ajouter une description
 
 ---
 
@@ -63,7 +63,7 @@
 - [x] REC-15 — Historique des modifications
 
 ### COULD
-- [ ] REC-16 — Notation personnelle des recettes
+- [x] REC-16 — Notation personnelle et notes moyenne des recettes
 - [ ] REC-17 — Estimation automatique des calories
 
 ---
@@ -83,7 +83,7 @@
 - [x] SEARCH-08 — Combiner plusieurs filtres
 
 ### COULD
-- [ ] SEARCH-09 — Sauvegarder les recherches
+- [x] SEARCH-09 — Sauvegarder les recherches
 - [ ] SEARCH-10 — Suggestions automatiques
 
 ---
@@ -101,7 +101,7 @@
 - [x] PLAN-06 — Gestion des portions dans le planning
 
 ### COULD
-- [ ] PLAN-07 — Répéter automatiquement un planning
+- [x] PLAN-07 — Répéter automatiquement un planning
 - [ ] PLAN-08 — Suggestion automatique de menu
 
 ---
@@ -120,7 +120,7 @@
 - [x] CHAT-07 — Répondre à un commentaire
 
 ### COULD
-- [ ] CHAT-08 — Réactions emoji
+- [x] CHAT-08 — Réactions emoji
 
 ---
 
@@ -139,7 +139,7 @@
 - [x] IO-08 — Compatibilité CSV
 
 ### COULD
-- [ ] IO-09 — Prévisualisation avant import
+- [x] IO-09 — Prévisualisation avant import
 
 ---
 
@@ -156,4 +156,4 @@
 - [x] USER-06 — Gérer ses notifications
 
 ### COULD
-- [ ] USER-07 — Choisir un thème (clair / sombre)
+- [x] USER-07 — Choisir un thème (clair / sombre)
