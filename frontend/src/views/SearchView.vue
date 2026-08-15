@@ -8,6 +8,7 @@ import SearchBar from '@/components/SearchBar.vue';
 import { useAuthStore } from '@/stores/auth';
 import { fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe, type RecipeFilters, type RecipePagination } from '@/utils/recipes';
+import { createSavedSearch, deleteSavedSearch, fetchSavedSearches, type SavedSearch, type SavedSearchCriteria } from '@/utils/savedSearches';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -28,6 +29,13 @@ const maxCookTime = ref('');
 const favorites = ref(false);
 const minRating = ref('');
 const ratingSort = ref('');
+const savedSearches = ref<SavedSearch[]>([]);
+const savedSearchesLoading = ref(false);
+const savedSearchesError = ref('');
+const savedSearchName = ref('');
+const savedSearchActionError = ref('');
+const savingSearch = ref(false);
+const deletingSearchId = ref('');
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let requestId = 0;
 
@@ -63,6 +71,28 @@ function filtersForRequest(): RecipeFilters {
     ...(favorites.value ? { favorites: true } : {}),
     ...(minRating.value ? { min_rating: Number(minRating.value) } : {}),
     ...(ratingSort.value ? { sort: ratingSort.value as 'rating_desc' | 'rating_asc' } : {}),
+  };
+}
+
+function criteriaForCurrentState(): SavedSearchCriteria {
+  return {
+    ...(search.value.trim() ? { q: search.value.trim() } : {}),
+    ...filtersForRequest(),
+  };
+}
+
+function queryForCriteria(criteria: SavedSearchCriteria): Record<string, string | undefined> {
+  return {
+    q: criteria.q || undefined,
+    cookbook_id: criteria.cookbook_id || undefined,
+    tag: criteria.tag || undefined,
+    ingredient: criteria.ingredient || undefined,
+    max_prep_time: criteria.max_prep_time === undefined ? undefined : String(criteria.max_prep_time),
+    max_cook_time: criteria.max_cook_time === undefined ? undefined : String(criteria.max_cook_time),
+    favorites: criteria.favorites ? 'true' : undefined,
+    min_rating: criteria.min_rating === undefined ? undefined : String(criteria.min_rating),
+    sort: criteria.sort || undefined,
+    page: undefined,
   };
 }
 
@@ -144,6 +174,47 @@ function resetFilters(): void {
   scheduleLoad();
 }
 
+function applySavedSearch(savedSearch: SavedSearch): void {
+  void router.push({ query: queryForCriteria(savedSearch.criteria) });
+}
+
+async function saveCurrentSearch(): Promise<void> {
+  const name = savedSearchName.value.trim();
+  if (!name) {
+    savedSearchActionError.value = 'Donnez un nom à cette recherche.';
+    return;
+  }
+
+  savingSearch.value = true;
+  savedSearchActionError.value = '';
+  const result = await createSavedSearch(name, criteriaForCurrentState(), authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    savedSearches.value = [result.savedSearch, ...savedSearches.value.filter((item) => item.id !== result.savedSearch.id)];
+    savedSearchName.value = '';
+  } else {
+    savedSearchActionError.value = result.message;
+  }
+  savingSearch.value = false;
+}
+
+async function removeSavedSearch(savedSearch: SavedSearch): Promise<void> {
+  deletingSearchId.value = savedSearch.id;
+  savedSearchActionError.value = '';
+  const result = await deleteSavedSearch(savedSearch.id, authStore.tokenType, authStore.accessToken);
+  if (result.ok) savedSearches.value = savedSearches.value.filter((item) => item.id !== savedSearch.id);
+  else savedSearchActionError.value = result.message;
+  deletingSearchId.value = '';
+}
+
+async function loadSavedSearches(): Promise<void> {
+  savedSearchesLoading.value = true;
+  savedSearchesError.value = '';
+  const result = await fetchSavedSearches(authStore.tokenType, authStore.accessToken);
+  if (result.ok) savedSearches.value = result.savedSearches;
+  else savedSearchesError.value = result.message;
+  savedSearchesLoading.value = false;
+}
+
 function retry(): void {
   void loadSearch();
 }
@@ -168,10 +239,13 @@ watch(
 onMounted(async () => {
   cookbooksLoading.value = true;
   cookbooksError.value = '';
-  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  const cookbooksPromise = fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  const savedSearchesPromise = loadSavedSearches();
+  const result = await cookbooksPromise;
   if (result.ok) cookbooks.value = result.data;
   else cookbooksError.value = result.message;
   cookbooksLoading.value = false;
+  await savedSearchesPromise;
 });
 
 function retryCookbooks(): void {
@@ -263,6 +337,31 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
+    <section class="saved-searches-panel" aria-labelledby="saved-searches-title">
+      <div class="filters-heading">
+        <h3 id="saved-searches-title">Recherches sauvegardées</h3>
+        <span v-if="savedSearchesLoading" class="filter-status" role="status">Chargement...</span>
+      </div>
+      <form class="save-search-form" @submit.prevent="saveCurrentSearch">
+        <label for="saved-search-name">Nom de la recherche</label>
+        <div class="save-search-controls">
+          <input id="saved-search-name" v-model="savedSearchName" type="text" maxlength="100" placeholder="Ex. Dîners rapides" :disabled="savingSearch" />
+          <button type="submit" class="save-button" :disabled="savingSearch">{{ savingSearch ? 'Sauvegarde...' : 'Sauvegarder' }}</button>
+        </div>
+      </form>
+      <p v-if="savedSearchesError" class="filter-status filter-error" role="alert">{{ savedSearchesError }} <button type="button" @click="loadSavedSearches">Réessayer</button></p>
+      <p v-if="savedSearchActionError" class="filter-status filter-error" role="alert">{{ savedSearchActionError }}</p>
+      <ul v-if="savedSearches.length" class="saved-search-list">
+        <li v-for="savedSearch in savedSearches" :key="savedSearch.id">
+          <button type="button" class="saved-search-load" @click="applySavedSearch(savedSearch)">{{ savedSearch.name }}</button>
+          <button type="button" class="saved-search-delete" :disabled="deletingSearchId === savedSearch.id" :aria-label="`Supprimer ${savedSearch.name}`" @click="removeSavedSearch(savedSearch)">
+            {{ deletingSearchId === savedSearch.id ? 'Suppression...' : 'Supprimer' }}
+          </button>
+        </li>
+      </ul>
+      <p v-else-if="!savedSearchesLoading && !savedSearchesError" class="filter-status">Aucune recherche sauvegardée.</p>
+    </section>
+
     <p v-if="isLoading" class="state-message" role="status" aria-live="polite">Recherche en cours...</p>
     <section v-else-if="errorMessage" class="state-message error-summary" role="alert">
       <p>{{ errorMessage }}</p>
@@ -295,6 +394,7 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .secondary-link { padding: .65rem .8rem; border: 1px solid #395330; border-radius: .6rem; color: #395330; font-weight: 700; text-decoration: none; }
 .recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
 .filters-panel { margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; background: rgba(247, 251, 243, .65); }
+.saved-searches-panel { margin-top: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; background: rgba(247, 251, 243, .65); }
 .filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .filters-heading h3 { margin: 0; color: #243127; }
 .reset-button { padding: .45rem .65rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
@@ -306,6 +406,15 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .checkbox-filter input { width: 1.1rem; height: 1.1rem; accent-color: #395330; }
 .filter-status { margin: .8rem 0 0; color: #50634d; font-size: .9rem; }
 .filter-error { color: #8f1e1e; }
+.save-search-form { display: grid; gap: .35rem; margin-top: 1rem; color: #395330; font-size: .9rem; font-weight: 700; }
+.save-search-controls { display: flex; gap: .6rem; }
+.save-search-controls input { min-width: 0; flex: 1; padding: .65rem .7rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; color: #243127; font: inherit; font-weight: 400; }
+.save-button, .saved-search-delete { padding: .55rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.save-button:disabled, .saved-search-delete:disabled { cursor: wait; opacity: .6; }
+.saved-search-list { display: grid; gap: .5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.saved-search-list li { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .55rem .65rem; border: 1px solid #d6dfd0; border-radius: .5rem; background: #fffdf8; }
+.saved-search-load { padding: 0; border: 0; background: transparent; color: #395330; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.saved-search-delete { border-color: #8f1e1e; background: transparent; color: #8f1e1e; }
 .result-count { margin: 1.5rem 0 0; color: #50634d; font-size: .9rem; }
 .state-message, .empty-state { margin-top: 1.5rem; padding: 1.25rem; border-radius: .8rem; }
 .state-message { color: #50634d; }
