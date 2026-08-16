@@ -288,7 +288,7 @@ async function toggleTwoFactor(): Promise<void> {
           <p v-if="visibleError('currentPassword')" id="currentPassword-error" class="field-error" role="alert">{{ visibleError('currentPassword') }}</p>
         </div>
 
-        <section class="preferences-section" aria-labelledby="theme-preferences-title">
+        <section id="theme-preferences" class="preferences-section" aria-labelledby="theme-preferences-title">
           <h3 id="theme-preferences-title">Thème</h3>
           <p class="section-help">Choisissez l’apparence de l’application. Le mode système suit automatiquement les réglages de votre appareil.</p>
           <div class="field">
@@ -301,7 +301,7 @@ async function toggleTwoFactor(): Promise<void> {
           </div>
         </section>
 
-        <section class="preferences-section" aria-labelledby="food-preferences-title">
+        <section id="food-preferences" class="preferences-section" aria-labelledby="food-preferences-title">
           <h3 id="food-preferences-title">Préférences culinaires</h3>
           <p class="section-help">Ces préférences servent à personnaliser vos suggestions de recettes. Vous pourrez les modifier à tout moment.</p>
 
@@ -341,7 +341,7 @@ async function toggleTwoFactor(): Promise<void> {
           </div>
         </section>
 
-        <section class="preferences-section" aria-labelledby="notification-preferences-title">
+        <section id="notification-preferences" class="preferences-section" aria-labelledby="notification-preferences-title">
           <h3 id="notification-preferences-title">Préférences de notifications</h3>
           <p class="section-help">Choisissez comment vous souhaitez être informé pour chaque source de notification.</p>
           <p v-if="notificationLoading" role="status">Chargement des préférences de notifications...</p>
@@ -362,7 +362,7 @@ async function toggleTwoFactor(): Promise<void> {
       </fieldset>
     </form>
 
-    <section class="preferences-section" aria-labelledby="two-factor-title">
+    <section id="security-preferences" class="preferences-section" aria-labelledby="two-factor-title">
       <h3 id="two-factor-title">Verification en deux etapes</h3>
       <p class="section-help">Recevez un code temporaire par e-mail a chaque nouvelle connexion.</p>
       <p v-if="twoFactorError" class="error-summary" role="alert">{{ twoFactorError }}</p>
@@ -380,7 +380,9 @@ async function toggleTwoFactor(): Promise<void> {
       </button>
     </section>
 
-    <OAuthAccountsSection />
+    <section id="connected-accounts">
+      <OAuthAccountsSection />
+    </section>
   </main>
 </template>
 
