@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import { deletePlannedMeal, fetchPlannedMeals, updatePlannedMeal, type PlannedMeal } from '@/utils/planning';
@@ -7,6 +8,8 @@ import { useDialogFocus } from '@/utils/dialogFocus';
 
 type CalendarMode = 'week' | 'month';
 const authStore = useAuthStore();
+const route = useRoute();
+const cookbookId = computed(() => typeof route?.params?.id === 'string' ? route.params.id : undefined);
 const mode = ref<CalendarMode>('week');
 const currentDate = ref(startOfDay(new Date()));
 const meals = ref<PlannedMeal[]>([]);
@@ -172,7 +175,7 @@ async function loadMeals(): Promise<void> {
   errorMessage.value = '';
   feedbackMessage.value = '';
   selectedMeal.value = null;
-  const result = await fetchPlannedMeals(period.value.from, period.value.to, authStore.tokenType, authStore.accessToken);
+  const result = await fetchPlannedMeals(period.value.from, period.value.to, authStore.tokenType, authStore.accessToken, cookbookId.value);
   if (result.ok) meals.value = result.meals;
   else { meals.value = []; errorMessage.value = result.message; }
   isLoading.value = false;
@@ -272,7 +275,7 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
 </template>
 
 <style scoped>
-.planning-page { max-width: 64rem; margin: 0 auto; padding: 1.5rem; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
+.planning-page { width: 100%; max-width: 76rem; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
 .planning-header { display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
 .kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h2, h3 { margin: 0; color: #243127; }

@@ -15,7 +15,7 @@ import { RouterLink } from 'vue-router';
 </script>
 
 <style scoped>
-.data-page { max-width: 42rem; margin: 0 auto; padding: 2rem; }
+.data-page { width: 100%; max-width: 76rem; margin: 0 auto; padding: 2rem; box-sizing: border-box; }
 .kicker { margin: 0 0 .35rem; color: var(--app-muted); font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h1 { margin: 0 0 .75rem; }
 .intro { color: var(--app-muted); }

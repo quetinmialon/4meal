@@ -39,7 +39,7 @@ onMounted(() => { void loadRecipe(); });
 </template>
 
 <style scoped>
-.edit-page { max-width: 48rem; margin: 0 auto; }
+.edit-page { width: 100%; max-width: 76rem; margin: 0 auto; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
