@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth';
 import { fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { fetchRecipes, type Recipe, type RecipeFilters, type RecipePagination } from '@/utils/recipes';
 import { createSavedSearch, deleteSavedSearch, fetchSavedSearches, type SavedSearch, type SavedSearchCriteria } from '@/utils/savedSearches';
+import { useDialogFocus } from '@/utils/dialogFocus';
 
 const authStore = useAuthStore();
 const route = useRoute();
@@ -36,6 +37,8 @@ const savedSearchName = ref('');
 const savedSearchActionError = ref('');
 const savingSearch = ref(false);
 const deletingSearchId = ref('');
+const isFilterDrawerOpen = ref(false);
+const filterDrawer = ref<HTMLElement | null>(null);
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let requestId = 0;
 
@@ -60,6 +63,35 @@ function queryBoolean(value: unknown): boolean {
 const hasFilters = computed(() => Boolean(
   cookbookId.value || tag.value.trim() || ingredient.value.trim() || maxPrepTime.value || maxCookTime.value || favorites.value || minRating.value || ratingSort.value,
 ));
+
+const activeFilterChips = computed(() => [
+  cookbookId.value ? { key: 'cookbook', label: `Cookbook : ${cookbooks.value.find((item) => item.id === cookbookId.value)?.name ?? cookbookId.value}` } : null,
+  tag.value.trim() ? { key: 'tag', label: `Tag : ${tag.value.trim()}` } : null,
+  ingredient.value.trim() ? { key: 'ingredient', label: `Ingrédient : ${ingredient.value.trim()}` } : null,
+  maxPrepTime.value ? { key: 'prep', label: `Préparation ≤ ${maxPrepTime.value} min` } : null,
+  maxCookTime.value ? { key: 'cook', label: `Cuisson ≤ ${maxCookTime.value} min` } : null,
+  favorites.value ? { key: 'favorites', label: 'Mes favoris' } : null,
+  minRating.value ? { key: 'rating', label: `Note ≥ ${minRating.value}/5` } : null,
+  ratingSort.value ? { key: 'sort', label: ratingSort.value === 'rating_desc' ? 'Mieux notées' : 'Moins bien notées' } : null,
+].filter((chip): chip is { key: string; label: string } => chip !== null));
+
+function closeFilterDrawer(): void {
+  isFilterDrawerOpen.value = false;
+}
+
+function clearFilter(key: string): void {
+  if (key === 'cookbook') cookbookId.value = '';
+  if (key === 'tag') tag.value = '';
+  if (key === 'ingredient') ingredient.value = '';
+  if (key === 'prep') maxPrepTime.value = '';
+  if (key === 'cook') maxCookTime.value = '';
+  if (key === 'favorites') favorites.value = false;
+  if (key === 'rating') minRating.value = '';
+  if (key === 'sort') ratingSort.value = '';
+  syncFilters();
+}
+
+useDialogFocus(filterDrawer, isFilterDrawerOpen, closeFilterDrawer);
 
 function filtersForRequest(): RecipeFilters {
   return {
@@ -280,15 +312,26 @@ onBeforeUnmount(() => {
 
     <section class="filters-panel" aria-labelledby="filters-title">
       <div class="filters-heading">
-        <h3 id="filters-title">Filtrer les recettes</h3>
+        <div>
+          <h3 id="filters-title">Filtres</h3>
+          <p class="filter-summary">Affinez les résultats par cookbook, favoris, tags, ingrédients ou durée.</p>
+        </div>
+        <div class="filter-actions">
+          <button type="button" class="quick-filter-button" :class="{ active: favorites }" :aria-pressed="favorites" :disabled="isLoading" @click="favorites = !favorites; syncFilters()">Favoris</button>
+          <button type="button" class="advanced-filter-button" :aria-expanded="isFilterDrawerOpen" aria-controls="advanced-filters" @click="isFilterDrawerOpen = true">Tous les filtres</button>
         <button type="button" class="reset-button" :disabled="isLoading || !hasFilters" @click="resetFilters">Réinitialiser</button>
       </div>
+        </div>
       <p v-if="cookbooksLoading" class="filter-status" role="status">Chargement des cookbooks...</p>
       <p v-else-if="cookbooksError" class="filter-status filter-error" role="alert">
         {{ cookbooksError }}
         <button type="button" @click="retryCookbooks">Réessayer</button>
       </p>
-      <div class="filters-grid">
+      <div v-show="isFilterDrawerOpen" id="advanced-filters" ref="filterDrawer" class="filters-grid filter-drawer" role="dialog" aria-modal="true" aria-labelledby="filters-title">
+        <div class="drawer-heading">
+          <h4>Filtres avancés</h4>
+          <button type="button" class="drawer-close" aria-label="Fermer les filtres avancés" @click="closeFilterDrawer">Fermer</button>
+        </div>
         <label>
           Cookbook
           <select v-model="cookbookId" :disabled="isLoading || cookbooksLoading" @change="syncFilters">
@@ -335,6 +378,19 @@ onBeforeUnmount(() => {
           </select>
         </label>
       </div>
+    </section>
+
+    <section v-if="activeFilterChips.length" class="active-filters" aria-labelledby="active-filters-title">
+      <div class="active-filters-heading">
+        <h3 id="active-filters-title">Filtres actifs</h3>
+        <button type="button" class="reset-button" :disabled="isLoading" @click="resetFilters">Réinitialiser</button>
+      </div>
+      <ul class="filter-chips">
+        <li v-for="chip in activeFilterChips" :key="chip.key" class="filter-chip">
+          <span>{{ chip.label }}</span>
+          <button type="button" :aria-label="`Retirer ${chip.label}`" @click="clearFilter(chip.key)">×</button>
+        </li>
+      </ul>
     </section>
 
     <section class="saved-searches-panel" aria-labelledby="saved-searches-title">
@@ -386,7 +442,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.search-page { max-width: 52rem; margin: 0 auto; }
+.search-page { width: 100%; max-width: 76rem; margin: 0 auto; }
 .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
@@ -394,12 +450,27 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .secondary-link { padding: .65rem .8rem; border: 1px solid #395330; border-radius: .6rem; color: #395330; font-weight: 700; text-decoration: none; }
 .recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
 .filters-panel { margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; background: rgba(247, 251, 243, .65); }
+.filter-summary { margin: .35rem 0 0; color: #50634d; font-size: .9rem; font-weight: 400; }
+.filter-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: .5rem; }
+.quick-filter-button, .advanced-filter-button { padding: .45rem .65rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.quick-filter-button.active { background: #395330; color: #fffdf8; }
+.filter-drawer { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 1rem; padding: 1rem; border: 1px solid #b9c5af; border-radius: .7rem; background: #fffdf8; }
+.drawer-heading { display: flex; align-items: center; justify-content: space-between; grid-column: 1 / -1; gap: 1rem; }
+.drawer-heading h4 { margin: 0; color: #243127; }
+.drawer-close { padding: .45rem .65rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
+.active-filters { margin-top: 1rem; }
+.active-filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.active-filters-heading h3 { margin: 0; color: #243127; font-size: 1rem; }
+.filter-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin: .7rem 0 0; padding: 0; list-style: none; }
+.filter-chip { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .5rem .35rem .65rem; border: 1px solid #b9c5af; border-radius: 999px; background: #edf4e8; color: #243127; font-size: .88rem; }
+.filter-chip button { display: inline-grid; width: 1.35rem; height: 1.35rem; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #243127; font: inherit; font-weight: 700; cursor: pointer; }
+.filter-chip button:hover, .filter-chip button:focus-visible { background: #d6dfd0; }
 .saved-searches-panel { margin-top: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; background: rgba(247, 251, 243, .65); }
 .filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .filters-heading h3 { margin: 0; color: #243127; }
 .reset-button { padding: .45rem .65rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .reset-button:disabled { cursor: not-allowed; opacity: .45; }
-.filters-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: 1rem; }
+.filters-grid { display: grid; gap: .8rem; }
 .filters-grid label { display: grid; gap: .35rem; color: #395330; font-size: .9rem; font-weight: 700; }
 .filters-grid input:not([type="checkbox"]), .filters-grid select { width: 100%; box-sizing: border-box; padding: .65rem .7rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; color: #243127; font: inherit; font-weight: 400; }
 .checkbox-filter { display: flex !important; align-items: center; grid-template-columns: auto 1fr; gap: .55rem !important; align-self: end; min-height: 2.4rem; }
@@ -422,5 +493,5 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .error-summary button { padding: .5rem .7rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: transparent; color: #8f1e1e; font: inherit; font-weight: 700; cursor: pointer; }
 .empty-state { border: 1px dashed #b9c5af; color: #50634d; }
 .empty-state h3 { margin-top: 0; color: #243127; }
-@media (max-width: 38rem) { .page-heading { align-items: flex-start; flex-direction: column; } .filters-grid { grid-template-columns: 1fr; } .recipe-grid { grid-template-columns: 1fr; } }
+@media (max-width: 38rem) { .page-heading { align-items: flex-start; flex-direction: column; } .filter-actions { justify-content: start; } .filter-drawer { grid-template-columns: 1fr; } .recipe-grid { grid-template-columns: 1fr; } }
 </style>
