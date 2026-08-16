@@ -126,7 +126,9 @@ async function handleLogout(): Promise<void> {
       </div>
       <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
     </section>
-    <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
+    <div id="notifications">
+      <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
+    </div>
     <section class="cookbooks-section" aria-labelledby="cookbooks-title">
       <div class="section-heading">
         <div>

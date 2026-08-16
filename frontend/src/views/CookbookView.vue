@@ -399,13 +399,14 @@ onMounted(async () => {
         :src="cookbook.image_url"
         :alt="`Image de ${cookbook.name}`"
       />
-      <div v-if="!isEditingName" class="name-heading">
-        <h2>{{ cookbook.name }}</h2>
-        <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
-          Modifier le cookbook
-        </button>
-      </div>
-      <form v-else class="edit-name-form" novalidate @submit.prevent="saveName">
+      <section id="cookbook-settings" class="cookbook-settings-section">
+        <div v-if="!isEditingName" class="name-heading">
+          <h2>{{ cookbook.name }}</h2>
+          <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
+            Modifier le cookbook
+          </button>
+        </div>
+        <form v-else class="edit-name-form" novalidate @submit.prevent="saveName">
         <label for="cookbook-name-edit-input">Nom du cookbook</label>
         <input
           id="cookbook-name-edit-input"
@@ -436,7 +437,8 @@ onMounted(async () => {
           <button type="submit" :disabled="isSavingName">{{ isSavingName ? 'Enregistrement...' : 'Enregistrer' }}</button>
           <button type="button" class="cancel-button" :disabled="isSavingName" @click="cancelEditingName">Annuler</button>
         </div>
-      </form>
+        </form>
+      </section>
       <div class="cookbook-owner">
         <img v-if="cookbook.owner.avatar_url" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
         <span v-else class="owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
@@ -463,7 +465,7 @@ onMounted(async () => {
         />
       </section>
       <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
-      <section class="members-section" aria-labelledby="members-title">
+      <section id="cookbook-members" class="members-section" aria-labelledby="members-title">
         <div class="section-heading">
           <h3 id="members-title">Membres</h3>
           <span v-if="membersPagination" class="section-count">{{ membersPagination.total }} membre<span v-if="membersPagination.total !== 1">s</span></span>
