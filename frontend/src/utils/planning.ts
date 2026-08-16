@@ -140,9 +140,15 @@ export async function fetchPlannedMeals(
   tokenType: string,
   accessToken: string,
   cookbookId?: string,
+  cookbookIds: string[] = [],
+  includePersonal?: boolean,
 ): Promise<PlannedMealsResult> {
   const params = new URLSearchParams({ from, to });
   if (cookbookId) params.set('cookbook_id', cookbookId);
+  if (!cookbookId && includePersonal !== undefined) {
+    params.set('include_personal', String(includePersonal));
+    cookbookIds.forEach((id) => params.append('cookbook_ids[]', id));
+  }
 
   try {
     const response = await apiFetch(`/api/planned-meals?${params.toString()}`, {

@@ -28,6 +28,8 @@ class ListPlannedMealsController extends Controller
                 $request->string('from')->toString(),
                 $request->string('to')->toString(),
                 $request->filled('cookbook_id') ? $request->string('cookbook_id')->toString() : null,
+                $request->input('cookbook_ids', []),
+                $request->has('include_personal') ? $request->boolean('include_personal') : null,
             )->get(),
         )->resolve($request));
     }
