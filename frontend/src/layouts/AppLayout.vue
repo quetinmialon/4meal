@@ -32,6 +32,9 @@ const quickMenu = ref<HTMLElement | null>(null);
 const userMenu = ref<HTMLElement | null>(null);
 const quickMenuTrigger = ref<HTMLButtonElement | null>(null);
 const userMenuTrigger = ref<HTMLButtonElement | null>(null);
+const mobileNavigation = ref<HTMLElement | null>(null);
+const mobileMenuTrigger = ref<HTMLButtonElement | null>(null);
+let previousBodyOverflow = '';
 
 const navigationItems: NavigationItem[] = [
   { label: 'Accueil', name: 'dashboard', icon: Home },
@@ -42,6 +45,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Import & Export', name: 'data', icon: ArrowDownUp },
   { label: 'Paramètres', name: 'settings', icon: Settings },
 ];
+const mobilePrimaryItems = navigationItems.filter((item) => ['dashboard', 'recipes', 'planning', 'shopping-list'].includes(item.name));
 
 const cookbookId = computed(() => String(route.params.id ?? ''));
 const isCookbookContext = computed(() => route.name === 'cookbook' || route.name === 'cookbook-messages');
@@ -54,8 +58,29 @@ function isNavigationItemActive(item: NavigationItem): boolean {
   return route.name === item.name || (item.name === 'recipes' && ['recipe-create', 'recipe-detail', 'recipe-edit', 'recipe-history', 'public-recipes', 'search'].includes(String(route.name)));
 }
 
-function closeMobileNavigation(): void { isMobileNavigationOpen.value = false; }
-function toggleMobileNavigation(): void { isMobileNavigationOpen.value = !isMobileNavigationOpen.value; }
+function closeMobileNavigation(restoreFocus = true): void {
+  isMobileNavigationOpen.value = false;
+  if (restoreFocus) void nextTick(() => mobileMenuTrigger.value?.focus());
+}
+function toggleMobileNavigation(): void {
+  if (isMobileNavigationOpen.value) closeMobileNavigation(true);
+  else isMobileNavigationOpen.value = true;
+}
+
+function focusMobileNavigation(): void {
+  void nextTick(() => mobileNavigation.value?.querySelector<HTMLElement>('button, a')?.focus());
+}
+
+function trapMobileNavigationFocus(event: KeyboardEvent): void {
+  if (!isMobileNavigationOpen.value || event.key !== 'Tab' || !mobileNavigation.value) return;
+  const focusable = Array.from(mobileNavigation.value.querySelectorAll<HTMLElement>('button, a[href]')).filter((element) => !element.hasAttribute('disabled'));
+  if (focusable.length === 0) return;
+  const first = focusable.at(0);
+  const last = focusable.at(-1);
+  if (!first || !last) return;
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+}
 
 function focusFirstMenuItem(menu: HTMLElement | null): void {
   void nextTick(() => menu?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
@@ -90,6 +115,10 @@ function handleDocumentPointerDown(event: PointerEvent): void {
 }
 
 function handleDocumentKeydown(event: KeyboardEvent): void {
+  if (isMobileNavigationOpen.value) {
+    if (event.key === 'Escape') { event.preventDefault(); closeMobileNavigation(true); return; }
+    trapMobileNavigationFocus(event);
+  }
   if (event.key !== 'Escape') return;
   if (isQuickMenuOpen.value) { event.preventDefault(); closeQuickMenu(true); }
   if (isUserMenuOpen.value) { event.preventDefault(); closeUserMenu(true); }
@@ -101,7 +130,16 @@ async function logout(): Promise<void> {
   await router.push({ name: 'login' });
 }
 
-watch(() => route.fullPath, () => { closeMobileNavigation(); closeQuickMenu(); closeUserMenu(); });
+watch(() => route.fullPath, () => { closeMobileNavigation(false); closeQuickMenu(); closeUserMenu(); });
+watch(isMobileNavigationOpen, (isOpen) => {
+  if (isOpen) {
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    focusMobileNavigation();
+  } else {
+    document.body.style.overflow = previousBodyOverflow;
+  }
+});
 onMounted(() => {
   document.addEventListener('pointerdown', handleDocumentPointerDown);
   document.addEventListener('keydown', handleDocumentKeydown);
@@ -109,17 +147,18 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', handleDocumentPointerDown);
   document.removeEventListener('keydown', handleDocumentKeydown);
+  document.body.style.overflow = previousBodyOverflow;
 });
 </script>
 
 <template>
   <div class="app-shell">
-    <button v-if="isMobileNavigationOpen" class="navigation-scrim" type="button" aria-label="Fermer le menu" @click="closeMobileNavigation" />
+    <button v-if="isMobileNavigationOpen" class="navigation-scrim" type="button" aria-label="Fermer le menu" @click="closeMobileNavigation()" />
 
-    <aside id="main-navigation" class="sidebar" :class="{ 'is-open': isMobileNavigationOpen }" aria-label="Navigation principale">
+    <aside id="main-navigation" ref="mobileNavigation" class="sidebar" :class="{ 'is-open': isMobileNavigationOpen }" aria-label="Navigation principale">
       <div class="sidebar-header">
         <RouterLink class="brand" :to="{ name: 'dashboard' }" @click="closeMobileNavigation">SUPMEAL</RouterLink>
-        <button class="icon-button sidebar-close" type="button" aria-label="Fermer le menu" @click="closeMobileNavigation"><X :size="20" aria-hidden="true" /></button>
+        <button class="icon-button sidebar-close" type="button" aria-label="Fermer le menu" @click="closeMobileNavigation()"><X :size="20" aria-hidden="true" /></button>
       </div>
       <nav class="sidebar-navigation">
         <RouterLink v-for="item in navigationItems" :key="item.name" class="navigation-link" :class="{ 'is-active': isNavigationItemActive(item) }" :to="{ name: item.name }" :aria-current="isNavigationItemActive(item) ? 'page' : undefined" @click="closeMobileNavigation">
@@ -133,7 +172,7 @@ onBeforeUnmount(() => {
 
     <div class="shell-body">
       <header class="global-header">
-        <button class="icon-button mobile-menu-button" type="button" :aria-expanded="isMobileNavigationOpen" aria-controls="main-navigation" aria-label="Ouvrir le menu" @click="toggleMobileNavigation">
+        <button ref="mobileMenuTrigger" class="icon-button mobile-menu-button" type="button" :aria-expanded="isMobileNavigationOpen" aria-controls="main-navigation" :aria-label="isMobileNavigationOpen ? 'Fermer le menu' : 'Ouvrir le menu'" @click="toggleMobileNavigation">
           <Menu v-if="!isMobileNavigationOpen" :size="22" aria-hidden="true" /><X v-else :size="22" aria-hidden="true" />
         </button>
         <div class="header-search"><Search :size="18" aria-hidden="true" /><RouterLink :to="{ name: 'search' }">Rechercher une recette</RouterLink></div>
@@ -172,6 +211,11 @@ onBeforeUnmount(() => {
         <RouterLink :to="{ name: 'profile' }">Profil</RouterLink><RouterLink :to="{ name: 'profile', hash: '#food-preferences' }">Préférences alimentaires</RouterLink><RouterLink :to="{ name: 'change-password' }">Sécurité</RouterLink><RouterLink :to="{ name: 'profile', hash: '#connected-accounts' }">Comptes connectés</RouterLink><RouterLink :to="{ name: 'profile', hash: '#notification-preferences' }">Notifications</RouterLink><RouterLink :to="{ name: 'profile', hash: '#theme-preferences' }">Apparence</RouterLink>
       </nav>
       <main id="main-content" class="main-content"><slot /></main>
+      <nav class="mobile-primary-navigation" aria-label="Accès rapide mobile">
+        <RouterLink v-for="item in mobilePrimaryItems" :key="item.name" :to="{ name: item.name }" :class="{ 'is-active': isNavigationItemActive(item) }" :aria-current="isNavigationItemActive(item) ? 'page' : undefined">
+          <component :is="item.icon" :size="19" aria-hidden="true" /><span>{{ item.label }}</span>
+        </RouterLink>
+      </nav>
     </div>
   </div>
 </template>
@@ -205,7 +249,23 @@ onBeforeUnmount(() => {
 .context-navigation a { flex: 0 0 auto; color: var(--app-muted); font-weight: 700; text-decoration: none; }
 .context-navigation a.router-link-active { color: var(--app-text); }
 .main-content { width: min(100% - 4rem, 76rem); margin: 0 auto; padding: 2rem 0 3rem; }
-.mobile-menu-button, .sidebar-close, .navigation-scrim { display: none; }
-@media (max-width: 52rem) { .sidebar { transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 18px 45px rgba(36, 49, 39, .2); } .sidebar.is-open { transform: translateX(0); } .sidebar-close, .mobile-menu-button { display: inline-flex; } .navigation-scrim { position: fixed; inset: 0; z-index: 15; display: block; border: 0; background: rgba(36, 49, 39, .38); cursor: pointer; } .shell-body { margin-left: 0; } .global-header { padding: .75rem 1rem; } .header-search { flex: 1; min-width: 0; } .header-search a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .header-action span, .user-name { display: none; } .header-action { width: 2.5rem; padding: 0; } .main-content { width: min(100% - 2rem, 76rem); } }
+.mobile-menu-button, .sidebar-close, .navigation-scrim, .mobile-primary-navigation { display: none; }
+@media (max-width: 52rem) {
+  .sidebar { transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 18px 45px rgba(36, 49, 39, .2); }
+  .sidebar.is-open { transform: translateX(0); }
+  .sidebar-close, .mobile-menu-button { display: inline-flex; }
+  .navigation-scrim { position: fixed; inset: 0; z-index: 15; display: block; border: 0; background: rgba(36, 49, 39, .38); cursor: pointer; }
+  .shell-body { margin-left: 0; padding-bottom: 4.75rem; }
+  .global-header { padding: .75rem 1rem; }
+  .header-search { flex: 1; min-width: 0; }
+  .header-search a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-action span, .user-name { display: none; }
+  .header-action { width: 2.5rem; padding: 0; }
+  .main-content { width: min(100% - 2rem, 76rem); }
+  .mobile-primary-navigation { position: fixed; inset: auto 0 0; z-index: 10; display: grid; grid-template-columns: repeat(4, 1fr); min-height: 4.25rem; padding: .35rem .5rem calc(.35rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-border); background: var(--app-surface); }
+  .mobile-primary-navigation a { display: flex; align-items: center; justify-content: center; gap: .2rem; min-height: 3.5rem; flex-direction: column; border-radius: .55rem; color: var(--app-muted); font-size: .72rem; font-weight: 700; text-decoration: none; }
+  .mobile-primary-navigation a.is-active { color: var(--app-text); background: color-mix(in srgb, var(--app-border) 70%, transparent); }
+  .mobile-primary-navigation a:focus-visible { outline: 3px solid color-mix(in srgb, var(--app-muted) 45%, transparent); outline-offset: -3px; }
+}
 @media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
 </style>
