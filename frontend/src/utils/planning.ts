@@ -139,8 +139,10 @@ export async function fetchPlannedMeals(
   to: string,
   tokenType: string,
   accessToken: string,
+  cookbookId?: string,
 ): Promise<PlannedMealsResult> {
   const params = new URLSearchParams({ from, to });
+  if (cookbookId) params.set('cookbook_id', cookbookId);
 
   try {
     const response = await apiFetch(`/api/planned-meals?${params.toString()}`, {

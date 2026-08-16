@@ -106,7 +106,7 @@ onMounted(() => { void loadList(); });
 </template>
 
 <style scoped>
-.shopping-page { max-width: 52rem; margin: 0 auto; padding: 1.5rem; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
+.shopping-page { width: 100%; max-width: 76rem; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
 .shopping-header, .list-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h2, h3 { margin: 0; color: #243127; }

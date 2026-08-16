@@ -4,7 +4,6 @@ import { RouterLink } from 'vue-router';
 
 import Avatar from '@/components/Avatar.vue';
 import Badge from '@/components/Badge.vue';
-import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingState from '@/components/LoadingState.vue';
@@ -17,7 +16,6 @@ import { acceptCookbookInvitationById, declineCookbookInvitation, fetchCookbookI
 const authStore = useAuthStore();
 const userName = computed(() => authStore.user?.name ?? '');
 const userEmail = computed(() => authStore.user?.email ?? '');
-const isCreateFormVisible = ref(false);
 const cookbooks = ref<Cookbook[]>([]);
 const pagination = ref<Pagination | null>(null);
 const isLoading = ref(true);
@@ -152,14 +150,12 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
           <p class="kicker">Espaces partagés</p>
           <h2 id="cookbooks-title">Mes cookbooks</h2>
         </div>
-        <button class="secondary-action" type="button" @click="isCreateFormVisible = !isCreateFormVisible">
-          {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
-        </button>
+        <RouterLink class="secondary-action" :to="{ name: 'cookbooks' }">Nouveau cookbook</RouterLink>
       </div>
       <LoadingState v-if="isLoading" label="Chargement des cookbooks..." />
       <ErrorState v-else-if="errorMessage" :message="errorMessage" />
-      <EmptyState v-else-if="cookbooks.length === 0 && !isCreateFormVisible" title="Vous n’avez encore aucun cookbook." description="Créez votre premier espace pour organiser vos recettes." />
-      <div v-else-if="!isCreateFormVisible" class="cookbook-list">
+      <EmptyState v-else-if="cookbooks.length === 0" title="Vous n’avez encore aucun cookbook." description="Créez votre premier espace pour organiser vos recettes." />
+      <div v-else class="cookbook-list">
         <RouterLink
           v-for="cookbook in cookbooks"
           :key="cookbook.id"
@@ -181,7 +177,6 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
           <button type="button" :disabled="!pagination.has_more_pages" @click="goToPage(pagination.current_page + 1)">Suivant</button>
         </nav>
       </div>
-      <CookbookCreateForm v-else />
     </section>
   </main>
 </template>

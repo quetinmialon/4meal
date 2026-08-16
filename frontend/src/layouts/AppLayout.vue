@@ -48,8 +48,17 @@ const navigationItems: NavigationItem[] = [
 const mobilePrimaryItems = navigationItems.filter((item) => ['dashboard', 'recipes', 'planning', 'shopping-list'].includes(item.name));
 
 const cookbookId = computed(() => String(route.params.id ?? ''));
-const isCookbookContext = computed(() => route.name === 'cookbook' || route.name === 'cookbook-messages');
+const cookbookRouteNames = ['cookbook', 'cookbook-recipes', 'cookbook-members', 'cookbook-planning', 'cookbook-settings', 'cookbook-messages'];
+const isCookbookContext = computed(() => cookbookRouteNames.includes(String(route.name)));
 const isSettingsContext = computed(() => route.name === 'profile' || route.name === 'change-password');
+
+function isCookbookTabActive(tab: 'recipes' | 'planning' | 'discussion' | 'members' | 'settings'): boolean {
+  if (tab === 'discussion') return route.name === 'cookbook-messages';
+  if (tab === 'planning') return route.name === 'cookbook-planning';
+  if (tab === 'members') return route.name === 'cookbook-members';
+  if (tab === 'settings') return route.name === 'cookbook-settings';
+  return tab === 'recipes' ? route.name === 'cookbook-recipes' : route.name === 'cookbook';
+}
 
 function isNavigationItemActive(item: NavigationItem): boolean {
   if (item.name === 'cookbooks') return isCookbookContext.value;
@@ -205,7 +214,11 @@ onBeforeUnmount(() => {
       </header>
 
       <nav v-if="isCookbookContext" class="context-navigation" aria-label="Navigation du cookbook">
-        <RouterLink :to="{ name: 'cookbook', params: { id: cookbookId } }">Recettes</RouterLink><RouterLink :to="{ name: 'planning' }">Planning</RouterLink><RouterLink :to="{ name: 'cookbook-messages', params: { id: cookbookId } }">Discussion</RouterLink><RouterLink :to="{ name: 'cookbook', params: { id: cookbookId }, hash: '#cookbook-members' }">Membres</RouterLink><RouterLink :to="{ name: 'cookbook', params: { id: cookbookId }, hash: '#cookbook-settings' }">Paramètres</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('recipes') }" :aria-current="isCookbookTabActive('recipes') ? 'page' : undefined" :to="{ name: 'cookbook-recipes', params: { id: cookbookId } }">Recettes</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('planning') }" :aria-current="isCookbookTabActive('planning') ? 'page' : undefined" :to="{ name: 'cookbook-planning', params: { id: cookbookId } }">Planning</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('discussion') }" :aria-current="isCookbookTabActive('discussion') ? 'page' : undefined" :to="{ name: 'cookbook-messages', params: { id: cookbookId } }">Discussion</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('members') }" :aria-current="isCookbookTabActive('members') ? 'page' : undefined" :to="{ name: 'cookbook-members', params: { id: cookbookId } }">Membres</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('settings') }" :aria-current="isCookbookTabActive('settings') ? 'page' : undefined" :to="{ name: 'cookbook', params: { id: cookbookId }, hash: '#cookbook-settings' }">Paramètres</RouterLink>
       </nav>
       <nav v-if="isSettingsContext" class="context-navigation" aria-label="Navigation des paramètres">
         <RouterLink :to="{ name: 'profile' }">Profil</RouterLink><RouterLink :to="{ name: 'profile', hash: '#food-preferences' }">Préférences alimentaires</RouterLink><RouterLink :to="{ name: 'change-password' }">Sécurité</RouterLink><RouterLink :to="{ name: 'profile', hash: '#connected-accounts' }">Comptes connectés</RouterLink><RouterLink :to="{ name: 'profile', hash: '#notification-preferences' }">Notifications</RouterLink><RouterLink :to="{ name: 'profile', hash: '#theme-preferences' }">Apparence</RouterLink>
@@ -247,7 +260,7 @@ onBeforeUnmount(() => {
 .popover-menu a:hover, .popover-menu button:hover { background: color-mix(in srgb, var(--app-border) 45%, transparent); }
 .context-navigation { display: flex; gap: 1rem; padding: .75rem 2rem; overflow-x: auto; border-bottom: 1px solid var(--app-border); background: var(--app-surface); }
 .context-navigation a { flex: 0 0 auto; color: var(--app-muted); font-weight: 700; text-decoration: none; }
-.context-navigation a.router-link-active { color: var(--app-text); }
+.context-navigation a.router-link-active, .context-navigation a.is-active { color: var(--app-text); }
 .main-content { width: min(100% - 4rem, 76rem); margin: 0 auto; padding: 2rem 0 3rem; }
 .mobile-menu-button, .sidebar-close, .navigation-scrim, .mobile-primary-navigation { display: none; }
 @media (max-width: 52rem) {

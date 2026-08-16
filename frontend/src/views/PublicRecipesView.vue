@@ -63,7 +63,7 @@ onMounted(() => { void loadRecipes(); });
 </template>
 
 <style scoped>
-.public-recipes-page { max-width: 52rem; margin: 0 auto; }
+.public-recipes-page { width: 100%; max-width: 76rem; margin: 0 auto; }
 .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }

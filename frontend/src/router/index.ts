@@ -5,13 +5,17 @@ import { pinia } from '@/pinia';
 import { useAuthStore } from '@/stores/auth';
 
 import DashboardView from '@/views/DashboardView.vue';
+import CookbooksView from '@/views/CookbooksView.vue';
 import DataView from '@/views/DataView.vue';
 import ExportView from '@/views/ExportView.vue';
 import ImportView from '@/views/ImportView.vue';
 import ChangePasswordView from '@/views/ChangePasswordView.vue';
 import EmailVerificationView from '@/views/EmailVerificationView.vue';
 import CookbookInvitationView from '@/views/CookbookInvitationView.vue';
-import CookbookView from '@/views/CookbookView.vue';
+import CookbookHomeView from '@/views/CookbookHomeView.vue';
+import CookbookRecipesView from '@/views/CookbookRecipesView.vue';
+import CookbookMembersView from '@/views/CookbookMembersView.vue';
+import CookbookSettingsView from '@/views/CookbookSettingsView.vue';
 import CookbookMessagesView from '@/views/CookbookMessagesView.vue';
 import LoginView from '@/views/LoginView.vue';
 import ForgotPasswordView from '@/views/ForgotPasswordView.vue';
@@ -81,7 +85,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cookbooks',
     name: 'cookbooks',
-    redirect: { name: 'dashboard' },
+    component: CookbooksView,
     meta: { requiresAuth: true },
   },
   {
@@ -115,7 +119,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cookbooks/:id',
     name: 'cookbook',
-    component: CookbookView,
+    component: CookbookHomeView,
     meta: {
       requiresAuth: true,
     },
@@ -127,6 +131,30 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
     },
+  },
+  {
+    path: '/cookbooks/:id/recettes',
+    name: 'cookbook-recipes',
+    component: CookbookRecipesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/cookbooks/:id/membres',
+    name: 'cookbook-members',
+    component: CookbookMembersView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/cookbooks/:id/planning',
+    name: 'cookbook-planning',
+    component: PlanningView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/cookbooks/:id/parametres',
+    name: 'cookbook-settings',
+    component: CookbookSettingsView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/recettes/nouvelle',

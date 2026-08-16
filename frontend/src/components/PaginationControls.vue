@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import type { RecipePagination } from '@/utils/recipes';
+type Pagination = {
+  current_page: number;
+  last_page: number;
+  has_more_pages: boolean;
+};
 
-defineProps<{ pagination: RecipePagination; disabled?: boolean }>();
+defineProps<{ pagination: Pagination; disabled?: boolean }>();
 const emit = defineEmits<{ change: [page: number] }>();
 </script>
 

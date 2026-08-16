@@ -6,10 +6,16 @@ import { useAuthStore } from '@/stores/auth';
 import CookbookInvitationForm from '@/components/CookbookInvitationForm.vue';
 import CookbookMessageComposer from '@/components/CookbookMessageComposer.vue';
 import CookbookMessageItem from '@/components/CookbookMessageItem.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import ErrorState from '@/components/ErrorState.vue';
+import LoadingState from '@/components/LoadingState.vue';
+import PaginationControls from '@/components/PaginationControls.vue';
+import RecipeCard from '@/components/RecipeCard.vue';
 import RecipeImageField from '@/components/RecipeImageField.vue';
-import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe } from '@/utils/cookbooks';
+import SearchBar from '@/components/SearchBar.vue';
+import type { Cookbook, CookbookMember, CookbookMessage, Pagination, Recipe as CookbookRecipe } from '@/utils/cookbooks';
 import { addRecipeToCookbook, deleteCookbook, fetchCookbook, fetchCookbookMembers, fetchCookbookRecipes, leaveCookbook, removeCookbookMember, removeRecipeFromCookbook, updateCookbook, updateCookbookMemberRole } from '@/utils/cookbooks';
-import { fetchRecipes, type Recipe as PublicRecipe } from '@/utils/recipes';
+import { fetchRecipes, type Recipe, type RecipePagination } from '@/utils/recipes';
 import { useDialogFocus } from '@/utils/dialogFocus';
 
 const route = useRoute();
@@ -18,10 +24,11 @@ const authStore = useAuthStore();
 const cookbook = ref<Cookbook | null>(null);
 const errorMessage = ref('');
 const recipes = ref<Recipe[]>([]);
-const recipesPagination = ref<Pagination | null>(null);
+const recipesPagination = ref<RecipePagination | null>(null);
 const recipesError = ref('');
 const recipesLoading = ref(true);
-const publicRecipes = ref<PublicRecipe[]>([]);
+const publicRecipes = ref<Recipe[]>([]);
+const cookbookRecipeSearch = ref('');
 const isAddRecipeVisible = ref(false);
 const selectedRecipeId = ref('');
 const addRecipeError = ref('');
@@ -56,11 +63,13 @@ const editGlobalError = ref('');
 const canEditName = computed(() => cookbook.value?.member_role === 'owner' || cookbook.value?.member_role === 'editor');
 const canDelete = computed(() => cookbook.value?.member_role === 'owner');
 const canManageRoles = computed(() => cookbook.value?.member_role === 'owner');
+const currentMember = computed(() => members.value.find((member) => member.user.id === authStore.user?.id) ?? null);
 const isDeleteConfirmationVisible = ref(false);
 const isDeleting = ref(false);
 const deleteConfirmation = ref('');
 const deleteError = ref('');
 const deleteFieldError = ref('');
+const transferTargetId = ref('');
 
 useDialogFocus(roleDialog, isRoleDialogOpen, cancelRoleChange);
 useDialogFocus(memberActionDialog, isMemberActionDialogOpen, cancelMemberAction);
@@ -71,6 +80,11 @@ function openDeleteConfirmation(): void {
   deleteError.value = '';
   deleteFieldError.value = '';
   isDeleteConfirmationVisible.value = true;
+}
+
+function requestOwnershipTransferById(): void {
+  const member = members.value.find((item) => String(item.user.id) === transferTargetId.value);
+  if (member) requestOwnershipTransfer(member);
 }
 
 function cancelDelete(): void {
@@ -171,15 +185,30 @@ async function saveName(): Promise<void> {
 async function loadRecipes(page = 1): Promise<void> {
   recipesLoading.value = true;
   recipesError.value = '';
-  const result = await fetchCookbookRecipes(String(route.params.id), authStore.tokenType, authStore.accessToken, page);
-
-  if (result.ok) {
-    recipes.value = result.data;
-    recipesPagination.value = result.pagination;
+  const search = cookbookRecipeSearch.value.trim();
+  if (search) {
+    const result = await fetchRecipes(authStore.tokenType, authStore.accessToken, page, 'all', search, { cookbook_id: String(route.params.id) });
+    if (result.ok) {
+      recipes.value = result.recipes;
+      recipesPagination.value = result.pagination;
+    } else recipesError.value = result.message;
   } else {
-    recipesError.value = result.message;
+    const result = await fetchCookbookRecipes(String(route.params.id), authStore.tokenType, authStore.accessToken, page);
+    if (result.ok) {
+      recipes.value = result.data.map((recipe: CookbookRecipe) => ({
+        ...recipe,
+        source: null,
+        author: null,
+        is_favorite: false,
+      }));
+      recipesPagination.value = result.pagination;
+    } else recipesError.value = result.message;
   }
   recipesLoading.value = false;
+}
+
+function searchCookbookRecipes(): void {
+  void loadRecipes(1);
 }
 
 async function goToRecipePage(page: number): Promise<void> {
@@ -285,6 +314,12 @@ async function requestRoleChange(member: CookbookMember): Promise<void> {
   pendingRoleChange.value = { member, role };
   await nextTick();
   roleDialog.value?.focus();
+}
+
+function requestOwnershipTransfer(member: CookbookMember): void {
+  if (!canRemoveMember(member)) return;
+  roleDrafts[member.user.id] = 'owner';
+  void requestRoleChange(member);
 }
 
 function cancelRoleChange(): void {
@@ -400,6 +435,11 @@ onMounted(async () => {
         :alt="`Image de ${cookbook.name}`"
       />
       <section id="cookbook-settings" class="cookbook-settings-section">
+        <div class="settings-heading">
+          <p class="kicker">Paramètres du cookbook</p>
+          <h2>Informations générales</h2>
+          <p>Modifiez les informations visibles de cet espace.</p>
+        </div>
         <div v-if="!isEditingName" class="name-heading">
           <h2>{{ cookbook.name }}</h2>
           <button v-if="canEditName" type="button" class="edit-button" @click="startEditingName">
@@ -438,13 +478,15 @@ onMounted(async () => {
           <button type="button" class="cancel-button" :disabled="isSavingName" @click="cancelEditingName">Annuler</button>
         </div>
         </form>
+        <div class="cookbook-summary">
+          <div class="cookbook-owner">
+            <img v-if="cookbook.owner.avatar_url" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
+            <span v-else class="owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
+            <p class="detail">Propriétaire : {{ cookbook.owner.name }}</p>
+          </div>
+          <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
+        </div>
       </section>
-      <div class="cookbook-owner">
-        <img v-if="cookbook.owner.avatar_url" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
-        <span v-else class="owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
-        <p class="detail">Proprietaire : {{ cookbook.owner.name }}</p>
-      </div>
-      <p v-if="cookbook.description" class="detail">{{ cookbook.description }}</p>
       <p class="role-line">Votre rôle : <strong>{{ cookbook.member_role ?? 'membre' }}</strong></p>
       <section class="messages-preview-section" aria-labelledby="messages-preview-title">
         <div class="section-heading">
@@ -464,15 +506,19 @@ onMounted(async () => {
           @sent="loadLatestMessages"
         />
       </section>
-      <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
       <section id="cookbook-members" class="members-section" aria-labelledby="members-title">
         <div class="section-heading">
-          <h3 id="members-title">Membres</h3>
+          <div>
+            <p class="kicker">Accès au cookbook</p>
+            <h3 id="members-title">Membres</h3>
+            <p class="section-intro">Gérez les personnes qui peuvent accéder à cet espace et leur niveau de permission.</p>
+          </div>
           <span v-if="membersPagination" class="section-count">{{ membersPagination.total }} membre<span v-if="membersPagination.total !== 1">s</span></span>
         </div>
-        <p v-if="membersLoading" role="status">Chargement des membres...</p>
-        <p v-else-if="membersError" class="error-summary" role="alert">{{ membersError }}</p>
-        <p v-else-if="members.length === 0" class="empty-state">Aucun membre dans ce cookbook.</p>
+        <CookbookInvitationForm v-if="canEditName" :cookbook-id="cookbook.id" />
+        <LoadingState v-if="membersLoading" label="Chargement des membres..." />
+        <ErrorState v-else-if="membersError" :message="membersError" show-retry @retry="loadMembers" />
+        <EmptyState v-else-if="members.length === 0" title="Aucun membre dans ce cookbook." description="Invitez une personne pour collaborer dans cet espace." />
         <div v-else class="member-list">
           <article v-for="member in members" :key="member.user.id" class="member-item">
             <div class="member-identity">
@@ -481,7 +527,10 @@ onMounted(async () => {
               <strong>{{ member.user.name }}</strong>
               <span v-if="member.user.email" class="member-email">{{ member.user.email }}</span>
             </div>
-            <span class="role-badge">{{ roleLabel(member.role) }}</span>
+            <div class="member-role">
+              <span class="role-badge">{{ roleLabel(member.role) }}</span>
+              <span v-if="isProtectedOwner(member)" class="owner-note">Propriétaire</span>
+            </div>
             <div class="member-actions" aria-label="Actions disponibles">
               <span v-if="isProtectedOwner(member)" class="member-no-action">Propriétaire protégé</span>
               <button v-else-if="canLeaveMember(member)" type="button" class="member-action-button member-leave-button" @click="requestMemberAction('leave', member)">
@@ -503,6 +552,9 @@ onMounted(async () => {
                     Modifier le rôle
                   </button>
                 </form>
+                <button type="button" class="member-action-button member-transfer-button" :disabled="roleUpdateLoading" @click="requestOwnershipTransfer(member)">
+                  Transférer la propriété
+                </button>
               </template>
               <form v-else-if="canManageRoles" class="member-role-form" @submit.prevent="requestRoleChange(member)">
                 <label class="sr-only" :for="`member-role-${member.user.id}`">Rôle de {{ member.user.name }}</label>
@@ -579,8 +631,40 @@ onMounted(async () => {
           </div>
         </section>
       </div>
-      <section v-if="canDelete" class="danger-section" aria-labelledby="delete-title">
-        <h3 id="delete-title">Zone dangereuse</h3>
+      <section v-if="canDelete || (currentMember && canLeaveMember(currentMember))" class="danger-section" aria-labelledby="danger-title">
+        <p class="kicker">Actions irréversibles</p>
+        <h3 id="danger-title">Zone dangereuse</h3>
+        <p class="danger-intro">Ces actions modifient durablement l’accès au cookbook.</p>
+        <div v-if="canDelete" class="danger-action">
+          <div>
+            <h4>Transférer la propriété</h4>
+            <p>Le nouveau propriétaire prendra en charge la gestion de cet espace.</p>
+          </div>
+          <div class="transfer-form">
+            <label for="cookbook-transfer-target">Nouveau propriétaire</label>
+            <select id="cookbook-transfer-target" v-model="transferTargetId">
+              <option value="">Choisir un membre</option>
+              <option v-for="member in members.filter((item) => !isProtectedOwner(item))" :key="member.user.id" :value="String(member.user.id)">
+                {{ member.user.name }}
+              </option>
+            </select>
+            <button type="button" class="danger-secondary-button" :disabled="transferTargetId === ''" @click="requestOwnershipTransferById">
+              Transférer la propriété
+            </button>
+          </div>
+        </div>
+        <div v-if="currentMember && canLeaveMember(currentMember)" class="danger-action">
+          <div>
+            <h4>Quitter le cookbook</h4>
+            <p>Vous perdrez votre accès à cet espace.</p>
+          </div>
+          <button type="button" class="danger-secondary-button" @click="requestMemberAction('leave', currentMember)">Quitter le cookbook</button>
+        </div>
+        <div v-if="canDelete" class="danger-action">
+          <div>
+            <h4 id="delete-title">Supprimer le cookbook</h4>
+            <p>Cette action supprimera le cookbook, ses recettes et ses membres.</p>
+          </div>
         <button v-if="!isDeleteConfirmationVisible" type="button" class="delete-button" @click="openDeleteConfirmation">
           Supprimer ce cookbook
         </button>
@@ -605,9 +689,18 @@ onMounted(async () => {
             <button type="button" class="cancel-button" :disabled="isDeleting" @click="cancelDelete">Annuler</button>
           </div>
         </form>
+        </div>
       </section>
       <section class="recipes-section" aria-labelledby="recipes-title">
-        <h3 id="recipes-title">Recettes</h3>
+        <div class="recipes-heading">
+          <div>
+            <p class="kicker">Espace cookbook</p>
+            <h2 id="recipes-title">Recettes</h2>
+            <p class="recipes-context">Recherchez et consultez les recettes de ce cookbook.</p>
+          </div>
+          <RouterLink class="filters-link" :to="{ name: 'search', query: { cookbook_id: cookbook.id } }">Filtres avancés</RouterLink>
+        </div>
+        <SearchBar v-model="cookbookRecipeSearch" :disabled="recipesLoading" @submit="searchCookbookRecipes" />
         <button v-if="canEditName && !isAddRecipeVisible" type="button" class="add-recipe-button" @click="openAddRecipeForm">
           Ajouter une recette existante
         </button>
@@ -620,29 +713,18 @@ onMounted(async () => {
           <button type="submit" :disabled="isAddingRecipe || selectedRecipeId === ''">Ajouter</button>
           <p v-if="addRecipeError" class="error-summary" role="alert">{{ addRecipeError }}</p>
         </form>
-        <p v-if="recipesLoading" role="status">Chargement des recettes...</p>
-        <p v-else-if="recipesError" class="error-summary" role="alert">{{ recipesError }}</p>
-        <p v-else-if="recipes.length === 0" class="empty-state">Aucune recette dans ce cookbook.</p>
+        <LoadingState v-if="recipesLoading" label="Chargement des recettes du cookbook..." />
+        <ErrorState v-else-if="recipesError" :message="recipesError" show-retry @retry="loadRecipes" />
+        <EmptyState v-else-if="recipes.length === 0" title="Aucune recette dans ce cookbook." description="Ajoutez une recette existante ou modifiez votre recherche." />
         <div v-else class="recipe-list">
           <article v-for="recipe in recipes" :key="recipe.id" class="recipe-item">
-            <h4><RouterLink :to="{ name: 'recipe-detail', params: { id: recipe.id } }">{{ recipe.title }}</RouterLink></h4>
-            <img v-if="recipe.image_url" class="recipe-item-image" :src="recipe.image_url" :alt="'Photo de ' + recipe.title" />
-            <h4>{{ recipe.title }}</h4>
-            <p v-if="recipe.description">{{ recipe.description }}</p>
+            <RecipeCard :recipe="recipe" />
             <button v-if="canEditName" type="button" class="remove-recipe-button" :disabled="removingRecipeId !== null" @click="removeRecipe(recipe.id)">
               {{ removingRecipeId === recipe.id ? 'Retrait...' : 'Retirer du cookbook' }}
             </button>
           </article>
-          <nav v-if="recipesPagination && recipesPagination.last_page > 1" class="pagination" aria-label="Pagination des recettes">
-            <button type="button" :disabled="recipesPagination.current_page === 1" @click="goToRecipePage(recipesPagination.current_page - 1)">
-              Precedent
-            </button>
-            <span>Page {{ recipesPagination.current_page }} / {{ recipesPagination.last_page }}</span>
-            <button type="button" :disabled="!recipesPagination.has_more_pages" @click="goToRecipePage(recipesPagination.current_page + 1)">
-              Suivant
-            </button>
-          </nav>
         </div>
+        <PaginationControls v-if="recipesPagination && recipesPagination.last_page > 1" :pagination="recipesPagination" :disabled="recipesLoading" @change="goToRecipePage" />
       </section>
     </template>
     <p v-else class="loading" role="status">Chargement...</p>
@@ -650,7 +732,11 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.cookbook-card { margin: 0 auto; max-width: 42rem; padding: 2rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.92); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
+#cookbook-members, #cookbook-settings { scroll-margin-top: 8rem; }
+.cookbook-card { width: 100%; max-width: 76rem; margin: 0 auto; padding: 2rem; box-sizing: border-box; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.92); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
+.cookbook-settings-section { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: 1rem; background: rgba(247, 251, 243, .55); }
+.settings-heading h2 { margin: 0; }
+.settings-heading p:last-child { margin: .35rem 0 0; color: #50634d; line-height: 1.45; }
 .cookbook-image { display: block; width: 100%; max-height: 15rem; margin: 1rem 0; object-fit: cover; border-radius: 0.8rem; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -676,6 +762,15 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .edit-actions .cancel-button { background: transparent; color: #395330; }
 .danger-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2b3ad; }
 .danger-section h3 { color: #8f1e1e; }
+.danger-intro { margin: .35rem 0 1rem; color: #8f1e1e; }
+.danger-action { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem; border: 1px solid #e2b3ad; border-radius: .75rem; background: #fff8f6; }
+.danger-action h4 { margin: 0; color: #6e1c18; }
+.danger-action p { margin: .35rem 0 0; color: #704744; line-height: 1.45; }
+.transfer-form { display: grid; gap: .45rem; min-width: min(100%, 18rem); }
+.transfer-form label { font-weight: 700; }
+.transfer-form select { padding: .6rem; border: 1px solid #d49b93; border-radius: .5rem; background: #fffdf8; font: inherit; }
+.danger-secondary-button { width: fit-content; padding: .6rem .75rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: transparent; color: #8f1e1e; font: inherit; font-weight: 700; cursor: pointer; }
+.danger-secondary-button:disabled { cursor: not-allowed; opacity: .5; }
 .delete-button { padding: 0.6rem 0.8rem; border: 1px solid #8f1e1e; border-radius: 0.5rem; background: #8f1e1e; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .delete-form { display: grid; gap: 0.6rem; }
 .warning { margin: 0; color: #8f1e1e; line-height: 1.5; }
@@ -691,10 +786,11 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .message-preview-list { display: grid; gap: .6rem; }
 .message-preview-item { padding: .8rem 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .7rem; }
 .message-preview-item p { margin: .35rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.section-intro { max-width: 42rem; margin: .35rem 0 0; color: #50634d; line-height: 1.45; }
 .section-count { color: #50634d; font-size: 0.9rem; }
 .member-list { display: grid; gap: 0.7rem; }
-.member-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
+.member-item { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(16rem, auto); align-items: center; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
 .member-identity { display: grid; gap: 0.25rem; min-width: 0; }
 .cookbook-owner { display: flex; align-items: center; gap: .6rem; }
 .cookbook-owner img, .owner-fallback, .member-identity img, .member-fallback { width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; }
@@ -703,6 +799,8 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .member-identity strong, .member-identity .member-email { grid-column: 2; }
 .member-email { overflow: hidden; color: #50634d; text-overflow: ellipsis; white-space: nowrap; }
 .role-badge, .member-self { padding: 0.3rem 0.55rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
+.member-role { display: grid; justify-items: start; gap: .3rem; }
+.owner-note { color: #6b7b57; font-size: .8rem; font-weight: 700; }
 .member-actions { color: #50634d; font-size: 0.85rem; text-align: right; }
 .member-no-action { white-space: nowrap; }
 .member-role-form { display: flex; align-items: center; gap: 0.45rem; }
@@ -710,6 +808,8 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .member-role-form button { padding: 0.4rem 0.55rem; border: 1px solid #395330; border-radius: 0.45rem; background: transparent; color: #395330; font: inherit; font-size: 0.8rem; cursor: pointer; }
 .member-role-form button:disabled { cursor: not-allowed; opacity: 0.45; }
 .member-action-button { padding: 0.4rem 0.55rem; border: 1px solid #395330; border-radius: 0.45rem; background: transparent; color: #395330; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.member-transfer-button { border-color: #a46114; color: #8a5310; }
+.member-action-button:disabled { cursor: wait; opacity: .55; }
 .member-action-button:focus-visible, .member-role-form button:focus-visible, .role-dialog button:focus-visible { outline: 3px solid #d98b35; outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .role-dialog-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 1rem; background: rgba(29, 39, 24, 0.45); }
@@ -721,17 +821,22 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .recipes-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
 h3 { margin: 0 0 1rem; font-size: 1.5rem; }
 .empty-state { color: #50634d; }
-.recipe-list { display: grid; gap: 0.7rem; }
-.recipe-item { padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
-.recipe-item-image { display: block; width: 100%; max-height: 12rem; margin-bottom: .8rem; object-fit: cover; border-radius: .6rem; }
-.recipe-item h4, .recipe-item p { margin: 0; }
-.recipe-item p { margin-top: 0.4rem; color: #50634d; line-height: 1.5; }
-.pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1rem; color: #50634d; font-size: 0.9rem; }
-.pagination button { padding: 0.5rem 0.7rem; border: 1px solid #b9c5af; border-radius: 0.5rem; background: transparent; color: #395330; cursor: pointer; }
-.pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
+.recipes-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.recipes-context { margin: .35rem 0 0; color: #50634d; line-height: 1.45; }
+.filters-link { color: #395330; font-weight: 700; white-space: nowrap; }
+.recipe-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.recipe-item { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.recipe-item :deep(.recipe-card) { height: 100%; box-sizing: border-box; }
+.remove-recipe-button { align-self: flex-start; }
 @media (max-width: 36rem) {
+  .recipes-heading { align-items: flex-start; flex-direction: column; }
+  .recipe-list { grid-template-columns: 1fr; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
   .member-item { grid-template-columns: 1fr auto; }
+  .member-role { grid-column: 2; grid-row: 1; }
   .member-actions { grid-column: 1 / -1; text-align: left; }
   .member-role-form { flex-wrap: wrap; }
+  .danger-action { align-items: stretch; flex-direction: column; }
+  .transfer-form { min-width: 0; }
 }
 </style>
