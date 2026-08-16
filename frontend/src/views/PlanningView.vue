@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import { deletePlannedMeal, fetchPlannedMeals, updatePlannedMeal, type PlannedMeal } from '@/utils/planning';
+import { fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { useDialogFocus } from '@/utils/dialogFocus';
 
 type CalendarMode = 'week' | 'month';
@@ -27,6 +28,15 @@ const feedbackMessage = ref('');
 const mealDialog = ref<HTMLElement | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
+const sourceSelectorOpen = ref(false);
+const sourcesLoading = ref(false);
+const sourcesError = ref('');
+const cookbooks = ref<Cookbook[]>([]);
+const includePersonal = ref(true);
+const selectedCookbookIds = ref<string[]>([]);
+const draftIncludePersonal = ref(true);
+const draftCookbookIds = ref<string[]>([]);
+const sourceSelectionActive = ref(false);
 const mealTypeLabels: Record<PlannedMeal['meal_type'], string> = {
   breakfast: 'Petit-déjeuner', lunch: 'Déjeuner', dinner: 'Dîner', snack: 'Collation',
 };
@@ -175,10 +185,50 @@ async function loadMeals(): Promise<void> {
   errorMessage.value = '';
   feedbackMessage.value = '';
   selectedMeal.value = null;
-  const result = await fetchPlannedMeals(period.value.from, period.value.to, authStore.tokenType, authStore.accessToken, cookbookId.value);
+  const result = await fetchPlannedMeals(
+    period.value.from,
+    period.value.to,
+    authStore.tokenType,
+    authStore.accessToken,
+    cookbookId.value,
+    cookbookId.value || !sourceSelectionActive.value ? [] : selectedCookbookIds.value,
+    cookbookId.value || !sourceSelectionActive.value ? undefined : includePersonal.value,
+  );
   if (result.ok) meals.value = result.meals;
   else { meals.value = []; errorMessage.value = result.message; }
   isLoading.value = false;
+}
+async function openSourceSelector(): Promise<void> {
+  sourceSelectorOpen.value = true;
+  if (cookbooks.value.length > 0) {
+    draftIncludePersonal.value = includePersonal.value;
+    draftCookbookIds.value = [...selectedCookbookIds.value];
+    return;
+  }
+  sourcesLoading.value = true;
+  sourcesError.value = '';
+  const result = await fetchCookbooks(authStore.tokenType, authStore.accessToken);
+  if (result.ok) {
+    cookbooks.value = result.data;
+    draftIncludePersonal.value = sourceSelectionActive.value ? includePersonal.value : true;
+    draftCookbookIds.value = sourceSelectionActive.value ? [...selectedCookbookIds.value] : result.data.map((cookbook) => cookbook.id);
+  } else sourcesError.value = result.message;
+  sourcesLoading.value = false;
+}
+function closeSourceSelector(): void { sourceSelectorOpen.value = false; }
+async function applySourceSelection(): Promise<void> {
+  includePersonal.value = draftIncludePersonal.value;
+  selectedCookbookIds.value = [...draftCookbookIds.value];
+  sourceSelectionActive.value = true;
+  sourceSelectorOpen.value = false;
+  await loadMeals();
+}
+async function resetSourceSelection(): Promise<void> {
+  sourceSelectionActive.value = false;
+  includePersonal.value = true;
+  selectedCookbookIds.value = [];
+  sourceSelectorOpen.value = false;
+  await loadMeals();
 }
 watch([mode, currentDate], () => { void loadMeals(); });
 onMounted(() => { void loadMeals(); });
@@ -194,6 +244,24 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
         <button type="button" :class="{ active: mode === 'month' }" @click="mode = 'month'">Mois</button>
       </div>
     </header>
+    <section v-if="!cookbookId" class="planning-sources" aria-labelledby="planning-sources-title">
+      <div class="sources-heading">
+        <div><h3 id="planning-sources-title">Sources affichées</h3><p>Choisissez votre planning personnel, un ou plusieurs cookbooks, ou une combinaison.</p></div>
+        <button type="button" class="sources-button" @click="openSourceSelector">Modifier les sources</button>
+      </div>
+      <p v-if="sourceSelectionActive" class="source-summary" aria-live="polite">{{ includePersonal ? 'Planning personnel' : 'Aucun planning personnel' }}<span v-if="selectedCookbookIds.length"> · {{ selectedCookbookIds.length }} cookbook<span v-if="selectedCookbookIds.length > 1">s</span></span></p>
+      <p v-else class="source-summary">Planning personnel et tous les cookbooks accessibles</p>
+      <div v-if="sourceSelectorOpen" class="sources-panel">
+        <p v-if="sourcesLoading" role="status">Chargement des cookbooks...</p>
+        <p v-else-if="sourcesError" class="source-error" role="alert">{{ sourcesError }}</p>
+        <fieldset v-else>
+          <legend>Inclure dans le planning</legend>
+          <label><input v-model="draftIncludePersonal" type="checkbox" /> Mon planning personnel</label>
+          <label v-for="cookbook in cookbooks" :key="cookbook.id"><input v-model="draftCookbookIds" type="checkbox" :value="cookbook.id" /> {{ cookbook.name }}</label>
+        </fieldset>
+        <div class="source-actions"><button type="button" class="secondary-source-button" @click="resetSourceSelection">Réinitialiser</button><button type="button" class="secondary-source-button" @click="closeSourceSelector">Annuler</button><button type="button" class="sources-button" :disabled="sourcesLoading || !!sourcesError" @click="applySourceSelection">Appliquer</button></div>
+      </div>
+    </section>
     <nav class="calendar-navigation" aria-label="Navigation du planning">
       <button type="button" class="period-button" aria-label="Période précédente" @click="movePeriod(-1)">‹</button>
       <button type="button" class="today-button" @click="goToToday">Aujourd’hui</button>
@@ -277,6 +345,18 @@ useDialogFocus(mealDialog, isMealDialogOpen, closeDetail);
 <style scoped>
 .planning-page { width: 100%; max-width: 76rem; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
 .planning-header { display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
+.planning-sources { margin: 1.25rem 0; padding: 1rem; border: 1px solid #b9c5af; border-radius: .8rem; background: rgba(247, 251, 243, .7); }
+.sources-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.sources-heading h3 { margin: 0; font-size: 1.05rem; }
+.sources-heading p { margin: .3rem 0 0; color: #50634d; }
+.sources-button, .secondary-source-button { padding: .55rem .75rem; border: 1px solid #395330; border-radius: .5rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
+.secondary-source-button { background: transparent; color: #395330; }
+.source-summary { margin: .75rem 0 0; color: #395330; font-size: .9rem; font-weight: 700; }
+.sources-panel { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #b9c5af; }
+.sources-panel fieldset { display: grid; gap: .55rem; margin: 0; padding: 0; border: 0; }
+.sources-panel legend { margin-bottom: .4rem; font-weight: 700; }
+.source-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: .5rem; margin-top: 1rem; }
+.source-error { color: #8f1e1e; }
 .kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h2, h3 { margin: 0; color: #243127; }
 .period-label { margin: .4rem 0 0; color: #50634d; text-transform: capitalize; }
@@ -331,6 +411,8 @@ button:disabled { cursor: wait; opacity: .55; }
 @media (max-width: 640px) {
   .planning-page { padding: 1rem .6rem; border-radius: 1rem; }
   .planning-header { display: grid; align-items: start; }
+  .sources-heading { align-items: flex-start; flex-direction: column; }
+  .sources-button { width: 100%; }
   .view-switcher { width: 100%; }
   .view-switcher button { flex: 1; }
   .calendar-day { min-height: 6.5rem; padding: .35rem; }

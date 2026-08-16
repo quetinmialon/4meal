@@ -27,6 +27,12 @@ class ListPlannedMealsRequest extends FormRequest
                 'uuid',
                 Rule::exists('cookbooks', 'public_id')->whereNull('deleted_at'),
             ],
+            'cookbook_ids' => ['sometimes', 'array'],
+            'cookbook_ids.*' => [
+                'uuid',
+                Rule::exists('cookbooks', 'public_id')->whereNull('deleted_at'),
+            ],
+            'include_personal' => ['sometimes', 'boolean'],
         ];
     }
 

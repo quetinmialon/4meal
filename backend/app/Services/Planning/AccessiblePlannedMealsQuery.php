@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 class AccessiblePlannedMealsQuery
 {
-    public function for(User $user, string $from, string $to, ?string $cookbookPublicId = null): Builder
+    public function for(User $user, string $from, string $to, ?string $cookbookPublicId = null, array $cookbookPublicIds = [], ?bool $includePersonal = null): Builder
     {
         $accessibleCookbookIds = $user->cookbooks()->select('cookbooks.id');
+        $selectedCookbookIds = $user->cookbooks()
+            ->when($cookbookPublicIds !== [], fn (Builder $query): Builder => $query->whereIn('cookbooks.public_id', $cookbookPublicIds))
+            ->select('cookbooks.id');
+        $hasSelectedCookbooks = $cookbookPublicIds !== [];
 
         return PlannedMeal::query()
             ->select([
@@ -36,7 +40,7 @@ class AccessiblePlannedMealsQuery
             ])
             ->whereDate('planned_meals.date', '>=', $from)
             ->whereDate('planned_meals.date', '<=', $to)
-            ->where(function (Builder $query) use ($user, $cookbookPublicId, $accessibleCookbookIds): void {
+            ->where(function (Builder $query) use ($user, $cookbookPublicId, $accessibleCookbookIds, $selectedCookbookIds, $includePersonal, $hasSelectedCookbooks): void {
                 if ($cookbookPublicId !== null) {
                     $query->whereHas('cookbook', function (Builder $query) use ($cookbookPublicId): void {
                         $query->where('public_id', $cookbookPublicId);
@@ -46,8 +50,23 @@ class AccessiblePlannedMealsQuery
                     return;
                 }
 
-                $query->where('planned_meals.user_id', $user->getKey())
-                    ->orWhereIn('planned_meals.cookbook_id', $accessibleCookbookIds);
+                if ($includePersonal === null && ! $hasSelectedCookbooks) {
+                    $query->where('planned_meals.user_id', $user->getKey())
+                        ->orWhereIn('planned_meals.cookbook_id', $accessibleCookbookIds);
+
+                    return;
+                }
+
+                if ($includePersonal === true) {
+                    $query->where('planned_meals.user_id', $user->getKey());
+                    if ($hasSelectedCookbooks) {
+                        $query->orWhereIn('planned_meals.cookbook_id', $selectedCookbookIds);
+                    }
+                } elseif ($hasSelectedCookbooks) {
+                    $query->whereIn('planned_meals.cookbook_id', $selectedCookbookIds);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
             })
             ->orderBy('planned_meals.date')
             ->orderBy('planned_meals.meal_type')
