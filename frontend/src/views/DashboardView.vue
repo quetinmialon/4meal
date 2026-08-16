@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { RouterLink } from 'vue-router';
 
+import Avatar from '@/components/Avatar.vue';
+import Badge from '@/components/Badge.vue';
 import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
+import EmptyState from '@/components/EmptyState.vue';
+import ErrorState from '@/components/ErrorState.vue';
+import LoadingState from '@/components/LoadingState.vue';
 import NotificationsPanel from '@/components/NotificationsPanel.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook, CookbookInvitation, Pagination } from '@/utils/cookbooks';
 import { acceptCookbookInvitationById, declineCookbookInvitation, fetchCookbookInvitations, fetchCookbooks } from '@/utils/cookbooks';
 
 const authStore = useAuthStore();
-const router = useRouter();
-
 const userName = computed(() => authStore.user?.name ?? '');
 const userEmail = computed(() => authStore.user?.email ?? '');
 const isCreateFormVisible = ref(false);
@@ -74,37 +78,42 @@ async function declineInvitation(invitation: CookbookInvitation): Promise<void> 
 }
 
 onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
-
-async function handleLogout(): Promise<void> {
-  await authStore.logout();
-  await router.push({ name: 'login' });
-}
 </script>
 
 <template>
-  <main class="dashboard-card">
-    <p class="kicker">Mon espace</p>
-    <h2>Connexion reussie</h2>
-    <p class="message">
-      <span v-if="userName">Bienvenue, {{ userName }}.</span>
-      <span v-else>Vous etes bien connecte.</span>
-    </p>
-    <div v-if="authStore.user?.avatar_url" class="profile-avatar">
-      <img :src="authStore.user.avatar_url" alt="Photo de profil" />
-    </div>
-    <p class="detail">Votre espace est accessible. Vous pouvez continuer en toute simplicite.</p>
-    <p v-if="userEmail" class="meta">Compte associe : {{ userEmail }}.</p>
-    <section class="invitations-section" aria-labelledby="invitations-title">
+  <main class="dashboard-page">
+    <PageHeader
+      title="Votre espace"
+      :description="userName ? `Bienvenue, ${userName}. Retrouvez ici les informations qui nécessitent votre attention.` : 'Retrouvez ici les informations qui nécessitent votre attention.'"
+      eyebrow="Accueil"
+    >
+      <template #primary>
+        <RouterLink class="primary-action" :to="{ name: 'recipe-create' }">Nouvelle recette</RouterLink>
+      </template>
+      <template #actions>
+        <RouterLink class="secondary-action" :to="{ name: 'planning' }">Planifier un repas</RouterLink>
+      </template>
+    </PageHeader>
+
+    <section v-if="userEmail || authStore.user" class="account-summary" aria-labelledby="account-summary-title">
+      <Avatar :src="authStore.user?.avatar_url ?? null" :name="userName || userEmail || 'Utilisateur'" size="large" />
+      <div>
+        <h2 id="account-summary-title">Votre compte</h2>
+        <p v-if="userEmail" class="meta">{{ userEmail }}</p>
+      </div>
+    </section>
+
+    <section class="dashboard-section invitations-section" aria-labelledby="invitations-title">
       <div class="section-heading">
         <div>
           <p class="kicker">À traiter</p>
-          <h3 id="invitations-title">Invitations reçues</h3>
+          <h2 id="invitations-title">Invitations reçues</h2>
         </div>
-        <span v-if="invitations.length" class="invitation-count">{{ invitations.length }}</span>
+        <Badge v-if="invitations.length" tone="warning">{{ invitations.length }}</Badge>
       </div>
-      <p v-if="invitationsLoading" class="loading" role="status">Chargement des invitations...</p>
-      <p v-else-if="invitationsError" class="error-summary" role="alert">{{ invitationsError }}</p>
-      <p v-else-if="invitations.length === 0" class="empty-state invitation-empty">Aucune invitation en attente.</p>
+      <LoadingState v-if="invitationsLoading" label="Chargement des invitations..." />
+      <ErrorState v-else-if="invitationsError" :message="invitationsError" />
+      <EmptyState v-else-if="invitations.length === 0" title="Aucune invitation en attente." />
       <div v-else class="invitation-list">
         <article v-for="invitation in invitations" :key="invitation.id" class="invitation-item">
           <div>
@@ -126,35 +135,30 @@ async function handleLogout(): Promise<void> {
       </div>
       <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
     </section>
-    <div id="notifications">
-      <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
-    </div>
-    <section class="cookbooks-section" aria-labelledby="cookbooks-title">
+
+    <section class="dashboard-section notifications-section" aria-labelledby="notifications-title">
       <div class="section-heading">
         <div>
-          <p class="kicker">Mes recettes</p>
-          <h3 id="cookbooks-title">Mes cookbooks</h3>
-        </div>
-        <div class="dashboard-actions">
-          <RouterLink class="create-button" :to="{ name: 'public-recipes' }">Toutes les recettes</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'search' }">Rechercher</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'planning' }">Mon planning</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'shopping-list' }">Liste de courses</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'recipes' }">Mes recettes</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'export' }">Exporter mes données</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'import' }">Importer un JSON</RouterLink>
-          <RouterLink class="create-button" :to="{ name: 'recipe-create' }">Nouvelle recette</RouterLink>
-          <button class="create-button" type="button" @click="isCreateFormVisible = !isCreateFormVisible">
-            {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
-          </button>
+          <p class="kicker">Activité</p>
+          <h2 id="notifications-title">Notifications</h2>
         </div>
       </div>
-      <p v-if="isLoading" class="loading" role="status">Chargement des cookbooks...</p>
-      <p v-else-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
-      <div v-else-if="cookbooks.length === 0 && !isCreateFormVisible" class="empty-state">
-        <p>Vous n’avez encore aucun cookbook.</p>
-        <p>Créez votre premier espace pour organiser vos recettes.</p>
+      <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
+    </section>
+
+    <section class="dashboard-section cookbooks-section" aria-labelledby="cookbooks-title">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Espaces partagés</p>
+          <h2 id="cookbooks-title">Mes cookbooks</h2>
+        </div>
+        <button class="secondary-action" type="button" @click="isCreateFormVisible = !isCreateFormVisible">
+          {{ isCreateFormVisible ? 'Fermer' : 'Nouveau cookbook' }}
+        </button>
       </div>
+      <LoadingState v-if="isLoading" label="Chargement des cookbooks..." />
+      <ErrorState v-else-if="errorMessage" :message="errorMessage" />
+      <EmptyState v-else-if="cookbooks.length === 0 && !isCreateFormVisible" title="Vous n’avez encore aucun cookbook." description="Créez votre premier espace pour organiser vos recettes." />
       <div v-else-if="!isCreateFormVisible" class="cookbook-list">
         <RouterLink
           v-for="cookbook in cookbooks"
@@ -162,141 +166,60 @@ async function handleLogout(): Promise<void> {
           class="cookbook-item"
           :to="{ name: 'cookbook', params: { id: cookbook.id } }"
         >
-          <span>
-            <img v-if="cookbook.owner.avatar_url" class="cookbook-owner-avatar" :src="cookbook.owner.avatar_url" :alt="`Photo de ${cookbook.owner.name}`" />
-            <span v-else class="cookbook-owner-avatar owner-fallback" aria-hidden="true">{{ cookbook.owner.name.charAt(0).toUpperCase() }}</span>
-            <strong>{{ cookbook.name }}</strong>
-            <small>{{ cookbook.owner.name }}</small>
+          <span class="cookbook-identity">
+            <Avatar :src="cookbook.owner.avatar_url ?? null" :name="cookbook.owner.name" size="small" />
+            <span>
+              <strong>{{ cookbook.name }}</strong>
+              <small>{{ cookbook.owner.name }}</small>
+            </span>
           </span>
-          <span class="role-badge">{{ cookbook.member_role ?? 'membre' }}</span>
+          <Badge class="role-badge">{{ cookbook.member_role ?? 'membre' }}</Badge>
         </RouterLink>
         <nav v-if="pagination && pagination.last_page > 1" class="pagination" aria-label="Pagination des cookbooks">
-          <button type="button" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">
-            Precedent
-          </button>
+          <button type="button" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">Précédent</button>
           <span>Page {{ pagination.current_page }} / {{ pagination.last_page }}</span>
-          <button type="button" :disabled="!pagination.has_more_pages" @click="goToPage(pagination.current_page + 1)">
-            Suivant
-          </button>
+          <button type="button" :disabled="!pagination.has_more_pages" @click="goToPage(pagination.current_page + 1)">Suivant</button>
         </nav>
       </div>
       <CookbookCreateForm v-else />
     </section>
-    <RouterLink class="password-link" :to="{ name: 'change-password' }">
-      Modifier mon mot de passe
-    </RouterLink>
-    <RouterLink class="password-link" :to="{ name: 'profile' }">
-      Modifier mon profil
-    </RouterLink>
-    <button class="logout-button" type="button" @click="handleLogout">Deconnexion</button>
   </main>
 </template>
 
 <style scoped>
-.dashboard-card {
-  margin: 0 auto;
-  max-width: 42rem;
-  padding: 2rem;
-  border: 1px solid rgba(86, 112, 79, 0.18);
-  border-radius: 1.5rem;
-  background: rgba(255, 253, 248, 0.92);
-  box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1);
-}
-
-.kicker {
-  margin: 0 0 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #6b7b57;
-}
-
-h2 {
-  margin: 0 0 1rem;
-  font-size: clamp(1.9rem, 4vw, 2.8rem);
-  line-height: 1;
-}
-
-.message,
-.detail {
-  margin: 0;
-  max-width: 34rem;
-  line-height: 1.6;
-}
-
-.detail {
-  margin-top: 0.75rem;
-  color: #50634d;
-}
-
-.meta {
-  margin: 1.5rem 0 0;
-  color: #395330;
-  font-weight: 700;
-}
-
-.profile-avatar { margin-top: 1.25rem; }
-.profile-avatar img { width: 6rem; height: 6rem; border: 1px solid rgba(86,112,79,.2); border-radius: 50%; object-fit: cover; }
-
-.password-link {
-  display: inline-flex;
-  margin-top: 1.5rem;
-  color: #2f4520;
-  font-weight: 700;
-}
-
-.invitations-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
-.invitation-count { min-width: 1.7rem; padding: 0.25rem 0.5rem; border-radius: 999px; background: #e6a84e; color: #fffdf8; text-align: center; font-weight: 700; }
-.invitation-empty { margin-top: 1rem; }
-.invitation-list { display: grid; gap: 0.7rem; margin-top: 1rem; }
-.invitation-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; }
-.invitation-item strong, .invitation-item small { display: block; }
-.invitation-item small { margin-top: 0.25rem; color: #50634d; }
+.dashboard-page { width: 100%; max-width: 76rem; margin: 0 auto; }
+.dashboard-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, .18); }
+.account-summary { display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: .9rem; background: rgba(255, 253, 248, .72); }
+.account-summary h2, .section-heading h2 { margin: 0; font-size: 1.45rem; }
+.meta { margin: .35rem 0 0; color: #50634d; }
+.kicker { margin: 0 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.primary-action, .secondary-action { display: inline-flex; align-items: center; justify-content: center; min-height: 2.7rem; padding: .65rem .85rem; border-radius: .65rem; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.primary-action { border: 1px solid #395330; background: #395330; color: #fffdf8; }
+.secondary-action { border: 1px solid #395330; background: transparent; color: #395330; }
+.section-link { color: #395330; font-weight: 700; }
+.invitation-list, .cookbook-list { display: grid; gap: .7rem; margin-top: 1rem; }
+.invitation-item, .cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; }
+.invitation-item strong, .invitation-item small, .cookbook-item strong, .cookbook-item small { display: block; }
+.invitation-item small, .cookbook-item small { margin-top: .25rem; color: #50634d; }
 .invitation-item .expired { color: #8f1e1e; font-weight: 700; }
-.invitation-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.accept-button, .decline-button { padding: 0.5rem 0.7rem; border-radius: 0.5rem; font: inherit; font-weight: 700; cursor: pointer; }
+.invitation-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.accept-button, .decline-button { padding: .5rem .7rem; border-radius: .5rem; font: inherit; font-weight: 700; cursor: pointer; }
 .accept-button { border: 1px solid #395330; background: #395330; color: #fffdf8; }
 .decline-button { border: 1px solid #8f1e1e; background: transparent; color: #8f1e1e; }
-.accept-button:disabled, .decline-button:disabled { cursor: wait; opacity: 0.55; }
-
-.cookbooks-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
-.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.dashboard-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
-.section-heading .kicker { margin-bottom: 0.35rem; }
-h3 { margin: 0; font-size: 1.5rem; }
-.create-button { padding: 0.7rem 0.9rem; border: 1px solid #395330; border-radius: 0.65rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
-.empty-state { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #b9c5af; border-radius: 0.8rem; color: #50634d; line-height: 1.5; }
-.empty-state p { margin: 0; }
-.empty-state p + p { margin-top: 0.35rem; }
-.loading, .error-summary { margin-top: 1rem; }
-.error-summary { color: #8f1e1e; }
-.cookbook-list { display: grid; gap: 0.7rem; margin-top: 1rem; }
-.cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, 0.2); border-radius: 0.8rem; color: #243127; text-decoration: none; }
+.accept-button:disabled, .decline-button:disabled { cursor: wait; opacity: .55; }
+.cookbook-item { color: #243127; text-decoration: none; }
 .cookbook-item:hover { border-color: #6b7b57; background: #f7fbf3; }
-.cookbook-item strong, .cookbook-item small { display: block; }
-.cookbook-owner-avatar { display: inline-grid; width: 2rem; height: 2rem; margin-right: .45rem; vertical-align: middle; border-radius: 50%; object-fit: cover; }
-.owner-fallback { place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
-.cookbook-item small { margin-top: 0.25rem; color: #50634d; }
-.role-badge { padding: 0.35rem 0.6rem; border-radius: 999px; background: #edf4e8; color: #395330; font-size: 0.85rem; font-weight: 700; }
-.pagination { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.5rem; color: #50634d; font-size: 0.9rem; }
-.pagination button { padding: 0.5rem 0.7rem; border: 1px solid #b9c5af; border-radius: 0.5rem; background: transparent; color: #395330; cursor: pointer; }
-.pagination button:disabled { cursor: not-allowed; opacity: 0.45; }
-
-.logout-button {
-  display: block;
-  margin-top: 1rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #8f1e1e;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.logout-button:focus-visible {
-  outline: 3px solid rgba(185, 72, 72, 0.28);
-  outline-offset: 3px;
+.cookbook-identity { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .5rem; color: #50634d; font-size: .9rem; }
+.pagination button { padding: .5rem .7rem; border: 1px solid #b9c5af; border-radius: .5rem; background: transparent; color: #395330; cursor: pointer; }
+.pagination button:disabled { cursor: not-allowed; opacity: .45; }
+.error-summary { margin-top: 1rem; color: #8f1e1e; }
+@media (max-width: 42rem) {
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .section-heading > .secondary-action, .section-link { align-self: stretch; text-align: center; }
+  .invitation-item, .cookbook-item { align-items: flex-start; flex-direction: column; }
+  .invitation-actions { width: 100%; }
+  .invitation-actions button { flex: 1; }
 }
 </style>
