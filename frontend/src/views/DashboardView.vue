@@ -7,10 +7,13 @@ import Badge from '@/components/Badge.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingState from '@/components/LoadingState.vue';
+import NotificationsPanel from '@/components/NotificationsPanel.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RecipeCard from '@/components/RecipeCard.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook, CookbookInvitation, Pagination } from '@/utils/cookbooks';
 import { acceptCookbookInvitationById, declineCookbookInvitation, fetchCookbookInvitations, fetchCookbooks } from '@/utils/cookbooks';
+import { fetchRecipes, type Recipe } from '@/utils/recipes';
 
 const authStore = useAuthStore();
 const userName = computed(() => authStore.user?.name ?? '');
@@ -20,6 +23,9 @@ const pagination = ref<Pagination | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const invitations = ref<CookbookInvitation[]>([]);
+const recipes = ref<Recipe[]>([]);
+const recipesLoading = ref(true);
+const recipesError = ref('');
 const invitationsLoading = ref(true);
 const invitationsError = ref('');
 const invitationActionError = ref('');
@@ -54,6 +60,15 @@ async function loadInvitations(): Promise<void> {
   invitationsLoading.value = false;
 }
 
+async function loadRecipes(): Promise<void> {
+  recipesLoading.value = true;
+  recipesError.value = '';
+  const result = await fetchRecipes(authStore.tokenType, authStore.accessToken, 1, 'mine');
+  if (result.ok) recipes.value = result.recipes.slice(0, 6);
+  else recipesError.value = result.message;
+  recipesLoading.value = false;
+}
+
 async function acceptInvitation(invitation: CookbookInvitation): Promise<void> {
   acceptingInvitationId.value = invitation.id;
   invitationActionError.value = '';
@@ -74,11 +89,12 @@ async function declineInvitation(invitation: CookbookInvitation): Promise<void> 
   decliningInvitationId.value = null;
 }
 
-onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
+onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadRecipes()]); });
 </script>
 
 <template>
   <main class="dashboard-page">
+    <section class="dashboard-card welcome-card" aria-label="Votre espace">
     <PageHeader
       title="Votre espace"
       :description="userName ? `Bienvenue, ${userName}. Retrouvez ici les informations qui nécessitent votre attention.` : 'Retrouvez ici les informations qui nécessitent votre attention.'"
@@ -100,7 +116,14 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
       </div>
     </section>
 
-    <section class="dashboard-section invitations-section" aria-labelledby="invitations-title">
+    </section>
+
+    <div class="dashboard-grid">
+      <section class="dashboard-card notifications-card" aria-label="Notifications récentes">
+        <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
+      </section>
+
+    <section class="dashboard-card invitations-section" aria-labelledby="invitations-title">
       <div class="section-heading">
         <div>
           <p class="kicker">À traiter</p>
@@ -133,20 +156,20 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
       <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
     </section>
 
-    <section class="dashboard-section cookbooks-section" aria-labelledby="cookbooks-title">
+    <section class="dashboard-card cookbooks-section" aria-labelledby="cookbooks-title">
       <div class="section-heading">
         <div>
           <p class="kicker">Espaces partagés</p>
           <h2 id="cookbooks-title">Mes cookbooks</h2>
         </div>
-        <RouterLink class="secondary-action" :to="{ name: 'cookbooks' }">Nouveau cookbook</RouterLink>
+        <RouterLink class="secondary-action" :to="{ name: 'cookbooks' }">Voir tous</RouterLink>
       </div>
       <LoadingState v-if="isLoading" label="Chargement des cookbooks..." />
       <ErrorState v-else-if="errorMessage" :message="errorMessage" />
       <EmptyState v-else-if="cookbooks.length === 0" title="Vous n’avez encore aucun cookbook." description="Créez votre premier espace pour organiser vos recettes." />
       <div v-else class="cookbook-list">
         <RouterLink
-          v-for="cookbook in cookbooks"
+          v-for="cookbook in cookbooks.slice(0, 5)"
           :key="cookbook.id"
           class="cookbook-item"
           :to="{ name: 'cookbook', params: { id: cookbook.id } }"
@@ -167,12 +190,29 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
         </nav>
       </div>
     </section>
+
+      <section class="dashboard-card recipes-section" aria-labelledby="latest-recipes-title">
+        <div class="section-heading">
+          <div><p class="kicker">À découvrir</p><h2 id="latest-recipes-title">Dernières recettes publiées</h2></div>
+          <RouterLink class="secondary-action" :to="{ name: 'recipes' }">Voir tout</RouterLink>
+        </div>
+        <LoadingState v-if="recipesLoading" label="Chargement des recettes..." />
+        <ErrorState v-else-if="recipesError" :message="recipesError" />
+        <EmptyState v-else-if="recipes.length === 0" title="Aucune recette publiée." />
+        <div v-else class="latest-recipe-grid">
+          <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" compact />
+        </div>
+      </section>
+    </div>
   </main>
 </template>
 
 <style scoped>
 .dashboard-page { width: 100%; max-width: 76rem; margin: 0 auto; }
-.dashboard-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, .18); }
+.dashboard-card { min-width: 0; padding: 1.25rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: 1rem; background: rgba(255, 253, 248, .94); box-shadow: 0 12px 30px rgba(53, 72, 47, .08); }
+.welcome-card { margin-top: 1.5rem; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; align-items: start; }
+.dashboard-card :deep(.notifications-section) { margin-top: 0; padding-top: 0; border-top: 0; }
 .account-summary { display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: .9rem; background: rgba(255, 253, 248, .72); }
 .account-summary h2, .section-heading h2 { margin: 0; font-size: 1.45rem; }
 .meta { margin: .35rem 0 0; color: #50634d; }
@@ -195,15 +235,24 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
 .cookbook-item { color: #243127; text-decoration: none; }
 .cookbook-item:hover { border-color: #6b7b57; background: #f7fbf3; }
 .cookbook-identity { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.latest-recipe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .5rem; color: #50634d; font-size: .9rem; }
 .pagination button { padding: .5rem .7rem; border: 1px solid #b9c5af; border-radius: .5rem; background: transparent; color: #395330; cursor: pointer; }
 .pagination button:disabled { cursor: not-allowed; opacity: .45; }
 .error-summary { margin-top: 1rem; color: #8f1e1e; }
+@media (max-width: 52rem) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .latest-recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 42rem) {
   .section-heading { align-items: flex-start; flex-direction: column; }
   .section-heading > .secondary-action, .section-link { align-self: stretch; text-align: center; }
   .invitation-item, .cookbook-item { align-items: flex-start; flex-direction: column; }
   .invitation-actions { width: 100%; }
   .invitation-actions button { flex: 1; }
+}
+@media (max-width: 28rem) {
+  .dashboard-card { padding: 1rem; }
+  .latest-recipe-grid { grid-template-columns: 1fr; }
 }
 </style>
