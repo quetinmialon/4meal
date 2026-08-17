@@ -7,7 +7,6 @@ import { setRecipeFavorite } from '@/utils/recipes';
 const props = defineProps<{
   recipeId: string;
   isFavorite?: boolean;
-  iconOnly?: boolean;
 }>();
 
 const isFavorite = ref(props.isFavorite ?? false);
@@ -49,14 +48,14 @@ async function toggleFavorite(): Promise<void> {
     <button
       type="button"
       class="favorite-button"
-      :class="{ active: isFavorite, 'icon-only': props.iconOnly }"
+      :class="{ active: isFavorite }"
       :disabled="isSaving"
       :aria-pressed="isFavorite"
       :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
       @click="toggleFavorite"
     >
       <span aria-hidden="true">{{ isFavorite ? '★' : '☆' }}</span>
-      <span v-if="!props.iconOnly">{{ isFavorite ? 'Favori' : 'Ajouter aux favoris' }}</span>
+      {{ isFavorite ? 'Favori' : 'Ajouter aux favoris' }}
     </button>
     <p v-if="errorMessage" class="favorite-error" role="alert">{{ errorMessage }}</p>
   </div>
@@ -66,7 +65,6 @@ async function toggleFavorite(): Promise<void> {
 .favorite-control { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
 .favorite-button { padding: .5rem .7rem; border: 1px solid #b9c5af; border-radius: .55rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
 .favorite-button.active { border-color: #d18a2e; background: #fff4d9; color: #8a5a16; }
-.favorite-button.icon-only { width: 2.4rem; height: 2.4rem; padding: .25rem; font-size: 1.35rem; line-height: 1; }
 .favorite-button:disabled { cursor: wait; opacity: .65; }
 .favorite-error { flex-basis: 100%; margin: 0; color: #8f1e1e; font-size: .85rem; }
 </style>
