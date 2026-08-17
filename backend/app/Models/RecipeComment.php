@@ -55,4 +55,10 @@ class RecipeComment extends Model
     {
         return $this->hasMany(self::class, 'parent_id');
     }
+
+    /** @return HasMany<RecipeCommentReaction, $this> */
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(RecipeCommentReaction::class);
+    }
 }

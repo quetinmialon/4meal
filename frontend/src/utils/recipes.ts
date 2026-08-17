@@ -104,6 +104,13 @@ export type RecipeComment = {
     avatar_url: string | null;
     role: string | null;
   };
+  reactions?: RecipeCommentReaction[];
+};
+
+export type RecipeCommentReaction = {
+  emoji: string;
+  count: number;
+  reacted: boolean;
 };
 
 export type RecipeAudit = {
@@ -390,6 +397,34 @@ export async function deleteRecipeComment(
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
   }
+}
+
+export type RecipeCommentReactionResult = { ok: true } | { ok: false; message: string };
+
+export async function addRecipeCommentReaction(
+  recipeId: string, commentId: string, emoji: string, tokenType: string, accessToken: string,
+): Promise<RecipeCommentReactionResult> {
+  try {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}/reactions`, {
+      method: 'POST', headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji }),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.ok && payload?.success !== false) return { ok: true };
+    return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible d’ajouter la réaction.') };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' }; }
+}
+
+export async function removeRecipeCommentReaction(
+  recipeId: string, commentId: string, emoji: string, tokenType: string, accessToken: string,
+): Promise<RecipeCommentReactionResult> {
+  try {
+    const response = await apiFetch(`/api/recipes/${encodeURIComponent(recipeId)}/comments/${encodeURIComponent(commentId)}/reactions`, {
+      method: 'DELETE', headers: { ...recipeReadHeaders(tokenType, accessToken), 'Content-Type': 'application/json' }, body: JSON.stringify({ emoji }),
+    });
+    const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+    if (response.status === 204 || (response.ok && payload?.success !== false)) return { ok: true };
+    return { ok: false, message: readError(payload?.success === false ? payload : null, 'Impossible de retirer la réaction.') };
+  } catch { return { ok: false, message: 'Impossible de joindre le serveur. Réessayez dans un instant.' }; }
 }
 
 export async function createRecipe(

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 
-import { createRecipeComment, deleteRecipeComment, fetchRecipeComments, updateRecipeComment, type RecipeComment, type RecipePagination } from '@/utils/recipes';
+import { addRecipeCommentReaction, createRecipeComment, deleteRecipeComment, fetchRecipeComments, removeRecipeCommentReaction, updateRecipeComment, type RecipeComment, type RecipeCommentReaction, type RecipePagination } from '@/utils/recipes';
 
 const props = withDefaults(defineProps<{ recipeId: string; tokenType: string; accessToken: string; currentUserId?: number | null }>(), {
   currentUserId: null,
@@ -24,6 +24,8 @@ const replyContent = ref('');
 const replyError = ref('');
 const replySubmitting = ref(false);
 const MAX_VISUAL_DEPTH = 3;
+const allowedEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+const reactingKey = ref<string | null>(null);
 
 const commentRows = computed(() => {
   const byParent = new Map<string | null, RecipeComment[]>();
@@ -187,6 +189,29 @@ function roleLabel(role: string | null): string {
   return ({ owner: 'Propriétaire', editor: 'Éditeur', commenter: 'Commentateur' }[role ?? ''] ?? role ?? 'Membre');
 }
 
+function reactionFor(comment: RecipeComment, emoji: string): RecipeCommentReaction {
+  return comment.reactions?.find((reaction) => reaction.emoji === emoji) ?? { emoji, count: 0, reacted: false };
+}
+
+async function toggleReaction(comment: RecipeComment, emoji: string): Promise<void> {
+  if (reactingKey.value !== null) return;
+  const current = reactionFor(comment, emoji);
+  const next = { emoji, count: Math.max(0, current.count + (current.reacted ? -1 : 1)), reacted: !current.reacted };
+  const reactions = (comment.reactions ?? []).filter((reaction) => reaction.emoji !== emoji);
+  comment.reactions = next.count > 0 ? [...reactions, next] : reactions;
+  reactingKey.value = `${comment.id}:${emoji}`;
+  const result = current.reacted
+    ? await removeRecipeCommentReaction(props.recipeId, comment.id, emoji, props.tokenType, props.accessToken)
+    : await addRecipeCommentReaction(props.recipeId, comment.id, emoji, props.tokenType, props.accessToken);
+  if (!result.ok) {
+    comment.reactions = current.count > 0
+      ? [...reactions, current]
+      : reactions;
+    errorMessage.value = result.message;
+  }
+  reactingKey.value = null;
+}
+
 onMounted(() => { void loadComments(); });
 </script>
 
@@ -223,13 +248,23 @@ onMounted(() => { void loadComments(); });
           </template>
           <template v-else>
             <p>{{ row.comment.content }} <small v-if="row.comment.edited_at" class="edited-label">(modifié)</small></p>
+            <div class="comment-reactions" aria-label="Réactions au commentaire">
+              <div class="reaction-list">
+                <button v-for="emoji in allowedEmojis" :key="emoji" type="button" class="reaction-button" :aria-label="`${reactionFor(row.comment, emoji).reacted ? 'Retirer' : 'Ajouter'} la réaction ${emoji}`" :aria-pressed="reactionFor(row.comment, emoji).reacted" :disabled="reactingKey !== null" @click="toggleReaction(row.comment, emoji)">
+                  <span aria-hidden="true">{{ emoji }}</span><span v-if="reactionFor(row.comment, emoji).count" class="reaction-count">{{ reactionFor(row.comment, emoji).count }}</span>
+                </button>
+              </div>
+            </div>
             <div class="comment-actions">
               <button type="button" @click="startReply(row.comment)">Répondre</button>
-              <template v-if="canManage(row.comment)">
+            </div>
+            <details v-if="canManage(row.comment)" class="comment-menu">
+              <summary aria-label="Actions du commentaire">⋯</summary>
+              <div class="comment-menu-items comment-actions">
                 <button type="button" @click="startEditing(row.comment)">Modifier</button>
                 <button type="button" @click="askDelete(row.comment)">Supprimer</button>
-              </template>
-            </div>
+              </div>
+            </details>
             <form v-if="replyToId === row.comment.id" class="comment-reply-form" @submit.prevent="submitReply(row.comment)">
               <label :for="`reply-comment-${row.comment.id}`">Répondre à {{ row.comment.author.name }}</label>
               <textarea :id="`reply-comment-${row.comment.id}`" v-model="replyContent" rows="3" maxlength="2000" :disabled="replySubmitting" />
@@ -265,7 +300,7 @@ onMounted(() => { void loadComments(); });
 button:disabled { cursor: not-allowed; opacity: .5; }
 .comment-list { display: grid; gap: .7rem; }
 .comment-item { display: flex; gap: .75rem; padding: 1rem; border: 1px solid rgba(86,112,79,.2); border-radius: .8rem; }
-.comment-item { margin-inline-start: min(calc(var(--comment-depth, 0) * 2rem), 6rem); }
+.comment-item { margin-inline-start: min(calc(var(--comment-depth, 0) * 1rem), 2rem); border-inline-start: 3px solid rgba(86,112,79,.28); }
 .comment-avatar { flex: 0 0 2.5rem; width: 2.5rem; height: 2.5rem; border-radius: 50%; object-fit: cover; }
 .avatar-fallback { display: grid; place-items: center; background: #edf4e8; color: #395330; font-weight: 700; }
 .comment-content { min-width: 0; flex: 1; }
@@ -278,9 +313,22 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .comment-edit-form textarea { resize: vertical; padding: .7rem; border: 1px solid #b9c5af; border-radius: .5rem; font: inherit; }
 .comment-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
 .comment-actions button, .delete-comment-confirmation button { padding: .4rem .6rem; border: 1px solid #395330; border-radius: .4rem; background: transparent; color: #395330; font: inherit; cursor: pointer; }
+.comment-menu { position: relative; margin-top: .55rem; }
+.comment-menu summary { width: fit-content; padding: .15rem .45rem; border-radius: .4rem; color: #395330; font-size: 1.25rem; line-height: 1; cursor: pointer; list-style: none; }
+.comment-menu summary::-webkit-details-marker { display: none; }
+.comment-menu-items { position: absolute; z-index: 1; inset-inline-start: 0; display: grid; min-width: 8rem; padding: .3rem; border: 1px solid #b9c5af; border-radius: .5rem; background: var(--app-surface, #fffdf8); box-shadow: 0 .35rem 1rem rgba(36,49,39,.14); }
+.comment-menu-items button { padding: .5rem .6rem; border: 0; background: transparent; color: #395330; text-align: start; font: inherit; cursor: pointer; }
+.comment-menu-items button:hover, .comment-menu-items button:focus-visible { background: #edf4e8; }
+.comment-reactions { margin-top: .7rem; }
+.reaction-list { display: flex; flex-wrap: wrap; gap: .35rem; }
+.reaction-button { display: inline-flex; align-items: center; justify-content: center; gap: .25rem; min-width: 2.25rem; min-height: 2.25rem; padding: .3rem .5rem; border: 1px solid #b9c5af; border-radius: 999px; background: transparent; color: #395330; font: inherit; cursor: pointer; }
+.reaction-button[aria-pressed="true"] { border-color: #395330; background: #edf4e8; }
+.reaction-button:focus-visible { outline: 2px solid #395330; outline-offset: 2px; }
+.reaction-count { font-size: .8rem; }
 .delete-comment-confirmation { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .6rem; padding: .6rem; border: 1px solid #e2b3ad; border-radius: .5rem; color: #6d4140; }
 .edited-label { color: #50634d; }
 .comment-error, .field-error { margin: 0; color: #8f1e1e; }
 .muted { color: #50634d; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 540px) { .comment-item { padding: .8rem; gap: .55rem; } .comment-avatar { flex-basis: 2.1rem; width: 2.1rem; height: 2.1rem; } .comment-meta time { margin-inline-start: 0; width: 100%; } }
 </style>
