@@ -166,7 +166,7 @@ label { font-weight: 700; }
 input { width: 100%; padding: 0.9rem 1rem; border: 1px solid #b4bead; border-radius: 0.95rem; background: #fffdfa; color: #243127; font: inherit; }
 input:focus-visible { outline: 3px solid rgba(116, 144, 88, 0.32); outline-offset: 2px; }
 input[aria-invalid='true'] { border-color: #b64242; background: #fff8f6; }
-button { margin-top: 0.25rem; padding: 0.95rem 1.3rem; border: 0; border-radius: 999px; background: #2f4520; color: #fffdf9; font: inherit; font-weight: 700; cursor: pointer; }
+button { width: fit-content; max-width: 100%; justify-self: center; margin-top: 0.25rem; padding: 0.95rem 1.3rem; border: 0; border-radius: 999px; background: #2f4520; color: #fffdf9; font: inherit; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: wait; opacity: 0.8; }
 .field-error, .error-summary { margin: 0; color: #8f1e1e; line-height: 1.5; }
 .error-summary { margin-bottom: 1rem; padding: 0.95rem 1rem; border: 1px solid rgba(171, 44, 44, 0.24); border-radius: 1rem; background: #fff4f2; }

@@ -43,6 +43,7 @@ async function handleCsvDownload(): Promise<void> {
 
 <template>
   <main class="export-card">
+    <img class="data-hero" src="@/assets/importexport.png" alt="Cuisine lumineuse avec des ingrédients frais" />
     <RouterLink class="back-link" :to="{ name: 'dashboard' }">← Retour à mon espace</RouterLink>
     <p class="kicker">Mes données</p>
     <h1>Exporter mes données</h1>
@@ -146,6 +147,7 @@ async function handleCsvDownload(): Promise<void> {
   background: rgba(255, 253, 248, 0.94);
   box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1);
 }
+.data-hero { display: block; width: calc(100% + 4rem); height: clamp(12rem, 24vw, 19rem); margin: -2rem -2rem 1.5rem; object-fit: cover; object-position: center; }
 
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -179,5 +181,5 @@ li + li { margin-top: 0.55rem; }
 .confirmation input { width: 1.1rem; height: 1.1rem; margin-top: 0.15rem; accent-color: #395330; }
 .download-button { width: 100%; margin-top: 1.25rem; padding: 0.85rem 1rem; border: 1px solid #395330; border-radius: 0.65rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .download-button:disabled { cursor: not-allowed; opacity: 0.5; }
-@media (max-width: 640px) { .export-card { width: min(100% - 1rem, 76rem); padding: 1rem; }.export-workflow li { font-size: .68rem; }.export-workflow small { display: none; }.export-scope { grid-template-columns: 1fr; }.format-option { align-items: stretch; flex-direction: column; }.format-option .download-button { width: 100%; } }
+@media (max-width: 640px) { .export-card { width: min(100% - 1rem, 76rem); padding: 1rem; }.data-hero { width: calc(100% + 2rem); height: 11rem; margin: -1rem -1rem 1.25rem; }.export-workflow li { font-size: .68rem; }.export-workflow small { display: none; }.export-scope { grid-template-columns: 1fr; }.format-option { align-items: stretch; flex-direction: column; }.format-option .download-button { width: 100%; } }
 </style>

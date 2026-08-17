@@ -7,6 +7,7 @@ import MicrosoftAuthButton from '@/components/MicrosoftAuthButton.vue';
 import { useAuthStore } from '@/stores/auth';
 import { handleOAuthCallback } from '@/utils/oauth';
 import { apiFetch } from '@/utils/api';
+import registerIllustration from '@/assets/auth-register.png';
 
 type FieldName = 'name' | 'email' | 'password' | 'passwordConfirmation';
 
@@ -296,6 +297,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="auth-screen">
   <main class="register-card">
     <div class="card-header">
       <p class="kicker">Inscription</p>
@@ -304,9 +306,6 @@ onMounted(() => {
         Renseignez vos informations pour creer votre compte. Nous vous indiquerons les champs a
         corriger si besoin.
       </p>
-      <GoogleAuthButton />
-      <MicrosoftAuthButton />
-      <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
     </div>
 
     <form class="register-form" novalidate :aria-busy="isSubmitting || authStore.status === 'loading'" @submit.prevent="handleSubmit">
@@ -407,11 +406,18 @@ onMounted(() => {
       </fieldset>
     </form>
     <p class="auth-switch">Vous avez déjà un compte ? <RouterLink :to="{ name: 'login' }">Se connecter</RouterLink></p>
+    <div class="oauth-separator" aria-hidden="true"><span>ou continuer avec</span></div>
+    <GoogleAuthButton />
+    <MicrosoftAuthButton />
   </main>
+  <img class="auth-illustration" :src="registerIllustration" alt="" aria-hidden="true" />
+  </div>
 </template>
 
 <style scoped>
 .register-card {
+  display: flex;
+  flex-direction: column;
   margin: 0 auto;
   max-width: 42rem;
   padding: 2rem;
@@ -527,7 +533,7 @@ input[aria-invalid='true'] {
 }
 
 .submit-button {
-  justify-self: start;
+  justify-self: center;
   min-width: 13rem;
   padding: 0.95rem 1.3rem;
   border: 0;
@@ -559,6 +565,13 @@ fieldset:disabled .submit-button {
   opacity: 0.72;
   transform: none;
 }
+
+.auth-switch { margin: 1.25rem 0 0; color: #50634d; font-size: .9rem; text-align: center; }
+.auth-switch a { color: #2f4520; font-weight: 700; }
+.register-card .card-header { order: 0; }
+.register-card .register-form { order: 1; }
+.register-card :deep(.oauth-separator), .register-card :deep(.oauth-button) { order: 2; }
+.register-card .auth-switch { order: 3; }
 
 @media (max-width: 640px) {
   .register-card {
