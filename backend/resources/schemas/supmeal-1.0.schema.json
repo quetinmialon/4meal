@@ -41,7 +41,7 @@
       "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 200 }, "description": { "type": ["string", "null"], "maxLength": 10000 },
       "servings": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] }, "prep_time_minutes": { "anyOf": [{ "$ref": "#/definitions/nonNegativeInt" }, { "type": "null" }] },
       "cook_time_minutes": { "anyOf": [{ "$ref": "#/definitions/nonNegativeInt" }, { "type": "null" }] }, "rest_time_minutes": { "anyOf": [{ "$ref": "#/definitions/nonNegativeInt" }, { "type": "null" }] },
-      "ingredients": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/ingredient" } }, "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/step" } },
+      "ingredients": { "type": "array", "items": { "$ref": "#/definitions/ingredient" } }, "steps": { "type": "array", "items": { "$ref": "#/definitions/step" } },
       "tags": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/definitions/text" } }, "cookbook_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^supmeal:cookbook:[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$" } },
       "notes": { "type": ["string", "null"], "maxLength": 10000 }, "source": { "type": ["string", "null"], "maxLength": 2048 }, "image_url": { "type": ["string", "null"], "format": "uri", "maxLength": 2048 }
     } }

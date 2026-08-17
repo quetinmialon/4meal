@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
@@ -14,6 +14,13 @@ const errors = ref<ImportErrorDetail[]>([]);
 const report = ref<ImportReport | null>(null);
 const preview = ref<ImportPreview | null>(null);
 const format = ref<'json' | 'csv' | 'mealie'>('json');
+
+const currentStep = computed(() => {
+  if (report.value) return 5;
+  if (preview.value) return 4;
+  if (selectedFile.value || isUploading.value) return 2;
+  return 1;
+});
 
 function selectFile(event: Event): void {
   const input = event.target as HTMLInputElement;
@@ -83,12 +90,36 @@ function cancelPreview(): void {
     <h1>Importer un fichier</h1>
     <p class="intro">Choisissez le format correspondant au fichier à importer.</p>
 
+    <ol class="import-workflow" aria-label="Étapes de l’import">
+      <li
+        v-for="step in [
+        { number: 1, label: 'Sélection' },
+        { number: 2, label: 'Analyse / validation' },
+        { number: 3, label: 'Prévisualisation' },
+        { number: 4, label: 'Confirmation' },
+        { number: 5, label: 'Résultat' },
+        ]"
+        :key="step.number"
+        :class="{ active: currentStep === step.number, complete: currentStep > step.number }"
+      >
+        <span class="workflow-number" aria-hidden="true">{{ step.number }}</span>
+        <span>{{ step.label }}</span>
+      </li>
+    </ol>
+
+    <section class="workflow-step" :class="{ active: currentStep === 1 }" aria-labelledby="selection-title">
+      <div class="step-heading">
+        <span class="step-number">1</span>
+        <div><p class="step-kicker">Étape 1</p><h2 id="selection-title">Sélection du fichier</h2></div>
+      </div>
+
     <fieldset class="format-choice">
-      <legend>Format du fichier</legend>
-      <label><input v-model="format" type="radio" value="json" :disabled="isUploading"> JSON SUPMEAL</label>
-      <label><input v-model="format" type="radio" value="csv" :disabled="isUploading"> CSV recettes</label>
-      <label><input v-model="format" type="radio" value="mealie" :disabled="isUploading"> Mealie</label>
+      <legend>Format accepté</legend>
+      <label><input v-model="format" type="radio" value="json" :disabled="isUploading"> JSON SUPMEAL (.json)</label>
+      <label><input v-model="format" type="radio" value="csv" :disabled="isUploading"> CSV recettes (.csv)</label>
+      <label><input v-model="format" type="radio" value="mealie" :disabled="isUploading"> Mealie (.json)</label>
     </fieldset>
+    <p class="format-help">Taille maximale : 10 Mo. Le format sélectionné détermine la validation appliquée au fichier.</p>
 
     <aside class="warning" role="note" aria-label="Avertissements d’import">
       <strong>Avant de commencer</strong>
@@ -113,6 +144,15 @@ function cancelPreview(): void {
       </div>
     </div>
 
+    </section>
+
+    <section class="workflow-step" :class="{ active: currentStep === 2 }" aria-labelledby="analysis-title">
+      <div class="step-heading">
+        <span class="step-number">2</span>
+        <div><p class="step-kicker">Étape 2</p><h2 id="analysis-title">Analyse et validation</h2></div>
+      </div>
+      <p class="step-description">L’analyse vérifie le fichier avant toute écriture. Aucune donnée ne sera importée à cette étape.</p>
+
     <div v-if="errorMessage" class="error-summary" role="alert" aria-live="assertive">
       <strong>{{ errorMessage }}</strong>
       <ul v-if="errors.length" class="error-list">
@@ -129,9 +169,18 @@ function cancelPreview(): void {
       Validation et import du fichier en cours…
     </div>
 
-    <section v-if="preview" class="preview" aria-labelledby="preview-title">
-      <h2 id="preview-title">Prévisualisation avant import</h2>
+      <button v-if="!preview" class="import-button" type="button" :disabled="selectedFile === null || isUploading" @click="handleImport">
+        {{ isUploading ? 'Analyse en cours…' : 'Analyser et prévisualiser' }}
+      </button>
+    </section>
+
+    <section v-if="preview" class="workflow-step preview" :class="{ active: currentStep === 4 }" aria-labelledby="preview-title">
+      <div class="step-heading">
+        <span class="step-number">3</span>
+        <div><p class="step-kicker">Étape 3</p><h2 id="preview-title">Prévisualisation avant import</h2></div>
+      </div>
       <p>Vérifiez les éléments détectés avant de confirmer l’écriture dans votre compte.</p>
+      <p class="preview-count"><strong>{{ preview.objects.length }}</strong> élément(s) seront importés si vous confirmez.</p>
       <table>
         <caption>Objets reconnus</caption>
         <thead><tr><th>Type</th><th>Nom</th><th>Chemin</th></tr></thead>
@@ -156,12 +205,16 @@ function cancelPreview(): void {
       </div>
       <div class="preview-actions">
         <button type="button" class="secondary-button" :disabled="isUploading" @click="cancelPreview">Modifier le fichier</button>
-        <button type="button" class="import-button" :disabled="isUploading || preview.errors.length > 0" @click="confirmImport">Confirmer et importer</button>
+        <button type="button" class="import-button" :disabled="isUploading || preview.errors.length > 0" @click="confirmImport"><span class="confirmation-label">Étape 4 · </span>Confirmer et importer</button>
       </div>
     </section>
 
     <section v-if="report" class="result" aria-labelledby="result-title" role="status">
-      <h2 id="result-title">Import terminé</h2>
+      <div class="step-heading">
+        <span class="step-number">5</span>
+        <div><p class="step-kicker">Étape 5</p><h2 id="result-title">Import terminé</h2></div>
+      </div>
+      <p class="success-message">Le fichier a été traité avec succès. Voici le résultat de l’import.</p>
       <dl>
         <div v-if="report.cookbooks !== undefined"><dt>Cookbooks importés</dt><dd>{{ report.cookbooks }}</dd></div>
         <div><dt>Recettes importées</dt><dd>{{ report.recipes }}</dd></div>
@@ -174,19 +227,29 @@ function cancelPreview(): void {
       </ul>
     </section>
 
-    <button v-if="!preview" class="import-button" type="button" :disabled="selectedFile === null || isUploading" @click="handleImport">
-      {{ isUploading ? 'Analyse en cours…' : 'Prévisualiser avant import' }}
-    </button>
   </main>
 </template>
 
 <style scoped>
-.import-card { width: min(100% - 2rem, 46rem); margin: 2rem auto; padding: 2rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.94); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
+.import-card { box-sizing: border-box; width: min(100% - 2rem, 76rem); margin: 2rem auto; padding: 2rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.94); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 h1 { margin: 0 0 1rem; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 h2 { margin: 0 0 1rem; font-size: 1.25rem; }
 .intro { color: #50634d; line-height: 1.6; }
+.import-workflow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin: 1.75rem 0; padding: 0; list-style: none; }
+.import-workflow li { display: grid; gap: 0.4rem; justify-items: center; min-width: 0; color: #71806b; font-size: 0.78rem; font-weight: 700; text-align: center; }
+.workflow-number, .step-number { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid #b9c5af; border-radius: 50%; background: #fffdf8; color: #71806b; font-weight: 800; }
+.import-workflow li.active, .import-workflow li.complete { color: #395330; }
+.import-workflow li.active .workflow-number, .import-workflow li.complete .workflow-number { border-color: #395330; background: #395330; color: #fffdf8; }
+.workflow-step { margin-top: 1.25rem; padding: 1.25rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 0.8rem; background: rgba(255, 255, 255, 0.35); }
+.workflow-step.active { border-color: #8ca17b; box-shadow: 0 0 0 2px rgba(140, 161, 123, 0.12); }
+.step-heading { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.step-heading h2 { margin: 0; }
+.step-number { flex: 0 0 auto; border-color: #395330; background: #395330; color: #fffdf8; }
+.step-kicker { margin: 0 0 0.15rem; color: #6b7b57; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.step-description, .format-help { color: #50634d; line-height: 1.5; }
+.format-help { margin: 0.75rem 0 0; font-size: 0.9rem; }
 .warning { margin-top: 1.5rem; padding: 1rem 1.1rem; border: 1px solid #d89b43; border-radius: 0.8rem; background: #fff5df; color: #704414; line-height: 1.5; }
 .warning ul { margin-bottom: 0; padding-left: 1.2rem; }
 .warning li + li { margin-top: 0.35rem; }
@@ -209,6 +272,9 @@ code { padding: 0.1rem 0.25rem; border-radius: 0.25rem; background: rgba(36, 49,
 .result { border: 1px solid #8ca17b; background: #f1f8ed; color: #395330; }
 .preview { margin-top: 1.25rem; padding: 1rem; border: 1px solid #8ca17b; border-radius: 0.7rem; background: #f8fcf5; color: #395330; }
 .preview p { margin-top: -0.35rem; }
+.preview-count { margin: 0.75rem 0 1rem !important; padding: 0.75rem; border-radius: 0.55rem; background: #eef5ea; }
+.confirmation-label { font-size: 0.8em; opacity: 0.85; }
+.success-message { margin-top: -0.35rem; }
 .preview table { width: 100%; border-collapse: collapse; background: #fffdf8; }
 .preview caption { padding: 0.7rem; text-align: left; font-weight: 800; }
 .preview th, .preview td { padding: 0.6rem; border: 1px solid #d8e1d2; text-align: left; }
@@ -225,5 +291,17 @@ code { padding: 0.1rem 0.25rem; border-radius: 0.25rem; background: rgba(36, 49,
 .duplicate-list { margin-bottom: 0; }
 .import-button { width: 100%; margin-top: 1.25rem; padding: 0.85rem 1rem; border: 1px solid #395330; border-radius: 0.65rem; background: #395330; color: #fffdf8; font: inherit; font-weight: 700; cursor: pointer; }
 .import-button:disabled { cursor: not-allowed; opacity: 0.5; }
+@media (max-width: 640px) {
+  .import-card { width: min(100% - 1rem, 76rem); padding: 1rem; }
+  .import-workflow { gap: 0.2rem; }
+  .import-workflow li { font-size: 0.68rem; }
+  .workflow-number, .step-number { width: 1.75rem; height: 1.75rem; }
+  .format-choice { display: grid; gap: 0.65rem; }
+  .preview { overflow-x: auto; }
+  .preview table { min-width: 34rem; }
+  .preview-actions { flex-direction: column-reverse; }
+  .preview-actions button { width: 100%; }
+  .result dl { grid-template-columns: 1fr; }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
