@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
 import OAuthAccountsSection from '@/components/OAuthAccountsSection.vue';
@@ -26,6 +27,16 @@ const themeOptions: { value: ThemePreference; label: string }[] = [
 ];
 
 const authStore = useAuthStore();
+const route = useRoute();
+const settingsSection = computed<'all' | 'profile' | 'food' | 'usage'>(() => {
+  const path = route?.path ?? window.location.pathname;
+  if (path.endsWith('/preferences-alimentaires')) return 'food';
+  if (path.endsWith('/preferences-utilisation')) return 'usage';
+  return path === '/profil' ? 'profile' : 'all';
+});
+const settingsPageTitle = computed(() => settingsSection.value === 'food' ? 'Préférences alimentaires' : settingsSection.value === 'usage' ? 'Préférences d’utilisation' : 'Profil');
+const settingsPageHeading = computed(() => settingsSection.value === 'food' ? 'Vos habitudes alimentaires' : settingsSection.value === 'usage' ? 'Vos préférences d’utilisation' : 'Informations générales');
+const settingsPageIntro = computed(() => settingsSection.value === 'food' ? 'Gérez votre régime, vos allergies et vos portions par défaut.' : settingsSection.value === 'usage' ? 'Choisissez l’apparence de l’application et la manière de recevoir vos notifications.' : 'Gérez les informations principales de votre compte.');
 const originalEmail = authStore.user?.email ?? '';
 const form = reactive({
   name: authStore.user?.name ?? '',
@@ -69,6 +80,21 @@ const notificationChannels: { value: NotificationChannel; label: string }[] = [
   { value: 'mail', label: 'E-mail' },
   { value: 'both', label: 'Application web et e-mail' },
 ];
+const notificationGroups = [
+  { label: 'Recettes', types: notificationTypes.filter(({ type }) => type !== 'cookbook_message') },
+  { label: 'Cookbooks', types: notificationTypes.filter(({ type }) => type === 'cookbook_message') },
+];
+
+function channelIncludes(type: NotificationType, channel: 'web' | 'mail'): boolean {
+  const current = notificationPreferences[type];
+  return current === channel || current === 'both';
+}
+
+function updateNotificationChannel(type: NotificationType, channel: 'web' | 'mail', enabled: boolean): void {
+  const webEnabled = channel === 'web' ? enabled : channelIncludes(type, 'web');
+  const mailEnabled = channel === 'mail' ? enabled : channelIncludes(type, 'mail');
+  notificationPreferences[type] = webEnabled ? (mailEnabled ? 'both' : 'web') : (mailEnabled ? 'mail' : 'none');
+}
 const formErrorSummary = ref<HTMLElement | null>(null);
 const avatarPreview = ref<string | null>(authStore.user?.avatar_url ?? null);
 let objectPreviewUrl: string | null = null;
@@ -250,14 +276,16 @@ async function toggleTwoFactor(): Promise<void> {
 <template>
   <main class="profile-card">
     <p class="kicker">Mon compte</p>
-    <h2>Modifier mon profil</h2>
-    <p class="intro">Mettez a jour les informations visibles sur votre compte.</p>
+    <h1>{{ settingsPageTitle }}</h1>
+    <h2 id="profile-form-title">{{ settingsPageHeading }}</h2>
+    <p class="intro">{{ settingsPageIntro }}</p>
     <p v-if="successMessage" class="success-message" role="status" aria-live="polite">{{ successMessage }}</p>
 
-    <form class="profile-form" novalidate @submit.prevent="handleSubmit">
+    <form id="profile-settings" class="profile-form" aria-labelledby="profile-form-title" novalidate @submit.prevent="handleSubmit">
       <fieldset :disabled="authStore.status === 'loading'">
         <div v-if="globalError" ref="formErrorSummary" class="error-summary" role="alert" aria-live="assertive" tabindex="-1">{{ globalError }}</div>
 
+        <section v-if="settingsSection === 'all' || settingsSection === 'profile'" class="profile-general" aria-labelledby="profile-form-title">
         <div class="field">
           <label for="name-input">Nom</label>
           <input id="name-input" v-model="form.name" name="name" autocomplete="name" :aria-invalid="visibleError('name') ? 'true' : 'false'" @blur="handleBlur('name')" @input="handleInput('name')" />
@@ -287,13 +315,21 @@ async function toggleTwoFactor(): Promise<void> {
           <small>Requis uniquement si vous modifiez votre adresse e-mail.</small>
           <p v-if="visibleError('currentPassword')" id="currentPassword-error" class="field-error" role="alert">{{ visibleError('currentPassword') }}</p>
         </div>
+        <a class="password-link" href="/securite">Changer le mot de passe</a>
+        </section>
 
-        <section id="theme-preferences" class="preferences-section" aria-labelledby="theme-preferences-title">
+        <section v-if="settingsSection === 'all' || settingsSection === 'usage'" id="theme-preferences" class="preferences-section" aria-labelledby="theme-preferences-title">
           <h3 id="theme-preferences-title">Thème</h3>
           <p class="section-help">Choisissez l’apparence de l’application. Le mode système suit automatiquement les réglages de votre appareil.</p>
           <div class="field">
             <label for="theme-input">Apparence</label>
-            <select id="theme-input" v-model="form.theme" name="theme" :aria-invalid="visibleError('theme') ? 'true' : 'false'" aria-describedby="theme-help theme-error" @change="selectTheme(form.theme)">
+            <div class="theme-options" role="radiogroup" aria-label="Choix de l’apparence" aria-describedby="theme-help theme-error">
+              <label v-for="option in themeOptions" :key="option.value" class="theme-option" :class="{ selected: form.theme === option.value }" :for="`theme-${option.value}-input`">
+                <input :id="`theme-${option.value}-input`" v-model="form.theme" type="radio" name="theme" :value="option.value" :aria-invalid="visibleError('theme') ? 'true' : 'false'" @change="selectTheme(option.value)">
+                <span>{{ option.label }}</span>
+              </label>
+            </div>
+            <select id="theme-input" v-model="form.theme" class="visually-hidden" aria-hidden="true" tabindex="-1" @change="selectTheme(form.theme)">
               <option v-for="option in themeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             </select>
             <small id="theme-help">Le choix est conservé sur cet appareil et les modes clair/sombre sont synchronisés avec votre profil.</small>
@@ -301,7 +337,7 @@ async function toggleTwoFactor(): Promise<void> {
           </div>
         </section>
 
-        <section id="food-preferences" class="preferences-section" aria-labelledby="food-preferences-title">
+        <section v-if="settingsSection === 'all' || settingsSection === 'food'" id="food-preferences" class="preferences-section food-preferences-section" aria-labelledby="food-preferences-title">
           <h3 id="food-preferences-title">Préférences culinaires</h3>
           <p class="section-help">Ces préférences servent à personnaliser vos suggestions de recettes. Vous pourrez les modifier à tout moment.</p>
 
@@ -317,8 +353,8 @@ async function toggleTwoFactor(): Promise<void> {
 
           <div class="field">
             <label for="allergy-input">Allergies et ingrédients à éviter</label>
-            <div class="tag-list" aria-live="polite">
-              <span v-for="allergy in form.allergies" :key="allergy" class="tag">
+            <div class="tag-list" role="list" aria-label="Allergies enregistrées" aria-live="polite">
+              <span v-for="allergy in form.allergies" :key="allergy" class="tag" role="listitem">
                 {{ allergy }}
                 <button type="button" class="remove-tag" :aria-label="'Retirer ' + allergy" @click="removeAllergy(allergy)">×</button>
               </span>
@@ -335,23 +371,34 @@ async function toggleTwoFactor(): Promise<void> {
 
           <div class="field">
             <label for="defaultServings-input">Portions par défaut</label>
-            <input id="defaultServings-input" v-model.number="form.defaultServings" name="default_servings" type="number" min="1" max="50" :aria-invalid="visibleError('defaultServings') ? 'true' : 'false'" aria-describedby="defaultServings-help defaultServings-error" @input="handleInput('defaultServings')" @blur="handleBlur('defaultServings')" />
+            <input id="defaultServings-input" v-model.number="form.defaultServings" name="default_servings" type="number" inputmode="numeric" min="1" max="50" :aria-invalid="visibleError('defaultServings') ? 'true' : 'false'" aria-describedby="defaultServings-help defaultServings-error" @input="handleInput('defaultServings')" @blur="handleBlur('defaultServings')" />
             <small id="defaultServings-help">Nombre de personnes pour lequel vous cuisinez habituellement (de 1 à 50).</small>
             <p v-if="visibleError('defaultServings')" id="defaultServings-error" class="field-error" role="alert">{{ visibleError('defaultServings') }}</p>
           </div>
         </section>
 
-        <section id="notification-preferences" class="preferences-section" aria-labelledby="notification-preferences-title">
+        <section v-if="settingsSection === 'all' || settingsSection === 'usage'" id="notification-preferences" class="preferences-section" aria-labelledby="notification-preferences-title">
           <h3 id="notification-preferences-title">Préférences de notifications</h3>
           <p class="section-help">Choisissez comment vous souhaitez être informé pour chaque source de notification.</p>
           <p v-if="notificationLoading" role="status">Chargement des préférences de notifications...</p>
           <p v-if="notificationError" class="field-error" role="alert">{{ notificationError }}</p>
-          <div v-for="item in notificationTypes" :key="item.type" class="notification-preference">
-            <label :for="`${item.type}-notification-input`">{{ item.label }}</label>
-            <select :id="`${item.type}-notification-input`" v-model="notificationPreferences[item.type]" :disabled="notificationLoading || notificationSaving">
-              <option v-for="channel in notificationChannels" :key="channel.value" :value="channel.value">{{ channel.label }}</option>
-            </select>
-          </div>
+          <fieldset v-for="group in notificationGroups" :key="group.label" class="notification-group">
+            <legend>{{ group.label }}</legend>
+            <div v-for="item in group.types" :key="item.type" class="notification-preference">
+              <div class="notification-preference-heading">
+                <strong>{{ item.label }}</strong>
+                <span>Choisissez où recevoir cette notification.</span>
+              </div>
+              <div class="notification-switches">
+                <label :for="`${item.type}-web-input`"><input :id="`${item.type}-web-input`" type="checkbox" :checked="channelIncludes(item.type, 'web')" :disabled="notificationLoading || notificationSaving" @change="updateNotificationChannel(item.type, 'web', ($event.target as HTMLInputElement).checked)"> Application web</label>
+                <label :for="`${item.type}-mail-input`"><input :id="`${item.type}-mail-input`" type="checkbox" :checked="channelIncludes(item.type, 'mail')" :disabled="notificationLoading || notificationSaving" @change="updateNotificationChannel(item.type, 'mail', ($event.target as HTMLInputElement).checked)"> E-mail</label>
+              </div>
+              <label class="visually-hidden" :for="`${item.type}-notification-input`">Canal de notification {{ item.label }}</label>
+              <select :id="`${item.type}-notification-input`" v-model="notificationPreferences[item.type]" class="visually-hidden" aria-hidden="true" tabindex="-1" :disabled="notificationLoading || notificationSaving">
+                <option v-for="channel in notificationChannels" :key="channel.value" :value="channel.value">{{ channel.label }}</option>
+              </select>
+            </div>
+          </fieldset>
           <button type="button" class="secondary-button" :disabled="notificationLoading || notificationSaving" @click="saveNotificationPreferences">
             {{ notificationSaving ? 'Enregistrement...' : 'Enregistrer les notifications' }}
           </button>
@@ -362,7 +409,7 @@ async function toggleTwoFactor(): Promise<void> {
       </fieldset>
     </form>
 
-    <section id="security-preferences" class="preferences-section" aria-labelledby="two-factor-title">
+    <section v-if="settingsSection === 'all'" id="security-preferences" class="preferences-section" aria-labelledby="two-factor-title">
       <h3 id="two-factor-title">Verification en deux etapes</h3>
       <p class="section-help">Recevez un code temporaire par e-mail a chaque nouvelle connexion.</p>
       <p v-if="twoFactorError" class="error-summary" role="alert">{{ twoFactorError }}</p>
@@ -380,7 +427,7 @@ async function toggleTwoFactor(): Promise<void> {
       </button>
     </section>
 
-    <section id="connected-accounts">
+    <section v-if="settingsSection === 'all'" id="connected-accounts">
       <OAuthAccountsSection />
     </section>
   </main>
@@ -389,28 +436,40 @@ async function toggleTwoFactor(): Promise<void> {
 <style scoped>
 .profile-card { width: 100%; max-width: 76rem; margin: 0 auto; padding: 2rem; box-sizing: border-box; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.92); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
 .kicker { margin: 0 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-h2 { margin: 0 0 0.75rem; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1; }
+h1 { margin: 0 0 0.75rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; }
+.profile-card > h2 { margin: 0 0 0.75rem; font-size: 1.45rem; line-height: 1.2; }
+.settings-content h2 { margin: 0 0 0.75rem; font-size: 1.45rem; line-height: 1.2; }
 .intro { margin: 0; color: #50634d; line-height: 1.6; }
+.settings-shell { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 2rem; margin-top: 2rem; align-items: start; }
+.settings-nav { position: sticky; top: 1rem; display: grid; gap: .25rem; padding: .75rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1rem; background: #f7fbf3; }
+.settings-nav-title { margin: .35rem .65rem .55rem; color: #6b7b57; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.settings-nav a { padding: .7rem .75rem; border-radius: .65rem; color: #395330; font-weight: 700; line-height: 1.3; text-decoration: none; }
+.settings-nav a:hover, .settings-nav a:focus-visible, .settings-nav a[aria-current='page'] { background: #e6efdc; outline: none; }
+.settings-content { min-width: 0; }
 .profile-form { margin-top: 1.75rem; }
 fieldset { display: grid; gap: 1.25rem; margin: 0; padding: 0; border: 0; }
 .field { display: grid; gap: 0.45rem; }
 .preferences-section { display: grid; gap: 1.25rem; margin-top: 0.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, 0.18); }
+.food-preferences-section { scroll-margin-top: 1rem; }
 h3 { margin: 0; font-size: 1.35rem; }
 .section-help { margin: -0.75rem 0 0; color: #50634d; line-height: 1.5; }
 .notification-preference { display: grid; gap: 0.45rem; padding: 0.9rem 0; border-top: 1px solid rgba(86, 112, 79, 0.12); }
-.notification-preference select { max-width: 30rem; }
+.notification-group { display: grid; gap: .7rem; margin: 0; padding: .9rem; border: 1px solid rgba(86, 112, 79, .16); border-radius: .8rem; }.notification-group legend { padding: 0 .35rem; color: #395330; font-weight: 800; }.notification-preference-heading { display: grid; gap: .2rem; }.notification-preference-heading span { color: #50634d; font-size: .9rem; line-height: 1.4; }.notification-switches { display: flex; flex-wrap: wrap; gap: .6rem; }.notification-switches label { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .7rem; border: 1px solid #b9c5af; border-radius: 999px; background: #fffdf8; color: #243127; cursor: pointer; }.notification-switches input { width: 1.1rem; height: 1.1rem; padding: 0; accent-color: #395330; }.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 label { font-weight: 700; }
 input, select { width: 100%; padding: 0.9rem 1rem; border: 1px solid #b4bead; border-radius: 0.95rem; background: #fffdfa; color: #243127; font: inherit; }
 input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid rgba(116, 144, 88, 0.32); outline-offset: 2px; }
 input[aria-invalid='true'], select[aria-invalid='true'] { border-color: #b64242; background: #fff8f6; }
 small { color: #50634d; }
-.tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 2rem; align-items: center; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 3.25rem; align-items: center; padding: .7rem; border: 1px solid #d8e1d2; border-radius: .8rem; background: #f7fbf3; }
 .tag { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.55rem 0.35rem 0.75rem; border-radius: 999px; background: #e6efdc; color: #2f4520; font-size: 0.92rem; }
 .remove-tag { margin: 0; padding: 0; border: 0; background: transparent; color: #2f4520; font-size: 1.2rem; line-height: 1; cursor: pointer; }
 .allergy-entry { display: flex; gap: 0.6rem; }
 .allergy-entry input { flex: 1; }
 .secondary-button { margin: 0; padding: 0.75rem 1rem; background: #e6efdc; color: #2f4520; }
 .empty-tags { color: #50634d; font-size: 0.92rem; }
+.food-preferences-section .field > label { font-size: 1rem; }
+.theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }.theme-option { display: flex; align-items: flex-start; gap: .55rem; min-height: 100%; padding: .75rem; border: 1px solid #b9c5af; border-radius: .7rem; background: #fffdf8; color: #243127; cursor: pointer; line-height: 1.35; }.theme-option.selected { border-color: #395330; background: #edf4e6; box-shadow: 0 0 0 2px rgba(57, 83, 48, .12); }.theme-option input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; margin: .1rem 0 0; padding: 0; accent-color: #395330; }
+.food-preferences-section .field > small { max-width: 42rem; }
 .avatar-preview { width: 7rem; height: 7rem; border: 1px solid rgba(86,112,79,.2); border-radius: 50%; object-fit: cover; }
 .avatar-figure { display: grid; justify-items: start; gap: .4rem; margin: 0; }
 .avatar-figure figcaption { color: #50634d; font-size: .9rem; }
@@ -424,4 +483,13 @@ button:disabled { cursor: wait; opacity: 0.8; }
 .secondary-button, .danger-button { width: fit-content; margin-top: 0; padding: .75rem 1rem; }
 .secondary-button { background: #e6efdc; color: #2f4520; }
 .danger-button { background: #fff4f2; color: #8f1e1e; }
+@media (max-width: 760px) {
+  .profile-card { padding: 1rem; }
+  .settings-shell { display: block; margin-top: 1.5rem; }
+  .settings-nav { position: static; display: flex; gap: .35rem; margin: 0 -0.25rem 1.5rem; padding: .5rem; overflow-x: auto; }
+  .settings-nav-title { display: none; }
+  .settings-nav a { flex: 0 0 auto; padding: .65rem .75rem; white-space: nowrap; }
+  .theme-options { grid-template-columns: 1fr; }
+  .profile-form { margin-top: 0; }
+}
 </style>

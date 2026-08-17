@@ -50,7 +50,7 @@ const mobilePrimaryItems = navigationItems.filter((item) => ['dashboard', 'recip
 const cookbookId = computed(() => String(route.params.id ?? ''));
 const cookbookRouteNames = ['cookbook', 'cookbook-recipes', 'cookbook-members', 'cookbook-planning', 'cookbook-settings', 'cookbook-messages'];
 const isCookbookContext = computed(() => cookbookRouteNames.includes(String(route.name)));
-const isSettingsContext = computed(() => route.name === 'profile' || route.name === 'change-password');
+const isSettingsContext = computed(() => ['profile', 'profile-food-preferences', 'profile-usage-preferences', 'change-password', 'security'].includes(String(route.name)));
 
 function isCookbookTabActive(tab: 'recipes' | 'planning' | 'discussion' | 'members' | 'settings'): boolean {
   if (tab === 'discussion') return route.name === 'cookbook-messages';
@@ -221,7 +221,7 @@ onBeforeUnmount(() => {
         <RouterLink :class="{ 'is-active': isCookbookTabActive('settings') }" :aria-current="isCookbookTabActive('settings') ? 'page' : undefined" :to="{ name: 'cookbook', params: { id: cookbookId }, hash: '#cookbook-settings' }">Paramètres</RouterLink>
       </nav>
       <nav v-if="isSettingsContext" class="context-navigation" aria-label="Navigation des paramètres">
-        <RouterLink :to="{ name: 'profile' }">Profil</RouterLink><RouterLink :to="{ name: 'profile', hash: '#food-preferences' }">Préférences alimentaires</RouterLink><RouterLink :to="{ name: 'change-password' }">Sécurité</RouterLink><RouterLink :to="{ name: 'profile', hash: '#connected-accounts' }">Comptes connectés</RouterLink><RouterLink :to="{ name: 'profile', hash: '#notification-preferences' }">Notifications</RouterLink><RouterLink :to="{ name: 'profile', hash: '#theme-preferences' }">Apparence</RouterLink>
+        <RouterLink :to="{ name: 'profile' }">Profil</RouterLink><RouterLink :to="{ name: 'profile-food-preferences' }">Préférences alimentaires</RouterLink><RouterLink :to="{ name: 'profile-usage-preferences' }">Préférences d’utilisation</RouterLink><RouterLink :to="{ name: 'security' }">Sécurité</RouterLink>
       </nav>
       <main id="main-content" class="main-content"><slot /></main>
       <nav class="mobile-primary-navigation" aria-label="Accès rapide mobile">
