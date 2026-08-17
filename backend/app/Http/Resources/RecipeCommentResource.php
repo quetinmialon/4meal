@@ -20,6 +20,8 @@ class RecipeCommentResource extends JsonResource
         /** @var User $author */
         $author = $comment->user;
         $editedAt = $comment->getAttribute('edited_at');
+        $reactions = $comment->relationLoaded('reactions') ? $comment->reactions : collect();
+        $viewerId = $request->user()?->getAuthIdentifier();
 
         return [
             'id' => $comment->public_id,
@@ -35,6 +37,11 @@ class RecipeCommentResource extends JsonResource
             ],
             'edited_at' => $editedAt instanceof CarbonInterface ? $editedAt->toJSON() : null,
             'created_at' => $comment->created_at?->toJSON(),
+            'reactions' => $reactions->groupBy('emoji')->map(fn ($items, $emoji): array => [
+                'emoji' => $emoji,
+                'count' => $items->count(),
+                'reacted' => $viewerId !== null && $items->contains('user_id', (int) $viewerId),
+            ])->values()->all(),
         ];
     }
 }

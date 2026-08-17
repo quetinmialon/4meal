@@ -227,3 +227,30 @@ it('validates updated content and rejects a comment routed through another recip
         ->deleteJson('/api/recipes/'.$otherRecipe->public_id.'/comments/'.$comment->public_id)
         ->assertNotFound();
 });
+
+it('allows a comment member to add and remove an emoji reaction', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    [$cookbook, $recipe] = commentableRecipe($owner);
+    $comment = RecipeComment::query()->create([
+        'recipe_id' => $recipe->id,
+        'user_id' => $owner->id,
+        'content' => 'À tester',
+    ]);
+    $token = recipeCommentToken($owner);
+
+    $this->withToken($token)
+        ->postJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id.'/reactions', ['emoji' => '👍'])
+        ->assertCreated()
+        ->assertJsonPath('data.emoji', '👍');
+
+    $this->withToken($token)
+        ->getJson('/api/recipes/'.$recipe->public_id.'/comments')
+        ->assertOk()
+        ->assertJsonPath('data.0.reactions.0.emoji', '👍')
+        ->assertJsonPath('data.0.reactions.0.count', 1)
+        ->assertJsonPath('data.0.reactions.0.reacted', true);
+
+    $this->withToken($token)
+        ->deleteJson('/api/recipes/'.$recipe->public_id.'/comments/'.$comment->public_id.'/reactions', ['emoji' => '👍'])
+        ->assertNoContent();
+});

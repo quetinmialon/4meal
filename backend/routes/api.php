@@ -64,6 +64,7 @@ use App\Http\Controllers\Planning\DeletePlannedMealController;
 use App\Http\Controllers\Planning\GenerateShoppingListController;
 use App\Http\Controllers\Planning\ListPlannedMealsController;
 use App\Http\Controllers\Planning\UpdatePlannedMealController;
+use App\Http\Controllers\Recipe\AddRecipeCommentReactionController;
 use App\Http\Controllers\Recipe\AddRecipeFavoriteController;
 use App\Http\Controllers\Recipe\CreateRecipeCommentController;
 use App\Http\Controllers\Recipe\CreateRecipeController;
@@ -73,6 +74,7 @@ use App\Http\Controllers\Recipe\DuplicateRecipeController;
 use App\Http\Controllers\Recipe\ListRecipeAuditsController;
 use App\Http\Controllers\Recipe\ListRecipeCommentsController;
 use App\Http\Controllers\Recipe\ListRecipesController;
+use App\Http\Controllers\Recipe\RemoveRecipeCommentReactionController;
 use App\Http\Controllers\Recipe\RemoveRecipeFavoriteController;
 use App\Http\Controllers\Recipe\RemoveRecipeRatingController;
 use App\Http\Controllers\Recipe\ShowRecipeController;
@@ -213,6 +215,12 @@ Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
 
         Route::delete('recipes/{recipe}/comments/{comment}', DeleteRecipeCommentController::class)
             ->name('recipes.comments.destroy');
+
+        Route::post('recipes/{recipe}/comments/{comment}/reactions', AddRecipeCommentReactionController::class)
+            ->name('recipes.comments.reactions.store');
+
+        Route::delete('recipes/{recipe}/comments/{comment}/reactions', RemoveRecipeCommentReactionController::class)
+            ->name('recipes.comments.reactions.destroy');
 
         Route::post('recipes/{recipe}/favorite', AddRecipeFavoriteController::class)
             ->name('recipes.favorite.store');

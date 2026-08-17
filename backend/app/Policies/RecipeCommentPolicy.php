@@ -30,6 +30,22 @@ class RecipeCommentPolicy
         return $this->canManageOwnComment($user, $comment);
     }
 
+    public function react(User $user, RecipeComment $comment): bool
+    {
+        /** @var Recipe|null $recipe */
+        $recipe = $comment->recipe;
+
+        return $recipe !== null && $this->canComment($user, $recipe);
+    }
+
+    public function unreact(User $user, RecipeComment $comment): bool
+    {
+        /** @var Recipe|null $recipe */
+        $recipe = $comment->recipe;
+
+        return $recipe !== null && $this->canComment($user, $recipe);
+    }
+
     private function canManageOwnComment(User $user, RecipeComment $comment): bool
     {
         if ((int) $comment->user_id !== (int) $user->getKey()) {
