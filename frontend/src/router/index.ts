@@ -250,6 +250,24 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/profil/preferences-alimentaires',
+    name: 'profile-food-preferences',
+    component: ProfileView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/profil/preferences-utilisation',
+    name: 'profile-usage-preferences',
+    component: ProfileView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/securite',
+    name: 'security',
+    component: ChangePasswordView,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/inscription',
     name: 'register',
     component: RegisterView,

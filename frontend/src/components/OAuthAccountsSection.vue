@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 import { useAuthStore } from '@/stores/auth';
 import {
@@ -21,8 +21,8 @@ const successMessage = ref('');
 const deletingProvider = ref<OAuthProvider | null>(null);
 const linkingProvider = ref<OAuthProvider | null>(null);
 
-const linkedProviders = computed(() => new Set(accounts.value.map((account) => account.provider)));
-const availableProviders = computed(() => (['google', 'microsoft'] as OAuthProvider[]).filter((provider) => !linkedProviders.value.has(provider)));
+const oauthProviders: OAuthProvider[] = ['google', 'microsoft'];
+const providerAccount = (provider: OAuthProvider): OAuthAccount | undefined => accounts.value.find((account) => account.provider === provider);
 
 async function loadAccounts(): Promise<void> {
   if (authStore.accessToken === '' || authStore.tokenType === '') {
@@ -92,29 +92,27 @@ onMounted(() => {
       </p>
       <p v-if="isLoading" class="section-help" role="status">Chargement des fournisseurs associés…</p>
 
-      <ul v-else-if="accounts.length > 0" class="oauth-list" aria-label="Fournisseurs associés">
-        <li v-for="account in accounts" :key="account.id" class="oauth-account">
-          <div>
-            <strong>{{ oauthProviderLabel(account.provider) }}</strong>
-            <span>{{ account.email }}</span>
+      <ul v-else class="oauth-list" aria-label="Comptes Google et Microsoft">
+        <li v-for="provider in oauthProviders" :key="provider" class="oauth-account" :class="{ connected: providerAccount(provider) !== undefined }">
+          <div class="oauth-provider">
+            <span class="provider-mark" aria-hidden="true">{{ provider === 'google' ? 'G' : 'M' }}</span>
+            <div>
+              <strong>{{ oauthProviderLabel(provider) }}</strong>
+              <span v-if="providerAccount(provider)">{{ providerAccount(provider)?.email }}</span>
+              <span v-else>Ce fournisseur n’est pas associé à votre compte.</span>
+            </div>
           </div>
-          <button
-            type="button"
-            class="danger-button"
-            :disabled="deletingProvider === account.provider"
-            @click="removeProvider(account)"
-          >
-            {{ deletingProvider === account.provider ? 'Suppression…' : 'Supprimer' }}
-          </button>
+          <div class="oauth-account-action">
+            <span class="connection-status" :class="providerAccount(provider) ? 'is-connected' : 'is-disconnected'">{{ providerAccount(provider) ? 'Connecté' : 'Non connecté' }}</span>
+            <button v-if="providerAccount(provider)" type="button" class="danger-button" :disabled="deletingProvider === provider" @click="removeProvider(providerAccount(provider)!)">
+              {{ deletingProvider === provider ? 'Suppression…' : 'Dissocier' }}
+            </button>
+            <button v-else type="button" class="secondary-button" :disabled="linkingProvider !== null" @click="linkProvider(provider)">
+              {{ linkingProvider === provider ? 'Redirection…' : `Associer ${oauthProviderLabel(provider)}` }}
+            </button>
+          </div>
         </li>
       </ul>
-      <p v-else-if="!loadingError" class="section-help">Aucun fournisseur OAuth n’est actuellement associé.</p>
-
-      <div class="link-actions" aria-label="Associer un fournisseur">
-        <button v-for="provider in availableProviders" :key="provider" type="button" class="secondary-button" :disabled="linkingProvider !== null" @click="linkProvider(provider)">
-          {{ linkingProvider === provider ? 'Redirection…' : `Associer ${oauthProviderLabel(provider)}` }}
-        </button>
-      </div>
     </div>
   </details>
 </template>
@@ -127,9 +125,9 @@ summary { cursor: pointer; color: #2f4520; font-weight: 700; }
 .section-help { margin: 0; color: #50634d; line-height: 1.5; }
 .oauth-list { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
 .oauth-account { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.9rem 1rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 0.9rem; background: #fffdfa; }
-.oauth-account div { display: grid; gap: 0.2rem; }
+.oauth-account.connected { border-color: #8ca17b; }.oauth-provider { display: flex; align-items: center; gap: .7rem; min-width: 0; }.provider-mark { display: grid; flex: 0 0 2rem; place-items: center; width: 2rem; height: 2rem; border-radius: .6rem; background: #edf4e6; color: #2f4520; font-weight: 800; }.oauth-provider > div { display: grid; gap: 0.2rem; min-width: 0; }
 .oauth-account span { color: #50634d; font-size: 0.92rem; }
-.link-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.oauth-account-action { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: .6rem; }.connection-status { padding: .25rem .55rem; border-radius: 999px; font-size: .78rem !important; font-weight: 800; }.connection-status.is-connected { background: #e6efdc; color: #2f4520; }.connection-status.is-disconnected { background: #f1f1ec; color: #50634d; }
 .secondary-button, .danger-button, .inline-button { margin: 0; padding: 0.7rem 0.95rem; border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer; }
 .secondary-button { border: 1px solid #6b875f; background: #edf4e6; color: #2f4520; }
 .danger-button { border: 1px solid #b64242; background: #fff4f2; color: #8f1e1e; }
@@ -138,4 +136,5 @@ summary { cursor: pointer; color: #2f4520; font-weight: 700; }
 .error-summary { border: 1px solid rgba(171, 44, 44, 0.24); background: #fff4f2; color: #8f1e1e; }
 .success-message { border: 1px solid #bdd0af; background: #edf4e6; color: #2f4520; }
 button:disabled { cursor: wait; opacity: 0.7; }
+@media (max-width: 640px) { .oauth-account { align-items: stretch; flex-direction: column; }.oauth-account-action { justify-content: flex-start; }.oauth-account-action button { width: 100%; } }
 </style>

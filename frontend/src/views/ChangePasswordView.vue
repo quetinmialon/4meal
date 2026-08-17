@@ -3,6 +3,7 @@ import { nextTick, reactive, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
+import OAuthAccountsSection from '@/components/OAuthAccountsSection.vue';
 
 type FieldName = 'currentPassword' | 'password' | 'passwordConfirmation';
 
@@ -37,6 +38,26 @@ const hasSubmitted = ref(false);
 const globalError = ref('');
 const successMessage = ref('');
 const formErrorSummary = ref<HTMLElement | null>(null);
+const twoFactorEnabled = ref(authStore.user?.two_factor_enabled ?? false);
+const twoFactorPassword = ref('');
+const twoFactorError = ref('');
+const twoFactorSuccess = ref('');
+const twoFactorLoading = ref(false);
+
+async function toggleTwoFactor(): Promise<void> {
+  twoFactorLoading.value = true;
+  twoFactorError.value = '';
+  twoFactorSuccess.value = '';
+  const result = await authStore.setTwoFactorEnabled(!twoFactorEnabled.value, twoFactorPassword.value);
+  twoFactorLoading.value = false;
+  if (!result.ok) {
+    twoFactorError.value = result.message;
+    return;
+  }
+  twoFactorEnabled.value = result.enabled;
+  twoFactorPassword.value = '';
+  twoFactorSuccess.value = result.enabled ? 'La vérification en deux étapes est activée.' : 'La vérification en deux étapes est désactivée.';
+}
 
 function validateField(field: FieldName): string {
   if (form[field].length === 0) {
@@ -141,9 +162,31 @@ async function handleSubmit(): Promise<void> {
 
 <template>
   <main class="password-card">
-    <p class="kicker">Securite</p>
-    <h2>Modifier le mot de passe</h2>
-    <p class="intro">Choisissez un nouveau mot de passe d'au moins 8 caracteres.</p>
+    <p class="kicker">Mon compte</p>
+    <h1>Sécurité du compte</h1>
+    <p class="intro">Consultez l’état de vos protections et gérez les actions sensibles de votre compte.</p>
+
+    <section class="security-status" aria-labelledby="security-status-title">
+      <h2 id="security-status-title">État des protections</h2>
+      <div class="security-status-grid">
+        <div class="security-status-item">
+          <div><strong>Adresse email</strong><span>{{ authStore.user?.email }}</span></div>
+          <span v-if="authStore.user?.email_verified === true" class="status-badge enabled">Vérifiée</span>
+          <span v-else class="status-badge pending">À vérifier</span>
+          <RouterLink v-if="authStore.user?.email_verified !== true" class="status-link" :to="{ name: 'email-verification-pending' }">Vérifier l’adresse</RouterLink>
+        </div>
+        <div class="security-status-item">
+          <div><strong>Authentification à deux facteurs</strong><span>Code envoyé par email lors des connexions.</span></div>
+          <span class="status-badge" :class="authStore.user?.two_factor_enabled === true ? 'enabled' : 'disabled'">{{ authStore.user?.two_factor_enabled === true ? 'Activée' : 'Désactivée' }}</span>
+          <a class="status-link" href="#two-factor-security">Gérer la 2FA</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="sensitive-action" aria-labelledby="password-title">
+      <p class="section-kicker">Action sensible</p>
+      <h2 id="password-title">Modifier le mot de passe</h2>
+      <p class="section-help">Utilisez votre mot de passe actuel pour en définir un nouveau d’au moins 8 caractères.</p>
 
     <div v-if="successMessage" class="success-message" role="status" aria-live="polite">
       <p>{{ successMessage }}</p>
@@ -194,6 +237,32 @@ async function handleSubmit(): Promise<void> {
         </button>
       </fieldset>
     </form>
+    </section>
+
+    <section id="two-factor-security" class="security-control" aria-labelledby="two-factor-title">
+      <p class="section-kicker">Protection du compte</p>
+      <h2 id="two-factor-title">Authentification à deux facteurs</h2>
+      <p class="section-help">Un code temporaire est demandé par email lors des nouvelles connexions.</p>
+      <p v-if="twoFactorError" class="error-summary" role="alert">{{ twoFactorError }}</p>
+      <p v-if="twoFactorSuccess" class="success-message" role="status">{{ twoFactorSuccess }}</p>
+      <div v-if="twoFactorEnabled" class="two-factor-enabled">
+        <strong>Protection active</strong>
+        <label for="two-factor-password-input">Mot de passe actuel pour désactiver</label>
+        <input id="two-factor-password-input" v-model="twoFactorPassword" type="password" autocomplete="current-password">
+        <button type="button" class="danger-button" :disabled="twoFactorLoading || twoFactorPassword === ''" @click="toggleTwoFactor">
+          {{ twoFactorLoading ? 'Modification…' : 'Désactiver la 2FA' }}
+        </button>
+      </div>
+      <button v-else type="button" class="secondary-button" :disabled="twoFactorLoading" @click="toggleTwoFactor">
+        {{ twoFactorLoading ? 'Activation…' : 'Activer la 2FA par email' }}
+      </button>
+    </section>
+
+    <section class="security-control" aria-labelledby="oauth-title">
+      <p class="section-kicker">Connexions externes</p>
+      <h2 id="oauth-title">Comptes OAuth</h2>
+      <OAuthAccountsSection />
+    </section>
   </main>
 </template>
 
@@ -217,8 +286,18 @@ async function handleSubmit(): Promise<void> {
   text-transform: uppercase;
 }
 
-h2 { margin: 0 0 0.75rem; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1; }
+h1 { margin: 0 0 .75rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; }
+h2 { margin: 0 0 0.75rem; font-size: 1.45rem; line-height: 1.2; }
 .intro { margin: 0; color: #50634d; line-height: 1.6; }
+.security-status { margin-top: 1.75rem; padding: 1.25rem; border: 1px solid rgba(86, 112, 79, .18); border-radius: 1rem; background: #f7fbf3; }
+.security-status h2 { margin-bottom: 1rem; }
+.security-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.security-status-item { display: grid; gap: .65rem; padding: .9rem; border: 1px solid #d8e1d2; border-radius: .7rem; background: #fffdf8; }
+.security-status-item > div { display: grid; gap: .25rem; }.security-status-item > div span { color: #50634d; font-size: .9rem; line-height: 1.4; overflow-wrap: anywhere; }
+.status-badge { width: fit-content; padding: .25rem .55rem; border-radius: 999px; font-size: .8rem; font-weight: 800; }.status-badge.enabled { background: #e6efdc; color: #2f4520; }.status-badge.pending, .status-badge.disabled { background: #fff1dc; color: #704414; }
+.status-link { width: fit-content; color: #395330; font-weight: 700; }
+.sensitive-action { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid #e2b3ad; border-radius: 1rem; background: #fffaf8; }.sensitive-action .section-kicker { margin: 0 0 .25rem; color: #8f1e1e; }.section-help { margin: 0; color: #50634d; line-height: 1.5; }
+.security-control { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(86, 112, 79, .18); }.security-control .section-kicker { margin: 0 0 .25rem; color: #6b7b57; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }.security-control h2 { margin-bottom: .5rem; }.security-control .section-help { margin-bottom: 1rem; }.two-factor-enabled { display: grid; gap: .8rem; }.secondary-button, .danger-button { width: fit-content; margin: 0; padding: .75rem 1rem; border: 0; border-radius: 999px; color: #fffdf9; font: inherit; font-weight: 700; cursor: pointer; }.secondary-button { background: #e6efdc; color: #2f4520; }.danger-button { background: #8f1e1e; }
 .password-form { margin-top: 1.75rem; }
 fieldset { display: grid; gap: 1.25rem; margin: 0; padding: 0; border: 0; }
 .field { display: grid; gap: 0.45rem; }
@@ -233,4 +312,5 @@ button:disabled { cursor: wait; opacity: 0.8; }
 .success-message { margin-top: 1.5rem; padding: 1rem; border: 1px solid #bdd0af; border-radius: 1rem; background: #edf4e6; color: #2f4520; }
 .success-message p { margin: 0; }
 .success-message a { display: inline-block; margin-top: 0.75rem; color: #2f4520; font-weight: 700; }
+@media (max-width: 680px) { .password-card { padding: 1rem; }.security-status-grid { grid-template-columns: 1fr; }.security-status, .sensitive-action { padding: 1rem; } }
 </style>
