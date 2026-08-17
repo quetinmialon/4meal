@@ -251,6 +251,7 @@ onMounted(() => {
     </form>
 
     <RouterLink class="forgot-link" :to="{ name: 'forgot-password' }">Mot de passe oublié ?</RouterLink>
+    <p class="auth-switch">Pas encore de compte ? <RouterLink :to="{ name: 'register' }">Créer un compte</RouterLink></p>
   </main>
 </template>
 
@@ -382,6 +383,8 @@ button:disabled {
   color: #2f4520;
   font-weight: 700;
 }
+.auth-switch { margin: 1.25rem 0 0; color: #50634d; }
+.auth-switch a { color: #2f4520; font-weight: 700; }
 
 @media (max-width: 640px) {
   .login-card {

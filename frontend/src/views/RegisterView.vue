@@ -406,6 +406,7 @@ onMounted(() => {
         </button>
       </fieldset>
     </form>
+    <p class="auth-switch">Vous avez déjà un compte ? <RouterLink :to="{ name: 'login' }">Se connecter</RouterLink></p>
   </main>
 </template>
 
