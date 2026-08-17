@@ -20,13 +20,15 @@ final class SupmealExportStreamer
 
     private const CHUNK_SIZE = 100;
 
-    public function stream(User $user): void
+    public function stream(User $user, bool $includeCookbooks = true): void
     {
         echo '{"format":"'.self::FORMAT.'","version":"'.self::VERSION.'","exported_at":'.json_encode(Carbon::now('UTC')->toJSON(), $this->jsonFlags()).',"source":{"application":"4meal"},"cookbooks":[';
 
-        $this->streamCookbooks($user);
+        if ($includeCookbooks) {
+            $this->streamCookbooks($user);
+        }
         echo '],"recipes":[';
-        $this->streamRecipes($user);
+        $this->streamRecipes($user, $includeCookbooks);
         echo ']}';
     }
 
@@ -72,7 +74,7 @@ final class SupmealExportStreamer
             }, 'cookbooks.id', 'cookbook_chunk_id');
     }
 
-    private function streamRecipes(User $user): void
+    private function streamRecipes(User $user, bool $includeCookbooks): void
     {
         $first = true;
         $this->accessibleRecipes($user)
@@ -84,14 +86,14 @@ final class SupmealExportStreamer
                 'cookbooks' => fn ($query) => $query->whereIn('cookbooks.id', $this->accessibleCookbooks($user)->select('cookbooks.id')),
             ])
             ->addSelect('recipes.id as recipe_chunk_id')
-            ->chunkById(self::CHUNK_SIZE, function ($recipes) use (&$first): void {
+            ->chunkById(self::CHUNK_SIZE, function ($recipes) use (&$first, $includeCookbooks): void {
                 foreach ($recipes as $recipe) {
                     /** @var Recipe $recipe */
                     if (! $first) {
                         echo ',';
                     }
                     $first = false;
-                    $this->writeJson($this->recipePayload($recipe));
+                    $this->writeJson($this->recipePayload($recipe, $includeCookbooks));
                 }
             }, 'recipes.id', 'recipe_chunk_id');
     }
@@ -116,7 +118,7 @@ final class SupmealExportStreamer
     }
 
     /** @return array<string, mixed> */
-    private function recipePayload(Recipe $recipe): array
+    private function recipePayload(Recipe $recipe, bool $includeCookbooks): array
     {
         /** @var Collection<int, RecipeIngredient> $ingredients */
         $ingredients = $recipe->ingredients;
@@ -124,17 +126,21 @@ final class SupmealExportStreamer
         $steps = $recipe->steps;
         $cookbookIds = collect();
 
-        if ($recipe->cookbook !== null) {
+        if ($includeCookbooks && $recipe->cookbook !== null) {
             /** @var Cookbook $cookbook */
             $cookbook = $recipe->cookbook;
             $cookbookIds->push($cookbook->public_id);
         }
 
-        $cookbookIds = $cookbookIds->concat($recipe->cookbooks->pluck('public_id'))
-            ->unique()
-            ->values()
-            ->map(fn (string $id): string => $this->id('cookbook', $id))
-            ->all();
+        if ($includeCookbooks) {
+            $cookbookIds = $cookbookIds->concat($recipe->cookbooks->pluck('public_id'))
+                ->unique()
+                ->values()
+                ->map(fn (string $id): string => $this->id('cookbook', $id))
+                ->all();
+        } else {
+            $cookbookIds = [];
+        }
 
         return [
             'id' => $this->id('recipe', (string) $recipe->public_id),
@@ -147,7 +153,7 @@ final class SupmealExportStreamer
             'rest_time_minutes' => $recipe->rest_time_minutes,
             'ingredients' => $ingredients->map(fn (RecipeIngredient $ingredient): array => [
                 'name' => $ingredient->name,
-                'quantity' => $ingredient->quantity,
+                'quantity' => $ingredient->quantity === null ? null : (float) $ingredient->quantity,
                 'unit' => $ingredient->unit,
                 'preparation' => $ingredient->preparation,
                 'optional' => (bool) $ingredient->is_optional,

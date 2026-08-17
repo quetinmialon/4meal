@@ -18,9 +18,9 @@ function safeFilename(contentDisposition: string | null): string {
     : '4meal-export.json';
 }
 
-export async function downloadJsonExport(tokenType: string, accessToken: string): Promise<JsonExportResult> {
+export async function downloadJsonExport(tokenType: string, accessToken: string, includeCookbooks = true): Promise<JsonExportResult> {
   try {
-    const response = await apiFetch('/api/export', {
+    const response = await apiFetch(includeCookbooks ? '/api/export' : '/api/export?include_cookbooks=false', {
       headers: {
         Accept: 'application/json',
         Authorization: `${tokenType} ${accessToken}`,

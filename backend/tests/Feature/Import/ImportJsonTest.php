@@ -71,6 +71,21 @@ it('imports a valid SUPMEAL document and assigns ownership to the authenticated 
         ->and($recipe->user_id)->not->toBe($other->id);
 });
 
+it('imports SUPMEAL recipes with empty ingredient and step collections', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $document = importDocument([
+        'recipes' => [[
+            'id' => 'supmeal:recipe:empty', 'title' => 'Recette à compléter', 'description' => null,
+            'servings' => null, 'prep_time_minutes' => null, 'cook_time_minutes' => null, 'rest_time_minutes' => null,
+            'ingredients' => [], 'steps' => [], 'tags' => [], 'cookbook_ids' => [],
+        ]],
+    ]);
+
+    $this->withToken(importToken($user))->post('/api/import', ['file' => importFile($document)])
+        ->assertCreated()
+        ->assertJsonPath('data.report.recipes', 1);
+});
+
 it('imports cookbooks through internal mappings and never trusts external ids', function (): void {
     $user = User::factory()->create(['password' => 'password123']);
     $document = importDocument([

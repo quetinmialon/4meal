@@ -57,7 +57,8 @@ it('exports only the user-owned and accessible data in versioned SUPMEAL JSON', 
         ->and($payload['cookbooks'][0]['id'])->toBe('supmeal:cookbook:'.$accessible->public_id)
         ->and($payload['recipes'])->toHaveCount(2)
         ->and(collect($payload['recipes'])->pluck('id'))->not->toContain('supmeal:recipe:'.$private->public_id)
-        ->and($payload['recipes'][0]['ingredients'][0]['optional'])->toBeFalse();
+        ->and($payload['recipes'][0]['ingredients'][0]['optional'])->toBeFalse()
+        ->and($payload['recipes'][0]['ingredients'][0]['quantity'])->toBe(200);
 
     $cookbookRecipeIds = $payload['cookbooks'][0]['recipe_ids'];
     expect($cookbookRecipeIds)->toContain('supmeal:recipe:'.$shared->public_id);
@@ -72,6 +73,19 @@ it('does not export a cookbook or recipe merely because another user owns it', f
     $payload = exportJson($this->withToken(exportToken($user))->get('/api/export'));
 
     expect($payload['cookbooks'])->toBeEmpty()->and($payload['recipes'])->toBeEmpty();
+});
+
+it('can export recipes without cookbook data or cookbook references', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'owner', 'joined_at' => now()]);
+    Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $user->id]);
+
+    $payload = exportJson($this->withToken(exportToken($user))->get('/api/export?include_cookbooks=false'));
+
+    expect($payload['cookbooks'])->toBeEmpty()
+        ->and($payload['recipes'])->toHaveCount(1)
+        ->and($payload['recipes'][0]['cookbook_ids'])->toBeEmpty();
 });
 
 it('streams large exports in bounded eager-loaded chunks', function (): void {

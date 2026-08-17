@@ -13,11 +13,12 @@ final class DownloadExportController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $includeCookbooks = $request->boolean('include_cookbooks', true);
         $filename = '4meal-export-'.now('UTC')->format('Ymd-His').'.json';
 
         return response()->streamDownload(
-            function () use ($exporter, $user): void {
-                $exporter->stream($user);
+            function () use ($exporter, $user, $includeCookbooks): void {
+                $exporter->stream($user, $includeCookbooks);
             },
             $filename,
             [
