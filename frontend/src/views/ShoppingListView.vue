@@ -53,6 +53,8 @@ async function loadList(): Promise<void> {
 }
 function printList(): void { window.print(); }
 const remainingCount = computed(() => items.value.filter((item) => !item.checked).length);
+const checkedCount = computed(() => items.value.length - remainingCount.value);
+const generateLabel = computed(() => hasLoaded.value ? 'Régénérer la liste' : 'Générer la liste');
 
 onMounted(() => { void loadList(); });
 </script>
@@ -65,7 +67,10 @@ onMounted(() => { void loadList(); });
         <h2>Liste de courses</h2>
         <p class="period-label">{{ periodLabel(from) }} — {{ periodLabel(to) }}</p>
       </div>
-      <button type="button" class="print-button" :disabled="items.length === 0" @click="printList">Imprimer</button>
+      <div class="header-actions">
+        <RouterLink class="planning-link" :to="{ name: 'planning' }">Voir le planning</RouterLink>
+        <button type="button" class="print-button" :disabled="items.length === 0" @click="printList">Imprimer</button>
+      </div>
     </header>
 
     <form class="period-form" aria-label="Sélection de la période" @submit.prevent="loadList">
@@ -74,20 +79,25 @@ onMounted(() => { void loadList(); });
       <label for="shopping-to">au</label>
       <input id="shopping-to" v-model="to" type="date" />
       <button type="button" class="secondary-button" @click="setCurrentWeek">Cette semaine</button>
-      <button type="submit" class="primary-button">Générer</button>
+      <button type="submit" class="primary-button">{{ generateLabel }}</button>
     </form>
 
     <p v-if="isLoading" class="state-message" role="status">Génération de la liste...</p>
     <p v-else-if="errorMessage" class="state-message error-state" role="alert">{{ errorMessage }}</p>
-    <section v-else-if="hasLoaded && items.length === 0" class="state-message empty-state">Aucun ingrédient sur cette période.</section>
+    <section v-else-if="hasLoaded && items.length === 0" class="state-message empty-state">
+      <h3>Aucun ingrédient sur cette période.</h3>
+      <p>Ajoutez un repas au planning ou choisissez une autre période.</p>
+      <RouterLink class="planning-link" :to="{ name: 'planning' }">Retour au planning</RouterLink>
+    </section>
     <section v-else class="shopping-list" aria-labelledby="shopping-list-title">
       <div class="list-summary">
-        <h3 id="shopping-list-title">À acheter</h3>
-        <span>{{ remainingCount }} article<span v-if="remainingCount > 1">s</span></span>
+        <div><p class="list-kicker">Ingrédients agrégés</p><h3 id="shopping-list-title">À acheter</h3></div>
+        <div class="list-counts"><strong>{{ remainingCount }}</strong> à acheter<span aria-hidden="true"> · </span><span>{{ checkedCount }} cochés</span></div>
       </div>
+      <p class="list-help">Cochez les ingrédients au fur et à mesure. Les quantités sont regroupées par ingrédient et unité.</p>
       <ul>
         <li v-for="item in items" :key="item.id" class="shopping-item" :class="{ checked: item.checked }">
-          <input :id="item.id" v-model="item.checked" type="checkbox" :aria-label="`Marquer ${item.name}`" />
+          <input :id="item.id" v-model="item.checked" type="checkbox" :aria-label="`${item.checked ? 'Désélectionner' : 'Marquer'} ${item.name}`" />
           <div class="item-fields">
             <label :for="`${item.id}-name`" class="sr-only">Nom</label>
             <input :id="`${item.id}-name`" v-model="item.name" class="item-name" aria-label="Nom de l'ingrédient" />
@@ -97,7 +107,7 @@ onMounted(() => { void loadList(); });
               <label :for="`${item.id}-unit`" class="sr-only">Unité</label>
               <input :id="`${item.id}-unit`" v-model="item.unit" placeholder="unité" aria-label="Unité" />
             </div>
-            <small v-if="item.preparation || item.is_optional">{{ item.preparation }}<span v-if="item.is_optional"> · facultatif</span></small>
+            <small v-if="item.preparation || item.is_optional" class="item-meta">{{ item.preparation }}<span v-if="item.is_optional"> · facultatif</span></small>
           </div>
         </li>
       </ul>
@@ -108,6 +118,8 @@ onMounted(() => { void loadList(); });
 <style scoped>
 .shopping-page { width: 100%; max-width: 76rem; margin: 0 auto; padding: 1.5rem; box-sizing: border-box; border: 1px solid rgba(86,112,79,.18); border-radius: 1.5rem; background: rgba(255,253,248,.92); box-shadow: 0 20px 60px rgba(54,68,35,.1); }
 .shopping-header, .list-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: .7rem; }
+.planning-link { color: #395330; font-weight: 700; }
 .kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h2, h3 { margin: 0; color: #243127; }
 .period-label { margin: .4rem 0 0; color: #50634d; text-transform: capitalize; }
@@ -119,11 +131,16 @@ button { padding: .55rem .75rem; border-radius: .5rem; font: inherit; font-weigh
 .secondary-button { margin-left: auto; border: 1px solid #b9c5af; background: transparent; color: #395330; }
 button:disabled { cursor: not-allowed; opacity: .5; }
 .state-message { margin: 2rem 0; padding: 2rem 1rem; border-radius: .8rem; color: #50634d; text-align: center; }
+.state-message h3 { margin: 0 0 .4rem; }
+.state-message p { margin: .4rem 0 1rem; }
 .empty-state { background: #f3f7ef; }
 .error-state { background: #fff0ee; color: #8f1e1e; }
 .shopping-list { margin-top: 1rem; }
 .list-summary { padding-bottom: .7rem; border-bottom: 1px solid #dce5d6; }
-.list-summary span { color: #50634d; font-size: .9rem; }
+.list-kicker { margin: 0 0 .2rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.list-counts { color: #50634d; font-size: .9rem; text-align: right; }
+.list-counts strong { color: #243127; font-size: 1.1rem; }
+.list-help { margin: .8rem 0; color: #50634d; font-size: .9rem; }
 .shopping-list ul { display: grid; gap: .6rem; margin: 1rem 0 0; padding: 0; list-style: none; }
 .shopping-item { display: flex; align-items: start; gap: .75rem; padding: .75rem; border: 1px solid #dce5d6; border-radius: .65rem; }
 .shopping-item > input { width: 1.2rem; height: 1.2rem; margin-top: .55rem; accent-color: #395330; }
@@ -134,7 +151,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .quantity-fields { display: flex; gap: .4rem; }
 .quantity-fields input:first-child { width: 7rem; }
 .quantity-fields input:last-child { width: 8rem; }
-.item-fields small { color: #6d7768; }
+.item-meta { color: #6d7768; }
 .shopping-item.checked .item-fields { opacity: .55; }
 .shopping-item.checked .item-name { text-decoration: line-through; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
@@ -147,8 +164,11 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @media (max-width: 640px) {
   .shopping-page { padding: 1rem .6rem; border-radius: 1rem; }
   .shopping-header { align-items: start; }
+  .header-actions { width: 100%; justify-content: space-between; }
   .print-button { padding: .45rem .55rem; }
   .secondary-button { margin-left: 0; }
   .period-form input { flex: 1; min-width: 8rem; }
+  .list-summary { align-items: end; }
+  .list-counts { max-width: 8rem; }
 }
 </style>

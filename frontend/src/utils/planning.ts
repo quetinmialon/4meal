@@ -146,7 +146,8 @@ export async function fetchPlannedMeals(
   const params = new URLSearchParams({ from, to });
   if (cookbookId) params.set('cookbook_id', cookbookId);
   if (!cookbookId && includePersonal !== undefined) {
-    params.set('include_personal', String(includePersonal));
+    // Laravel's boolean query validation accepts 0/1, not the strings "false"/"true".
+    params.set('include_personal', includePersonal ? '1' : '0');
     cookbookIds.forEach((id) => params.append('cookbook_ids[]', id));
   }
 

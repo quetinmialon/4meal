@@ -105,6 +105,8 @@ useDialogFocus(dialog, isOpen, () => {
         <div>
           <p class="kicker">Planning</p>
           <h3 id="planning-modal-title">Ajouter « {{ recipe.title }} »</h3>
+          <p class="recipe-summary">Recette sélectionnée · <strong>{{ recipe.title }}</strong></p>
+          <p class="recipe-servings">Portions de la recette : <strong>{{ recipe.servings ?? 'non définies' }}</strong></p>
         </div>
         <button type="button" class="close-button" aria-label="Fermer" :disabled="isSubmitting" @click="emit('close')">×</button>
       </div>
@@ -180,6 +182,7 @@ useDialogFocus(dialog, isOpen, () => {
 .modal-header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.2rem; }
 .kicker { margin: 0 0 .3rem; color: #6b7b57; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 h3 { margin: 0; color: #243127; }
+.recipe-summary, .recipe-servings { margin: .35rem 0 0; color: #50634d; font-size: .9rem; }
 .close-button { border: 0; background: transparent; color: #395330; font-size: 1.7rem; line-height: 1; cursor: pointer; }
 form { display: grid; gap: .55rem; }
 input[type='date'], select { width: 100%; box-sizing: border-box; padding: .6rem; border: 1px solid #b9c5af; border-radius: .5rem; background: #fffdf8; font: inherit; }

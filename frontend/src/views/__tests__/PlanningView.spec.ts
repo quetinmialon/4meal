@@ -121,6 +121,7 @@ describe('PlanningView', () => {
     const wrapper = mount(PlanningView, { global: { plugins: [testPinia] } });
     await flushPromises();
     await wrapper.get('.meal-card').trigger('click');
+    await wrapper.get('.edit-detail-button').trigger('click');
     await wrapper.get('.delete-detail-button').trigger('click');
     expect(wrapper.text()).toContain('Supprimer ce repas planifié');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -162,6 +163,7 @@ describe('PlanningView', () => {
     const wrapper = mount(PlanningView, { global: { plugins: [testPinia] } });
     await flushPromises();
     await wrapper.get('.meal-card').trigger('click');
+    await wrapper.get('.edit-detail-button').trigger('click');
     await wrapper.get('.delete-detail-button').trigger('click');
     await wrapper.get('input[value="series"]').setValue();
     await wrapper.get('.delete-confirmation .delete-detail-button').trigger('click');
