@@ -7,7 +7,6 @@ import Badge from '@/components/Badge.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingState from '@/components/LoadingState.vue';
-import NotificationsPanel from '@/components/NotificationsPanel.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { useAuthStore } from '@/stores/auth';
 import type { Cookbook, CookbookInvitation, Pagination } from '@/utils/cookbooks';
@@ -132,16 +131,6 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations()]); });
         </article>
       </div>
       <p v-if="invitationActionError" class="error-summary" role="alert">{{ invitationActionError }}</p>
-    </section>
-
-    <section class="dashboard-section notifications-section" aria-labelledby="notifications-title">
-      <div class="section-heading">
-        <div>
-          <p class="kicker">Activité</p>
-          <h2 id="notifications-title">Notifications</h2>
-        </div>
-      </div>
-      <NotificationsPanel :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
     </section>
 
     <section class="dashboard-section cookbooks-section" aria-labelledby="cookbooks-title">

@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Compon
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import {
   ArrowDownUp,
-  Bell,
   CalendarDays,
   ChefHat,
   HouseIcon as Home,
@@ -19,6 +18,7 @@ import {
 } from '@lucide/vue';
 
 import { useAuthStore } from '@/stores/auth';
+import NotificationsPanel from '@/components/NotificationsPanel.vue';
 
 type NavigationItem = { label: string; name: string; icon: Component };
 
@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <RouterLink class="icon-button" :to="{ name: 'dashboard', hash: '#notifications' }" aria-label="Notifications"><Bell :size="20" aria-hidden="true" /></RouterLink>
+          <NotificationsPanel compact :token-type="authStore.tokenType" :access-token="authStore.accessToken" />
 
           <div ref="userMenu" class="header-popover">
             <button ref="userMenuTrigger" class="user-trigger" type="button" aria-haspopup="menu" :aria-expanded="isUserMenuOpen" aria-controls="user-menu" aria-label="Ouvrir le menu utilisateur" @click="toggleUserMenu">
