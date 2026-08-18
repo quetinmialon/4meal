@@ -64,6 +64,21 @@ it('lists only personal recipes in the public scope', function (): void {
         ->assertJsonCount(1, 'data');
 });
 
+it('puts the authenticated user recipes first in the public scope', function (): void {
+    $user = User::factory()->create(['password' => 'password123']);
+    $otherUser = User::factory()->create();
+    $otherRecipe = Recipe::factory()->create(['user_id' => $otherUser->id, 'author_id' => $otherUser->id]);
+    $ownRecipe = Recipe::factory()->create(['user_id' => $user->id, 'author_id' => $user->id]);
+
+    $response = $this->withToken(browseRecipeToken($user))
+        ->getJson('/api/recipes?scope=public&per_page=20');
+
+    $response->assertOk()
+        ->assertJsonPath('meta.pagination.per_page', 20)
+        ->assertJsonPath('data.0.id', $ownRecipe->public_id)
+        ->assertJsonPath('data.1.id', $otherRecipe->public_id);
+});
+
 it('paginates accessible recipes', function (): void {
     $user = User::factory()->create(['password' => 'password123']);
     Recipe::factory()->count(3)->create(['user_id' => $user->id, 'author_id' => $user->id]);

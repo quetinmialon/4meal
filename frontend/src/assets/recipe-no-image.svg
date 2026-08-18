@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-labelledby="title desc">
+  <title id="title">Aucune photo</title>
+  <desc id="desc">Icône d’appareil photo barré indiquant qu’aucune photo n’est disponible.</desc>
+  <rect width="240" height="160" fill="#e5e5e1"/>
+  <g fill="none" stroke="#949995" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M82 62h16l7-10h30l7 10h16a8 8 0 0 1 8 8v39a8 8 0 0 1-8 8H82a8 8 0 0 1-8-8V70a8 8 0 0 1 8-8Z" stroke-width="5"/>
+    <circle cx="120" cy="89" r="19" stroke-width="5"/>
+    <circle cx="155" cy="74" r="4" fill="#949995" stroke="none"/>
+    <path d="m91 51 58 77" stroke="#777c78" stroke-width="7"/>
+  </g>
+</svg>

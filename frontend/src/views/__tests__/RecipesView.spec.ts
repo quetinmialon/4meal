@@ -34,7 +34,7 @@ describe('RecipesView', () => {
       json: async () => ({
         success: true,
         data,
-        meta: { pagination: { current_page: 1, per_page: 15, total, last_page: lastPage, from: data.length ? 1 : null, to: data.length || null, has_more_pages: lastPage > 1 } },
+        meta: { pagination: { current_page: 1, per_page: 20, total, last_page: lastPage, from: data.length ? 1 : null, to: data.length || null, has_more_pages: lastPage > 1 } },
       }),
     } as Response;
   }
@@ -45,7 +45,7 @@ describe('RecipesView', () => {
     expect(wrapper.get('[role="status"]').text()).toContain('Chargement');
     await flushPromises();
     expect(wrapper.text()).toContain('Soupe');
-    expect(wrapper.text()).toContain('Voir la recette');
+    expect(wrapper.text()).toContain('Voir la fiche de Soupe');
     expect(wrapper.find('[aria-label="Pagination des recettes"]').exists()).toBe(true);
   });
 
@@ -63,7 +63,7 @@ describe('RecipesView', () => {
     const wrapper = mount(RecipesView, { global: { plugins: [testPinia] } });
     await flushPromises();
     expect(wrapper.text()).toContain('Service indisponible');
-    await wrapper.get('button').trigger('click');
+    await wrapper.get('[role="alert"] button').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('Soupe');
     expect(fetchMock).toHaveBeenCalledTimes(2);
