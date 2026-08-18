@@ -64,7 +64,7 @@ html[data-theme='dark'] {
 }
 
 html { min-height: 100%; background: var(--color-background); font-size: 16px; text-rendering: optimizeLegibility; }
-body { min-width: 320px; min-height: 100%; margin: 0; background: var(--color-background); color: var(--color-text); font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+body { min-width: 320px; min-height: 100%; margin: 0; overflow-x: clip; background: var(--color-background); color: var(--color-text); font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.55; -webkit-font-smoothing: antialiased; }
 *, *::before, *::after { box-sizing: border-box; }
 h1, h2, h3, h4, p { margin-top: 0; }
 h1, h2, h3, h4 { color: var(--color-text); line-height: 1.2; letter-spacing: -.015em; }
@@ -463,3 +463,23 @@ html[data-theme='dark'] textarea:disabled {
   border-color: var(--color-border) !important;
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+@media (max-width: 38rem) {
+  button,
+  [role='button'],
+  select,
+  input[type='date'] {
+    min-height: 2.75rem;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    min-height: 1.15rem;
+    min-width: 1.15rem;
+  }
+  .main-content,
+  .shell-body,
+  main,
+  section,
+  article {
+    min-width: 0;
+  }
+}

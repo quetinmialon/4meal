@@ -240,6 +240,7 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
   .invitation-actions button { flex: 1; }
 }
 @media (max-width: 28rem) {
+    .cookbook-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
   .dashboard-card { padding: 1rem; }
   .latest-recipe-grid { grid-template-columns: 1fr; }
 }
