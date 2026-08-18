@@ -163,12 +163,15 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 }
 @media (max-width: 640px) {
   .shopping-page { padding: 1rem .6rem; border-radius: 1rem; }
-  .shopping-header { align-items: start; }
+  .shopping-header { align-items: flex-start; flex-direction: column; }
   .header-actions { width: 100%; justify-content: space-between; }
   .print-button { padding: .45rem .55rem; }
   .secondary-button { margin-left: 0; }
   .period-form input { flex: 1; min-width: 8rem; }
   .list-summary { align-items: end; }
   .list-counts { max-width: 8rem; }
+  .quantity-fields { width: 100%; }
+  .quantity-fields input:first-child,
+  .quantity-fields input:last-child { width: auto; min-width: 0; flex: 1; }
 }
 </style>

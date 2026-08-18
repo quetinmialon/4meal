@@ -69,11 +69,14 @@ onMounted(() => { void loadRecipes(); });
 .kicker { margin: 2rem 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .my-recipes-link { display: inline-block; padding: .65rem .8rem; border: 1px solid #395330; border-radius: .6rem; color: #395330; font-weight: 700; text-decoration: none; }
-.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.recipe-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem; }
 .state-message, .empty-state { margin-top: 1.5rem; padding: 1.25rem; border-radius: .8rem; }
 .state-message { color: #50634d; }
 .error-summary { color: #8f1e1e; background: #fff0ee; }
 .empty-state { border: 1px dashed #b9c5af; color: #50634d; }
 .empty-state h3 { margin-top: 0; color: #243127; }
+@media (max-width: 72rem) { .recipe-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 58rem) { .recipe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 46rem) { .recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 38rem) { .page-heading { align-items: flex-start; flex-direction: column; } .recipe-grid { grid-template-columns: 1fr; } }
 </style>

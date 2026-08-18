@@ -211,6 +211,8 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
 .section-link { color: #395330; font-weight: 700; }
 .invitation-list, .cookbook-list { display: grid; gap: .7rem; margin-top: 1rem; }
 .cookbook-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
+.cookbook-grid :deep(.cookbook-card) { min-height: 14rem; grid-template-columns: minmax(8rem, .9fr) minmax(0, 1.1fr); grid-template-rows: 1fr; }
+.cookbook-grid :deep(.cookbook-card-image) { min-width: 0; }
 .invitation-item, .cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; }
 .invitation-item strong, .invitation-item small, .cookbook-item strong, .cookbook-item small { display: block; }
 .invitation-item small, .cookbook-item small { margin-top: .25rem; color: #50634d; }
@@ -238,6 +240,7 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
   .invitation-item, .cookbook-item { align-items: flex-start; flex-direction: column; }
   .invitation-actions { width: 100%; }
   .invitation-actions button { flex: 1; }
+  .cookbook-grid :deep(.cookbook-card) { min-height: 22rem; grid-template-columns: 1fr; grid-template-rows: minmax(10rem, 1fr) minmax(0, 1fr); }
 }
 @media (max-width: 28rem) {
   .dashboard-card { padding: 1rem; }
