@@ -18,6 +18,7 @@ export type Cookbook = {
   };
   created_at: string | null;
   member_role: string | null;
+  members?: Array<{ id: number; name: string; avatar_url?: string | null; role?: string | null }>;
   latest_messages?: CookbookMessage[];
 };
 

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
 
-import Avatar from '@/components/Avatar.vue';
-import Badge from '@/components/Badge.vue';
+import CookbookCard from '@/components/CookbookCard.vue';
 import CookbookCreateForm from '@/components/CookbookCreateForm.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
@@ -69,17 +67,7 @@ onMounted(() => { void loadCookbooks(); });
       <section aria-labelledby="cookbooks-list-title">
         <h2 id="cookbooks-list-title" class="sr-only">Cookbooks accessibles</h2>
         <div class="cookbook-grid">
-          <RouterLink v-for="cookbook in cookbooks" :key="cookbook.id" class="cookbook-card" :to="{ name: 'cookbook', params: { id: cookbook.id } }">
-            <div class="cookbook-card-top">
-              <img v-if="cookbook.image_url" class="cookbook-image" :src="cookbook.image_url" :alt="`Image de ${cookbook.name}`" />
-              <Avatar v-else :src="cookbook.owner.avatar_url ?? null" :name="cookbook.name" size="large" />
-              <Badge>{{ cookbook.member_role ?? 'membre' }}</Badge>
-            </div>
-            <h3>{{ cookbook.name }}</h3>
-            <p v-if="cookbook.description" class="cookbook-description">{{ cookbook.description }}</p>
-            <p class="cookbook-owner">Géré par {{ cookbook.owner.name }}</p>
-            <span class="open-cookbook">Ouvrir le cookbook</span>
-          </RouterLink>
+          <CookbookCard v-for="cookbook in cookbooks" :key="cookbook.id" :cookbook="cookbook" />
         </div>
       </section>
       <PaginationControls v-if="pagination && pagination.last_page > 1" :pagination="pagination" :disabled="isLoading" @change="loadCookbooks" />
@@ -93,9 +81,10 @@ onMounted(() => { void loadCookbooks(); });
 .dialog-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 1rem; overflow-y: auto; background: rgba(36,49,39,.48); }
 .create-dialog { width: min(100%, 38rem); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 1.25rem; border: 1px solid rgba(86,112,79,.18); border-radius: 1rem; background: #fffdf8; box-shadow: 0 20px 60px rgba(36,49,39,.25); }
 .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }.dialog-heading h2 { margin: 0; font-size: 1.3rem; }.dialog-close { padding: .55rem .7rem; border: 1px solid #395330; border-radius: .5rem; background: transparent; color: #395330; font: inherit; font-weight: 700; cursor: pointer; }
-.cookbook-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-.cookbook-card { display: flex; min-height: 15rem; flex-direction: column; gap: .7rem; padding: 1.1rem; border: 1px solid rgba(86,112,79,.2); border-radius: 1rem; background: rgba(255,253,248,.92); color: #243127; text-decoration: none; box-shadow: 0 10px 30px rgba(54,68,35,.06); }.cookbook-card:hover, .cookbook-card:focus-visible { border-color: #6b7b57; }.cookbook-card:focus-visible { outline: 3px solid rgba(86,112,79,.3); outline-offset: 3px; }
-.cookbook-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }.cookbook-image { width: 5rem; height: 5rem; border-radius: .8rem; object-fit: cover; }.cookbook-card h3 { margin: .3rem 0 0; font-size: 1.25rem; }.cookbook-description { display: -webkit-box; margin: 0; overflow: hidden; color: #50634d; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }.cookbook-owner { margin: auto 0 0; color: #50634d; font-size: .9rem; }.open-cookbook { color: #395330; font-weight: 700; }.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-@media (max-width: 58rem) { .cookbook-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cookbook-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 72rem) { .cookbook-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 58rem) { .cookbook-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 46rem) { .cookbook-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 38rem) { .cookbook-grid { grid-template-columns: 1fr; } }
 </style>

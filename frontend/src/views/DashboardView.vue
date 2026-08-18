@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 
 import Avatar from '@/components/Avatar.vue';
 import Badge from '@/components/Badge.vue';
+import CookbookCard from '@/components/CookbookCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import ErrorState from '@/components/ErrorState.vue';
 import LoadingState from '@/components/LoadingState.vue';
@@ -167,22 +168,8 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
       <LoadingState v-if="isLoading" label="Chargement des cookbooks..." />
       <ErrorState v-else-if="errorMessage" :message="errorMessage" />
       <EmptyState v-else-if="cookbooks.length === 0" title="Vous n’avez encore aucun cookbook." description="Créez votre premier espace pour organiser vos recettes." />
-      <div v-else class="cookbook-list">
-        <RouterLink
-          v-for="cookbook in cookbooks.slice(0, 5)"
-          :key="cookbook.id"
-          class="cookbook-item"
-          :to="{ name: 'cookbook', params: { id: cookbook.id } }"
-        >
-          <span class="cookbook-identity">
-            <Avatar :src="cookbook.owner.avatar_url ?? null" :name="cookbook.owner.name" size="small" />
-            <span>
-              <strong>{{ cookbook.name }}</strong>
-              <small>{{ cookbook.owner.name }}</small>
-            </span>
-          </span>
-          <Badge class="role-badge">{{ cookbook.member_role ?? 'membre' }}</Badge>
-        </RouterLink>
+      <div v-else class="cookbook-grid">
+        <CookbookCard v-for="cookbook in cookbooks.slice(0, 5)" :key="cookbook.id" :cookbook="cookbook" />
         <nav v-if="pagination && pagination.last_page > 1" class="pagination" aria-label="Pagination des cookbooks">
           <button type="button" :disabled="pagination.current_page === 1" @click="goToPage(pagination.current_page - 1)">Précédent</button>
           <span>Page {{ pagination.current_page }} / {{ pagination.last_page }}</span>
@@ -223,6 +210,7 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
 .secondary-action { border: 1px solid #395330; background: transparent; color: #395330; }
 .section-link { color: #395330; font-weight: 700; }
 .invitation-list, .cookbook-list { display: grid; gap: .7rem; margin-top: 1rem; }
+.cookbook-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
 .invitation-item, .cookbook-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; }
 .invitation-item strong, .invitation-item small, .cookbook-item strong, .cookbook-item small { display: block; }
 .invitation-item small, .cookbook-item small { margin-top: .25rem; color: #50634d; }
