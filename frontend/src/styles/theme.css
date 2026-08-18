@@ -6,7 +6,7 @@
   --color-surface-raised: #ffffff;
   --color-surface-subtle: #efede5;
   --color-text: #26302a;
-  --color-text-secondary: #5e6a60;
+  --color-text-secondary: #6a695e;
   --color-text-muted: #788178;
   --color-border: #d9ded6;
   --color-border-strong: #b9c5ba;
@@ -24,6 +24,9 @@
   --color-info: #3e6680;
   --color-info-soft: #e3edf3;
   --color-focus: #a86a3e;
+  --color-on-primary: #fffdf9;
+  --color-overlay: rgb(25 32 28 / 48%);
+  --color-image-placeholder: #e5e5e1;
   --app-background: var(--color-background);
   --app-surface: var(--color-surface);
   --app-text: var(--color-text);
@@ -47,7 +50,7 @@
 html[data-theme='dark'] {
   color-scheme: dark;
   --color-background: #18201b; --color-surface: #202a23; --color-surface-raised: #27332a; --color-surface-subtle: #2b362e;
-  --color-text: #edf2eb; --color-text-secondary: #b9c6ba; --color-text-muted: #93a197;
+  --color-text: #edf2eb; --color-text-secondary: #d8b08f; --color-text-muted: #b9a18c;
   --color-border: #3b493f; --color-border-strong: #59695b;
   --color-primary: #9ab79b; --color-primary-hover: #b4cfb3; --color-primary-soft: #2d4032;
   --color-accent: #d39770; --color-accent-soft: #4a3328;
@@ -55,6 +58,9 @@ html[data-theme='dark'] {
   --color-warning: #e3b866; --color-warning-soft: #493a22;
   --color-success: #8fc49e; --color-success-soft: #294333;
   --color-info: #8ebbd3; --color-info-soft: #293e4a; --color-focus: #e0a477;
+  --color-on-primary: #18201b;
+  --color-overlay: rgb(7 11 9 / 68%);
+  --color-image-placeholder: #303a33;
 }
 
 html { min-height: 100%; background: var(--color-background); font-size: 16px; text-rendering: optimizeLegibility; }
@@ -86,13 +92,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--color-primary); 
 input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--color-danger); }
 
 /* Shared semantic controls. Existing component APIs and markup stay unchanged. */
-.primary-button, .primary-link, .button-primary { border: 1px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-primary); color: #fffdf9; font-weight: 700; text-decoration: none; }
-.primary-button:hover, .primary-link:hover, .button-primary:hover { background: var(--color-primary-hover); color: #fffdf9; }
+.primary-button, .primary-link, .button-primary { border: 1px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; text-decoration: none; }
+.primary-button:hover, .primary-link:hover, .button-primary:hover { background: var(--color-primary-hover); color: var(--color-on-primary); }
 .secondary-button, .secondary-link, .button-secondary { border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-primary); font-weight: 700; text-decoration: none; }
 .secondary-button:hover, .secondary-link:hover, .button-secondary:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
 .ghost-button, .inline-button { border-color: transparent; background: transparent; color: var(--color-primary); }
-.danger-button, .button-danger { border-color: var(--color-danger); background: var(--color-danger); color: #fff; }
-.danger-button:hover, .button-danger:hover { background: color-mix(in srgb, var(--color-danger) 82%, #000); }
+.danger-button, .button-danger { border-color: var(--color-danger); background: var(--color-danger); color: var(--color-on-primary); }
+.danger-button:hover, .button-danger:hover { background: color-mix(in srgb, var(--color-danger) 82%, var(--color-background)); }
 .primary-button, .secondary-button, .danger-button, .ghost-button, .inline-button, .primary-link, .secondary-link, .button-primary, .button-secondary, .button-danger { transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
 
 /* Surface vocabulary: hierarchy first, framing second. */
@@ -105,6 +111,355 @@ input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='
 .success-message { color: var(--color-success); }
 .warning-message, .oauth-warning { color: var(--color-warning); }
 
-html[data-theme='dark'] .app-shell main, html[data-theme='dark'] .app-shell [class$='-card'], html[data-theme='dark'] .auth-screen { background: var(--color-surface) !important; color: var(--color-text); border-color: var(--color-border) !important; }
+html[data-theme='dark'] .app-shell main, html[data-theme='dark'] .auth-layout { background: var(--color-background) !important; color: var(--color-text); }
+html[data-theme='dark'] .app-shell [class$='-card'], html[data-theme='dark'] .auth-screen, html[data-theme='dark'] .auth-card, html[data-theme='dark'] .login-card, html[data-theme='dark'] .register-card { background: var(--color-surface) !important; color: var(--color-text); border-color: var(--color-border) !important; }
 html[data-theme='dark'] input, html[data-theme='dark'] select, html[data-theme='dark'] textarea { background: var(--color-surface-raised) !important; color: var(--color-text) !important; border-color: var(--color-border-strong) !important; }
+
+/* Compatibility layer for legacy view-local styles. It keeps the existing
+   component markup and behavior while bringing older screens into the token
+   system in dark mode. */
+html[data-theme='dark'] h1,
+html[data-theme='dark'] h2,
+html[data-theme='dark'] h3,
+html[data-theme='dark'] h4,
+html[data-theme='dark'] legend,
+html[data-theme='dark'] label,
+html[data-theme='dark'] strong { color: var(--color-text) !important; }
+html[data-theme='dark'] p,
+html[data-theme='dark'] li,
+html[data-theme='dark'] dd,
+html[data-theme='dark'] dt { color: var(--color-text-secondary); }
+html[data-theme='dark'] .description,
+html[data-theme='dark'] .intro,
+html[data-theme='dark'] .muted,
+html[data-theme='dark'] .period-label,
+html[data-theme='dark'] .page-heading p,
+html[data-theme='dark'] .section-help,
+html[data-theme='dark'] .recipe-summary,
+html[data-theme='dark'] .recipe-servings,
+html[data-theme='dark'] .calendar-empty,
+html[data-theme='dark'] .item-meta,
+html[data-theme='dark'] .summary-label,
+html[data-theme='dark'] .help-text {
+  color: var(--color-text-secondary) !important;
+}
+html[data-theme='dark'] .kicker,
+html[data-theme='dark'] .step-kicker,
+html[data-theme='dark'] .list-kicker {
+  color: var(--color-primary) !important;
+}
+
+/* Complete the coverage for screens whose surface class does not use the
+   "-card" suffix. */
+html[data-theme='dark'] .recipe-form,
+html[data-theme='dark'] .messages-card,
+html[data-theme='dark'] .invitation-card,
+html[data-theme='dark'] .two-factor-card,
+html[data-theme='dark'] .password-card,
+html[data-theme='dark'] .export-card,
+html[data-theme='dark'] .verification-card,
+html[data-theme='dark'] .profile-card,
+html[data-theme='dark'] .setup-card,
+html[data-theme='dark'] .public-recipes-page,
+html[data-theme='dark'] .search-page,
+html[data-theme='dark'] .edit-page,
+html[data-theme='dark'] .detail-page,
+html[data-theme='dark'] .history-page,
+html[data-theme='dark'] .not-found-page,
+html[data-theme='dark'] .security-status-item,
+html[data-theme='dark'] .sensitive-action,
+html[data-theme='dark'] .filters-panel,
+html[data-theme='dark'] .filter-drawer,
+html[data-theme='dark'] .saved-searches-panel,
+html[data-theme='dark'] .message-composer,
+html[data-theme='dark'] .member-row,
+html[data-theme='dark'] .notification-item,
+html[data-theme='dark'] .shopping-item,
+html[data-theme='dark'] .account-summary,
+html[data-theme='dark'] .settings-section,
+html[data-theme='dark'] .danger-section,
+html[data-theme='dark'] .danger-action,
+html[data-theme='dark'] .format-list li,
+html[data-theme='dark'] .scope-option,
+html[data-theme='dark'] .format-option,
+html[data-theme='dark'] .oauth-account,
+html[data-theme='dark'] .ingredient-row,
+html[data-theme='dark'] .step-row,
+html[data-theme='dark'] .saved-search-list li,
+html[data-theme='dark'] .cookbook-item,
+html[data-theme='dark'] .agenda-day,
+html[data-theme='dark'] .recipe-history-item,
+html[data-theme='dark'] .history-item {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .filters-panel,
+html[data-theme='dark'] .filter-drawer,
+html[data-theme='dark'] .saved-searches-panel,
+html[data-theme='dark'] .message-composer,
+html[data-theme='dark'] .security-status,
+html[data-theme='dark'] .sensitive-action,
+html[data-theme='dark'] .format-list li,
+html[data-theme='dark'] .scope-option,
+html[data-theme='dark'] .format-option,
+html[data-theme='dark'] .ingredient-row,
+html[data-theme='dark'] .step-row,
+html[data-theme='dark'] .cookbook-item {
+  background: var(--color-surface-subtle) !important;
+}
+html[data-theme='dark'] .form-section,
+html[data-theme='dark'] .invitation-section,
+html[data-theme='dark'] .sources-panel,
+html[data-theme='dark'] .security-control,
+html[data-theme='dark'] .form-actions {
+  border-color: var(--color-border) !important;
+}
+html[data-theme='dark'] .filter-chip,
+html[data-theme='dark'] .filter-chip button:hover,
+html[data-theme='dark'] .filter-chip button:focus-visible,
+html[data-theme='dark'] .reaction-counter[aria-pressed='true'],
+html[data-theme='dark'] .reaction-option[aria-pressed='true'] {
+  background: var(--color-primary-soft) !important;
+  border-color: var(--color-border-strong) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .preview table,
+html[data-theme='dark'] .preview th,
+html[data-theme='dark'] .preview td {
+  background: var(--color-surface-raised) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .preview th,
+html[data-theme='dark'] .preview-count {
+  background: var(--color-surface-subtle) !important;
+}
+html[data-theme='dark'] .notification-item.unread,
+html[data-theme='dark'] .status-badge.enabled,
+html[data-theme='dark'] .connection-status.is-connected,
+html[data-theme='dark'] .provider-mark,
+html[data-theme='dark'] .scope-note {
+  background: var(--color-success-soft) !important;
+  color: var(--color-success) !important;
+}
+html[data-theme='dark'] .status-badge.pending,
+html[data-theme='dark'] .status-badge.disabled,
+html[data-theme='dark'] .oauth-warning,
+html[data-theme='dark'] .notification-count {
+  background: var(--color-warning-soft) !important;
+  color: var(--color-warning) !important;
+}
+html[data-theme='dark'] .connection-status.is-disconnected {
+  background: var(--color-surface-subtle) !important;
+  color: var(--color-text-secondary) !important;
+}
+html[data-theme='dark'] .confirmation-panel,
+html[data-theme='dark'] .trust-note {
+  background: var(--color-surface-subtle) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+}
+html[data-theme='dark'] .page-header-back,
+html[data-theme='dark'] .back-link,
+html[data-theme='dark'] .status-link,
+html[data-theme='dark'] .recipe-link,
+html[data-theme='dark'] .search-form label {
+  color: var(--color-primary) !important;
+}
+html[data-theme='dark'] .dashboard-card,
+html[data-theme='dark'] .notifications-card,
+html[data-theme='dark'] .invitations-section,
+html[data-theme='dark'] .cookbooks-section,
+html[data-theme='dark'] .recipes-section,
+html[data-theme='dark'] .account-summary {
+  background: var(--color-surface) !important;
+}
+html[data-theme='dark'] .primary-action,
+html[data-theme='dark'] .create-link {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+}
+html[data-theme='dark'] .period-form {
+  background: var(--color-surface-subtle) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+}
+html[data-theme='dark'] .period-form label,
+html[data-theme='dark'] .period-form strong {
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .theme-option,
+html[data-theme='dark'] .notification-switches label,
+html[data-theme='dark'] .notification-group,
+html[data-theme='dark'] .scope-toggle {
+  background: var(--color-surface-subtle) !important;
+  border-color: var(--color-border-strong) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .theme-option.selected {
+  background: var(--color-primary-soft) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] input[type='checkbox'],
+html[data-theme='dark'] input[type='radio'] {
+  accent-color: var(--color-primary-hover);
+}
+html[data-theme='dark'] .secondary-button,
+html[data-theme='dark'] .secondary-link,
+html[data-theme='dark'] .secondary-action,
+html[data-theme='dark'] .secondary-source-button,
+html[data-theme='dark'] .cancel-button,
+html[data-theme='dark'] .ghost-button,
+html[data-theme='dark'] .inline-button,
+html[data-theme='dark'] .view-switcher button:not(.active),
+html[data-theme='dark'] .calendar-navigation button {
+  color: var(--color-primary-hover) !important;
+  border-color: var(--color-border-strong) !important;
+}
+html[data-theme='dark'] .secondary-button:hover,
+html[data-theme='dark'] .secondary-link:hover,
+html[data-theme='dark'] .secondary-action:hover,
+html[data-theme='dark'] .cancel-button:hover,
+html[data-theme='dark'] .view-switcher button:not(.active):hover,
+html[data-theme='dark'] .calendar-navigation button:hover {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary-hover) !important;
+}
+html[data-theme='dark'] .secondary-button:not(.danger-button),
+html[data-theme='dark'] .secondary-link {
+  background: var(--color-surface) !important;
+}
+
+html[data-theme='dark'] .auth-screen,
+html[data-theme='dark'] .import-card,
+html[data-theme='dark'] .shopping-page,
+html[data-theme='dark'] .planning-page,
+html[data-theme='dark'] .cookbook-home,
+html[data-theme='dark'] .settings-page,
+html[data-theme='dark'] .profile-page,
+html[data-theme='dark'] .data-page,
+html[data-theme='dark'] .history-page,
+html[data-theme='dark'] .members-page,
+html[data-theme='dark'] .messages-page,
+html[data-theme='dark'] .cookbooks-page,
+html[data-theme='dark'] .recipes-page,
+html[data-theme='dark'] .recipe-detail-page {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+html[data-theme='dark'] .home-card,
+html[data-theme='dark'] .recipe-picker,
+html[data-theme='dark'] .planning-sources,
+html[data-theme='dark'] .security-status,
+html[data-theme='dark'] .workflow-step,
+html[data-theme='dark'] .preview,
+html[data-theme='dark'] .tag-list,
+html[data-theme='dark'] .destination-fieldset,
+html[data-theme='dark'] .meal-ingredients,
+html[data-theme='dark'] .edit-meal-summary,
+html[data-theme='dark'] .detail-note,
+html[data-theme='dark'] .recurrence-confirmation,
+html[data-theme='dark'] .selected-file {
+  background: var(--color-surface-subtle) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+html[data-theme='dark'] .modal-backdrop,
+html[data-theme='dark'] .dialog-backdrop,
+html[data-theme='dark'] .detail-backdrop,
+html[data-theme='dark'] .invitation-backdrop {
+  background: var(--color-overlay) !important;
+}
+html[data-theme='dark'] .planning-modal,
+html[data-theme='dark'] .confirm-dialog,
+html[data-theme='dark'] .meal-detail,
+html[data-theme='dark'] .invitation-dialog,
+html[data-theme='dark'] .dropdown-panel,
+html[data-theme='dark'] .popover-menu,
+html[data-theme='dark'] .notification-popover-panel {
+  background: var(--color-surface-raised) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+  box-shadow: var(--shadow-lg);
+}
+
+html[data-theme='dark'] .calendar,
+html[data-theme='dark'] .calendar-day,
+html[data-theme='dark'] .meal-card,
+html[data-theme='dark'] .mobile-agenda .agenda-day {
+  background: var(--color-surface-raised) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .weekday-row,
+html[data-theme='dark'] .calendar-day.outside,
+html[data-theme='dark'] .empty-state,
+html[data-theme='dark'] .recipe-picker,
+html[data-theme='dark'] .upload-status,
+html[data-theme='dark'] .result {
+  background: var(--color-surface-subtle) !important;
+}
+html[data-theme='dark'] .calendar-day.outside { color: var(--color-text-muted) !important; }
+
+html[data-theme='dark'] .tag,
+html[data-theme='dark'] .tag-chip,
+html[data-theme='dark'] .role-badge,
+html[data-theme='dark'] .owner-label,
+html[data-theme='dark'] .badge {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-text) !important;
+}
+html[data-theme='dark'] .badge-success,
+html[data-theme='dark'] .status {
+  background: var(--color-success-soft) !important;
+  border-color: var(--color-success) !important;
+  color: var(--color-success) !important;
+}
+html[data-theme='dark'] .badge-warning {
+  background: var(--color-warning-soft) !important;
+  color: var(--color-warning) !important;
+}
+html[data-theme='dark'] .badge-danger {
+  background: var(--color-danger-soft) !important;
+  color: var(--color-danger) !important;
+}
+html[data-theme='dark'] .error-summary,
+html[data-theme='dark'] .error-state,
+html[data-theme='dark'] .form-error,
+html[data-theme='dark'] .delete-confirmation {
+  background: var(--color-danger-soft) !important;
+  border-color: color-mix(in srgb, var(--color-danger) 55%, var(--color-border)) !important;
+  color: var(--color-danger) !important;
+}
+html[data-theme='dark'] .warning,
+html[data-theme='dark'] .preview-warnings,
+html[data-theme='dark'] .preview-duplicates {
+  background: var(--color-warning-soft) !important;
+  color: var(--color-warning) !important;
+}
+html[data-theme='dark'] .success-message,
+html[data-theme='dark'] .success-card,
+html[data-theme='dark'] .planning-success {
+  background: var(--color-success-soft) !important;
+  color: var(--color-success) !important;
+}
+html[data-theme='dark'] .recipe-image-placeholder,
+html[data-theme='dark'] .cookbook-card-image img[src^='data:image/svg+xml'] {
+  background: var(--color-image-placeholder);
+}
+html[data-theme='dark'] button:disabled,
+html[data-theme='dark'] input:disabled,
+html[data-theme='dark'] select:disabled,
+html[data-theme='dark'] textarea:disabled {
+  color: var(--color-text-muted) !important;
+  background: var(--color-surface-subtle) !important;
+  border-color: var(--color-border) !important;
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
