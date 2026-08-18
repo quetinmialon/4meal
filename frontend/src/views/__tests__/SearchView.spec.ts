@@ -161,6 +161,23 @@ describe('SearchView', () => {
     expect((wrapper.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
   });
 
+  it('opens the advanced filters drawer with an accessible name and focus target', async () => {
+    fetchMock.mockResolvedValueOnce(cookbooksPage()).mockResolvedValueOnce(savedSearchesPage());
+    const wrapper = mount(SearchView, { global: { plugins: [testPinia] }, attachTo: document.body });
+    await flushPromises();
+
+    await wrapper.get('.advanced-filter-button').trigger('click');
+    await flushPromises();
+
+    const drawer = wrapper.get('#advanced-filters');
+    expect(drawer.attributes('role')).toBe('dialog');
+    expect(drawer.attributes('aria-labelledby')).toBe('advanced-filters-title');
+    expect(drawer.attributes('tabindex')).toBe('-1');
+    expect(wrapper.get('#advanced-filters-title').text()).toContain('Filtres avancés');
+    expect(document.activeElement).toBe(drawer.element);
+    wrapper.unmount();
+  });
+
   it('shows loading state while filtered recipes are loading', async () => {
     let resolveRecipes: ((response: Response) => void) | undefined;
     const pendingRecipes = new Promise<Response>((resolve) => { resolveRecipes = resolve; });
