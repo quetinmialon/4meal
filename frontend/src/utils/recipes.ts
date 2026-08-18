@@ -232,9 +232,11 @@ export async function fetchRecipes(
   scope: 'all' | 'mine' | 'public' = 'all',
   search = '',
   filters: RecipeFilters = {},
+  perPage?: number,
 ): Promise<RecipeListResult> {
   try {
     const params = new URLSearchParams({ page: String(page) });
+    if (perPage !== undefined) params.set('per_page', String(perPage));
     if (scope !== 'all') params.set('scope', scope);
     if (search.trim() !== '') params.set('q', search.trim());
     if (filters.cookbook_id) params.set('cookbook_id', filters.cookbook_id);

@@ -28,7 +28,7 @@ describe('RecipeCard', () => {
     expect(wrapper.get('img').attributes('alt')).toBe('Photo de Tarte aux pommes');
   });
 
-  it('does not render an empty image element without a URL', () => {
+  it('renders the no-photo placeholder without a URL', () => {
     const wrapper = mount(RecipeCard, {
       props: {
         recipe: {
@@ -40,6 +40,7 @@ describe('RecipeCard', () => {
       global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
     });
 
-    expect(wrapper.find('img').exists()).toBe(false);
+    expect(wrapper.get('img').attributes('src')).toMatch(/^data:image\/svg\+xml/);
+    expect(wrapper.get('img').attributes('alt')).toBe('Aucune photo pour cette recette');
   });
 });

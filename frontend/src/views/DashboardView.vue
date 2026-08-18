@@ -200,7 +200,7 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
         <ErrorState v-else-if="recipesError" :message="recipesError" />
         <EmptyState v-else-if="recipes.length === 0" title="Aucune recette publiée." />
         <div v-else class="latest-recipe-grid">
-          <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" compact />
+          <RecipeCard v-for="recipe in recipes" :key="recipe.id" :recipe="recipe" />
         </div>
       </section>
     </div>
@@ -235,7 +235,7 @@ onMounted(() => { void Promise.all([loadCookbooks(), loadInvitations(), loadReci
 .cookbook-item { color: #243127; text-decoration: none; }
 .cookbook-item:hover { border-color: #6b7b57; background: #f7fbf3; }
 .cookbook-identity { display: flex; align-items: center; gap: .65rem; min-width: 0; }
-.latest-recipe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
+.latest-recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .5rem; color: #50634d; font-size: .9rem; }
 .pagination button { padding: .5rem .7rem; border: 1px solid #b9c5af; border-radius: .5rem; background: transparent; color: #395330; cursor: pointer; }
 .pagination button:disabled { cursor: not-allowed; opacity: .45; }

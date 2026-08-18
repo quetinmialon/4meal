@@ -59,6 +59,10 @@ class AccessibleRecipesQuery
 
         $this->applyFilters($query, $user, $filters);
 
+        if ($scope === 'public') {
+            $query->orderByRaw('CASE WHEN user_id = ? THEN 0 ELSE 1 END ASC', [$user->getKey()]);
+        }
+
         return $query
             ->orderByDesc('created_at')
             ->orderByDesc('id');

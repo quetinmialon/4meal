@@ -96,18 +96,18 @@ async function updateRating(nextRating: number | null): Promise<void> {
 <style scoped>
 .rating-control { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .7rem; }
 fieldset { display: flex; align-items: center; gap: .5rem; margin: 0; padding: 0; border: 0; }
-legend { margin-right: .15rem; color: #395330; font: inherit; font-weight: 700; }
+legend { margin-right: .15rem; color: var(--color-primary); font: inherit; font-weight: 700; }
 .rating-options { display: inline-flex; gap: .05rem; }
 .rating-option { display: inline-flex; }
 .rating-option input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
-.rating-option label { padding: .1rem .2rem; border-radius: .35rem; color: #c27b22; font-size: 1.45rem; line-height: 1; cursor: pointer; }
-.rating-option label:hover, .rating-option input:focus-visible + label { outline: 2px solid #395330; outline-offset: 2px; }
+.rating-option label { padding: .1rem .2rem; border-radius: var(--radius-sm); color: var(--color-accent); font-size: 1.45rem; line-height: 1; cursor: pointer; }
+.rating-option label:hover, .rating-option input:focus-visible + label { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 fieldset:disabled label { cursor: wait; opacity: .6; }
 .rating-hint, .rating-success, .rating-error { flex-basis: 100%; margin: 0; font-size: .85rem; }
-.rating-hint { color: #50634d; }
-.rating-success { color: #395330; }
-.rating-error { color: #8f1e1e; }
-.clear-rating { padding: .25rem .45rem; border: 1px solid #b9c5af; border-radius: .4rem; background: transparent; color: #395330; font: inherit; font-size: .8rem; cursor: pointer; }
+.rating-hint { color: var(--color-text-muted); }
+.rating-success { color: var(--color-success); }
+.rating-error { color: var(--color-danger); }
+.clear-rating { padding: .25rem .45rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: transparent; color: var(--color-primary); font: inherit; font-size: .8rem; cursor: pointer; }
 .clear-rating:disabled { cursor: wait; opacity: .6; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

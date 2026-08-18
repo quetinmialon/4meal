@@ -448,7 +448,7 @@ onBeforeUnmount(() => {
 .kicker { margin: 2rem 0 .35rem; color: #6b7b57; font-size: .8rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .secondary-link { padding: .65rem .8rem; border: 1px solid #395330; border-radius: .6rem; color: #395330; font-weight: 700; text-decoration: none; }
-.recipe-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
+.recipe-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
 .filters-panel { margin-top: 1.5rem; padding: 1rem; border: 1px solid rgba(86, 112, 79, .2); border-radius: .8rem; background: rgba(247, 251, 243, .65); }
 .filter-summary { margin: .35rem 0 0; color: #50634d; font-size: .9rem; font-weight: 400; }
 .filter-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: .5rem; }
@@ -493,5 +493,8 @@ h2 { margin: 0; font-size: clamp(1.9rem, 4vw, 2.8rem); }
 .error-summary button { padding: .5rem .7rem; border: 1px solid #8f1e1e; border-radius: .5rem; background: transparent; color: #8f1e1e; font: inherit; font-weight: 700; cursor: pointer; }
 .empty-state { border: 1px dashed #b9c5af; color: #50634d; }
 .empty-state h3 { margin-top: 0; color: #243127; }
+@media (max-width: 72rem) { .recipe-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 58rem) { .recipe-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 46rem) { .recipe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 38rem) { .page-heading { align-items: flex-start; flex-direction: column; } .filter-actions { justify-content: start; } .filter-drawer { grid-template-columns: 1fr; } .recipe-grid { grid-template-columns: 1fr; } }
 </style>
