@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton.vue';
 import MicrosoftAuthButton from '@/components/MicrosoftAuthButton.vue';
 import { handleOAuthCallback } from '@/utils/oauth';
+import loginIllustration from '@/assets/auth-login.png';
 
 type FieldName = 'email' | 'password';
 
@@ -183,16 +184,13 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="auth-screen">
   <main class="login-card">
     <p class="kicker">Connexion</p>
     <h2>Acceder a votre espace</h2>
     <p class="intro">
       Connectez-vous avec votre adresse e-mail et votre mot de passe pour retrouver votre espace.
     </p>
-
-    <GoogleAuthButton />
-    <MicrosoftAuthButton />
-    <div class="oauth-separator" aria-hidden="true"><span>ou</span></div>
 
     <form class="login-form" novalidate @submit.prevent="handleSubmit">
       <div
@@ -252,7 +250,12 @@ onMounted(() => {
 
     <RouterLink class="forgot-link" :to="{ name: 'forgot-password' }">Mot de passe oublié ?</RouterLink>
     <p class="auth-switch">Pas encore de compte ? <RouterLink :to="{ name: 'register' }">Créer un compte</RouterLink></p>
+    <div class="oauth-separator" aria-hidden="true"><span>ou continuer avec</span></div>
+    <GoogleAuthButton />
+    <MicrosoftAuthButton />
   </main>
+  <img class="auth-illustration" :src="loginIllustration" alt="" aria-hidden="true" />
+  </div>
 </template>
 
 <style scoped>
@@ -343,8 +346,11 @@ input[aria-invalid='true'] {
 }
 
 button {
-  width: 100%;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
   margin-top: 1.5rem;
+  margin-inline: auto;
   padding: 0.95rem 1.25rem;
   border: 0;
   border-radius: 999px;
@@ -378,12 +384,14 @@ button:disabled {
 }
 
 .forgot-link {
-  display: inline-block;
-  margin-top: 1rem;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1rem auto 0;
   color: #2f4520;
   font-weight: 700;
 }
-.auth-switch { margin: 1.25rem 0 0; color: #50634d; }
+.auth-switch { margin: 1.25rem 0 0; color: #50634d; text-align: center; }
 .auth-switch a { color: #2f4520; font-weight: 700; }
 
 @media (max-width: 640px) {

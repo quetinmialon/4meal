@@ -63,7 +63,7 @@ form { display: grid; gap: .65rem; margin-top: 1.75rem; }
 label { font-weight: 700; }
 input { width: 100%; padding: .9rem 1rem; border: 1px solid #c4cfb8; border-radius: .95rem; font: inherit; letter-spacing: .2em; text-align: center; }
 input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid rgba(116,144,88,.32); outline-offset: 2px; }
-button { margin-top: .75rem; padding: .95rem 1.25rem; border: 0; border-radius: 999px; background: #2f4520; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+button { width: fit-content; max-width: 100%; justify-self: center; margin-top: .75rem; padding: .95rem 1.25rem; border: 0; border-radius: 999px; background: #2f4520; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 button:disabled { cursor: wait; opacity: .8; }
 .error-summary { padding: .95rem 1rem; border: 1px solid rgba(185,72,72,.26); border-radius: 1rem; background: #fff3f0; color: #8d2727; line-height: 1.5; }
 .link-button, .back-link { display: block; width: fit-content; margin: 1rem auto 0; padding: 0; background: transparent; color: #2f4520; font-weight: 700; }

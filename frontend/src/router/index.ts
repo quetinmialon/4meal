@@ -33,6 +33,7 @@ import PlanningView from '@/views/PlanningView.vue';
 import ShoppingListView from '@/views/ShoppingListView.vue';
 import ProfileView from '@/views/ProfileView.vue';
 import TwoFactorVerificationView from '@/views/TwoFactorVerificationView.vue';
+import NotFoundView from '@/views/NotFoundView.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -276,6 +277,11 @@ const routes: RouteRecordRaw[] = [
     path: '/inscription/confirmation',
     name: 'register-success',
     component: RegisterSuccessView,
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: NotFoundView,
   },
 ];
 

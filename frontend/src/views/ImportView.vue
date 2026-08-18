@@ -85,6 +85,7 @@ function cancelPreview(): void {
 
 <template>
   <main class="import-card">
+    <img class="data-hero" src="@/assets/importexport.png" alt="Cuisine lumineuse avec des ingrédients frais" />
     <RouterLink class="back-link" :to="{ name: 'dashboard' }">← Retour à mon espace</RouterLink>
     <p class="kicker">Mes données</p>
     <h1>Importer un fichier</h1>
@@ -232,6 +233,7 @@ function cancelPreview(): void {
 
 <style scoped>
 .import-card { box-sizing: border-box; width: min(100% - 2rem, 76rem); margin: 2rem auto; padding: 2rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1.5rem; background: rgba(255, 253, 248, 0.94); box-shadow: 0 20px 60px rgba(54, 68, 35, 0.1); }
+.data-hero { display: block; width: calc(100% + 4rem); height: clamp(12rem, 24vw, 19rem); margin: -2rem -2rem 1.5rem; object-fit: cover; object-position: center; }
 .back-link { color: #395330; font-weight: 700; }
 .kicker { margin: 2rem 0 0.35rem; color: #6b7b57; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
 h1 { margin: 0 0 1rem; font-size: clamp(1.9rem, 4vw, 2.8rem); }
@@ -293,6 +295,7 @@ code { padding: 0.1rem 0.25rem; border-radius: 0.25rem; background: rgba(36, 49,
 .import-button:disabled { cursor: not-allowed; opacity: 0.5; }
 @media (max-width: 640px) {
   .import-card { width: min(100% - 1rem, 76rem); padding: 1rem; }
+  .data-hero { width: calc(100% + 2rem); height: 11rem; margin: -1rem -1rem 1.25rem; }
   .import-workflow { gap: 0.2rem; }
   .import-workflow li { font-size: 0.68rem; }
   .workflow-number, .step-number { width: 1.75rem; height: 1.75rem; }
