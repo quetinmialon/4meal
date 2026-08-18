@@ -3,6 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Models\Cookbook;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -28,6 +30,26 @@ class CookbookResource extends JsonResource
             $memberRole = $pivot->getAttribute('role');
         }
 
+        $members = [];
+        if ($cookbook->relationLoaded('members')) {
+            /** @var Collection<int, User> $memberUsers */
+            $memberUsers = $cookbook->members;
+            $members = $memberUsers->map(function (User $member) use ($request): array {
+                $memberPivot = $member->getAttribute('pivot');
+                $memberData = UserResource::make($member)->resolve($request);
+                $avatarUrl = is_string($memberData['avatar_url'] ?? null)
+                    ? $memberData['avatar_url']
+                    : null;
+
+                return [
+                    'id' => $member->id,
+                    'name' => $member->name,
+                    'avatar_url' => $avatarUrl,
+                    'role' => $memberPivot instanceof Pivot ? $memberPivot->getAttribute('role') : null,
+                ];
+            })->values()->all();
+        }
+
         return [
             'id' => $cookbook->public_id,
             'name' => $cookbook->name,
@@ -39,6 +61,7 @@ class CookbookResource extends JsonResource
                 : null,
             'owner' => UserResource::make($cookbook->owner)->resolve($request),
             'member_role' => $memberRole,
+            'members' => $members,
             'created_at' => $cookbook->created_at?->toJSON(),
         ];
     }

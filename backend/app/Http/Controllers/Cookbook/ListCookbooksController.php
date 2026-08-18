@@ -17,7 +17,7 @@ class ListCookbooksController extends Controller
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
 
         $cookbooks = $user->cookbooks()
-            ->with('owner')
+            ->with(['owner', 'members'])
             ->orderByDesc('cookbooks.created_at')
             ->paginate($perPage)
             ->withQueryString();
