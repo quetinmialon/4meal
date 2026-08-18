@@ -327,9 +327,9 @@ onBeforeUnmount(() => {
         {{ cookbooksError }}
         <button type="button" @click="retryCookbooks">Réessayer</button>
       </p>
-      <div v-show="isFilterDrawerOpen" id="advanced-filters" ref="filterDrawer" class="filters-grid filter-drawer" role="dialog" aria-modal="true" aria-labelledby="filters-title">
+      <div v-show="isFilterDrawerOpen" id="advanced-filters" ref="filterDrawer" class="filters-grid filter-drawer" role="dialog" aria-modal="true" aria-labelledby="filters-title" tabindex="-1">
         <div class="drawer-heading">
-          <h4>Filtres avancés</h4>
+          <h4 id="filters-title">Filtres avancés</h4>
           <button type="button" class="drawer-close" aria-label="Fermer les filtres avancés" @click="closeFilterDrawer">Fermer</button>
         </div>
         <label>

@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
         <RouterLink :class="{ 'is-active': isCookbookTabActive('planning') }" :aria-current="isCookbookTabActive('planning') ? 'page' : undefined" :to="{ name: 'cookbook-planning', params: { id: cookbookId } }">Planning</RouterLink>
         <RouterLink :class="{ 'is-active': isCookbookTabActive('discussion') }" :aria-current="isCookbookTabActive('discussion') ? 'page' : undefined" :to="{ name: 'cookbook-messages', params: { id: cookbookId } }">Discussion</RouterLink>
         <RouterLink :class="{ 'is-active': isCookbookTabActive('members') }" :aria-current="isCookbookTabActive('members') ? 'page' : undefined" :to="{ name: 'cookbook-members', params: { id: cookbookId } }">Membres</RouterLink>
-        <RouterLink :class="{ 'is-active': isCookbookTabActive('settings') }" :aria-current="isCookbookTabActive('settings') ? 'page' : undefined" :to="{ name: 'cookbook', params: { id: cookbookId }, hash: '#cookbook-settings' }">Paramètres</RouterLink>
+        <RouterLink :class="{ 'is-active': isCookbookTabActive('settings') }" :aria-current="isCookbookTabActive('settings') ? 'page' : undefined" :to="{ name: 'cookbook-settings', params: { id: cookbookId } }">Paramètres</RouterLink>
       </nav>
       <nav v-if="isSettingsContext" class="context-navigation" aria-label="Navigation des paramètres">
         <RouterLink :to="{ name: 'profile' }">Profil</RouterLink><RouterLink :to="{ name: 'profile-food-preferences' }">Préférences alimentaires</RouterLink><RouterLink :to="{ name: 'profile-usage-preferences' }">Préférences d’utilisation</RouterLink><RouterLink :to="{ name: 'security' }">Sécurité</RouterLink>

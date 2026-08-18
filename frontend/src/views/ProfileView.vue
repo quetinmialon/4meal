@@ -444,7 +444,8 @@ h1 { margin: 0 0 0.75rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; }
 .settings-nav { position: sticky; top: 1rem; display: grid; gap: .25rem; padding: .75rem; border: 1px solid rgba(86, 112, 79, 0.18); border-radius: 1rem; background: #f7fbf3; }
 .settings-nav-title { margin: .35rem .65rem .55rem; color: #6b7b57; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .settings-nav a { padding: .7rem .75rem; border-radius: .65rem; color: #395330; font-weight: 700; line-height: 1.3; text-decoration: none; }
-.settings-nav a:hover, .settings-nav a:focus-visible, .settings-nav a[aria-current='page'] { background: #e6efdc; outline: none; }
+.settings-nav a:hover, .settings-nav a[aria-current='page'] { background: #e6efdc; }
+.settings-nav a:focus-visible { background: #e6efdc; outline: 3px solid rgba(116, 144, 88, .45); outline-offset: 2px; }
 .settings-content { min-width: 0; }
 .profile-form { margin-top: 1.75rem; }
 fieldset { display: grid; gap: 1.25rem; margin: 0; padding: 0; border: 0; }
