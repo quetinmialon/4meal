@@ -16,9 +16,13 @@ class RemoveCookbookRecipeController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        Gate::forUser($user)->authorize('update', $cookbook);
+        Gate::forUser($user)->authorize('remove_recipes', $cookbook);
 
-        $cookbook->linkedRecipes()->detach($recipe->getKey());
+        if ((int) $recipe->cookbook_id === (int) $cookbook->getKey()) {
+            $recipe->delete();
+        } else {
+            $cookbook->linkedRecipes()->detach($recipe->getKey());
+        }
 
         return response()->noContent();
     }

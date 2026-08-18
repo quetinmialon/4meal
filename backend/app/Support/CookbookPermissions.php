@@ -18,6 +18,8 @@ final class CookbookPermissions
 
     public const UPDATE = 'update';
 
+    public const REMOVE_RECIPES = 'remove_recipes';
+
     public const MANAGE_MEMBERS = 'manage_members';
 
     public const INVITE_MEMBERS = 'invite_members';
@@ -43,8 +45,8 @@ final class CookbookPermissions
 
     /** @var array<string, list<string>> */
     private const MATRIX = [
-        self::OWNER => [self::VIEW, self::UPDATE, self::MANAGE_MEMBERS, self::INVITE_MEMBERS, self::LEAVE, self::REMOVE_MEMBERS, self::DELETE, self::COMMENT, self::MODERATE_MESSAGES],
-        self::EDITOR => [self::VIEW, self::UPDATE, self::INVITE_MEMBERS, self::LEAVE, self::COMMENT],
+        self::OWNER => [self::VIEW, self::UPDATE, self::REMOVE_RECIPES, self::MANAGE_MEMBERS, self::INVITE_MEMBERS, self::LEAVE, self::REMOVE_MEMBERS, self::DELETE, self::COMMENT, self::MODERATE_MESSAGES],
+        self::EDITOR => [self::VIEW, self::UPDATE, self::REMOVE_RECIPES, self::INVITE_MEMBERS, self::LEAVE, self::COMMENT],
         self::READER => [self::VIEW, self::LEAVE],
         self::COMMENTER => [self::VIEW, self::LEAVE, self::COMMENT],
         self::MODERATOR => [self::VIEW, self::LEAVE, self::COMMENT, self::MODERATE_MESSAGES],

@@ -23,6 +23,11 @@ class CookbookPolicy
         return $this->hasPermission($user, $cookbook, CookbookPermissions::UPDATE);
     }
 
+    public function remove_recipes(User $user, Cookbook $cookbook): bool
+    {
+        return $this->hasPermission($user, $cookbook, CookbookPermissions::REMOVE_RECIPES);
+    }
+
     public function manage_members(User $user, Cookbook $cookbook): bool
     {
         return $this->hasPermission($user, $cookbook, CookbookPermissions::MANAGE_MEMBERS);

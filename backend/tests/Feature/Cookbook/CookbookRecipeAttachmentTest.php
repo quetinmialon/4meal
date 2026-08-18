@@ -64,3 +64,37 @@ it('removes an existing recipe from a cookbook idempotently', function (): void 
         ->getJson('/api/recipes/'.$recipe->public_id)
         ->assertOk();
 });
+
+it('allows an editor to remove a recipe they did not author from a cookbook', function (): void {
+    $owner = User::factory()->create();
+    $editor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($editor, ['role' => 'editor']);
+    $recipe = Recipe::factory()->create(['user_id' => $owner->id, 'author_id' => $owner->id]);
+    $cookbook->linkedRecipes()->attach($recipe);
+
+    $this->withToken(cookbookRecipeToken($editor))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/recipes/'.$recipe->public_id)
+        ->assertNoContent();
+
+    $this->assertDatabaseMissing('cookbook_recipe', [
+        'cookbook_id' => $cookbook->id,
+        'recipe_id' => $recipe->id,
+    ]);
+});
+
+it('allows an editor to remove a recipe owned directly by a cookbook', function (): void {
+    $owner = User::factory()->create();
+    $editor = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($editor, ['role' => 'editor']);
+    $recipe = Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $owner->id]);
+
+    $this->withToken(cookbookRecipeToken($editor))
+        ->deleteJson('/api/cookbooks/'.$cookbook->public_id.'/recipes/'.$recipe->public_id)
+        ->assertNoContent();
+
+    $this->assertSoftDeleted('recipes', ['id' => $recipe->id]);
+});
