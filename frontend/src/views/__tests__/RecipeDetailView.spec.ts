@@ -86,7 +86,7 @@ describe('RecipeDetailView', () => {
       .mockResolvedValueOnce(commentsUnavailableResponse())
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true, data: [{ id: 'cookbook-id', name: 'Mes desserts' }], meta: { pagination: { current_page: 1, per_page: 15, total: 1, last_page: 1, from: 1, to: 1, has_more_pages: false } } }),
+        json: async () => ({ success: true, data: [{ id: 'cookbook-id', name: 'Mes desserts', member_role: 'editor' }], meta: { pagination: { current_page: 1, per_page: 15, total: 1, last_page: 1, from: 1, to: 1, has_more_pages: false } } }),
       } as Response)
       .mockResolvedValueOnce({ ok: true, status: 204, json: async () => null } as Response);
 
@@ -193,7 +193,7 @@ describe('RecipeDetailView', () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: { id: 'recipe-id', title: 'A supprimer', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
+          data: { id: 'recipe-id', title: 'A supprimer', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: { id: 7, name: 'Jane Doe' }, ingredients: [], steps: [], tags: [] },
         }),
       } as Response)
       .mockResolvedValueOnce(commentsUnavailableResponse())
@@ -201,7 +201,7 @@ describe('RecipeDetailView', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('.delete-button').trigger('click');
+    await wrapper.get('.action-danger').trigger('click');
     expect(wrapper.text()).toContain('Supprimer cette recette ?');
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
@@ -221,7 +221,7 @@ describe('RecipeDetailView', () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: { id: 'recipe-id', title: 'Protegee', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: null, ingredients: [], steps: [], tags: [] },
+          data: { id: 'recipe-id', title: 'Protegee', prep_time_minutes: null, cook_time_minutes: null, servings: null, source: null, author: { id: 7, name: 'Jane Doe' }, ingredients: [], steps: [], tags: [] },
         }),
       } as Response)
       .mockResolvedValueOnce(commentsUnavailableResponse())
@@ -233,7 +233,7 @@ describe('RecipeDetailView', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [testPinia] } });
     await flushPromises();
-    await wrapper.get('.delete-button').trigger('click');
+    await wrapper.get('.action-danger').trigger('click');
     await wrapper.get('.delete-confirmation .delete-button').trigger('click');
     await flushPromises();
 

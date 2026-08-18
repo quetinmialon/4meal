@@ -54,7 +54,9 @@ async function openCookbookPicker(): Promise<void> {
   await nextTick();
   if (secondaryActions.value) {
     secondaryActions.value.open = true;
-    secondaryActions.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (typeof secondaryActions.value.scrollIntoView === 'function') {
+      secondaryActions.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
   if (cookbooks.value.length > 0) return;
   isLoadingCookbooks.value = true;
