@@ -462,6 +462,49 @@ html[data-theme='dark'] textarea:disabled {
   background: var(--color-surface-subtle) !important;
   border-color: var(--color-border) !important;
 }
+@keyframes supmeal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes supmeal-popover-in {
+  from { opacity: 0; transform: translateY(-.25rem) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes supmeal-favorite-pop {
+  0% { transform: scale(1); }
+  55% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Small, functional feedback only: no decorative continuous motion. */
+html .popover-menu,
+html .dropdown-panel,
+html .notification-popover-panel,
+html .planning-modal,
+html .confirm-dialog,
+html .invitation-dialog,
+html .meal-detail {
+  animation: supmeal-popover-in .16s ease-out both;
+}
+html .modal-backdrop,
+html .dialog-backdrop,
+html .invitation-backdrop,
+html .detail-backdrop {
+  animation: supmeal-fade-in .14s ease-out both;
+}
+html .loading,
+html .state-message[role='status'],
+html .success-message,
+html .planning-success {
+  animation: supmeal-fade-in .18s ease-out both;
+}
+html .favorite-button.active {
+  animation: supmeal-favorite-pop .22s ease-out;
+}
+html button:not(:disabled):active,
+html [role='button']:not([aria-disabled='true']):active {
+  transform: translateY(1px);
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 @media (max-width: 38rem) {
   button,
@@ -481,5 +524,29 @@ html[data-theme='dark'] textarea:disabled {
   section,
   article {
     min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html .popover-menu,
+  html .dropdown-panel,
+  html .notification-popover-panel,
+  html .planning-modal,
+  html .confirm-dialog,
+  html .invitation-dialog,
+  html .meal-detail,
+  html .modal-backdrop,
+  html .dialog-backdrop,
+  html .invitation-backdrop,
+  html .detail-backdrop,
+  html .loading,
+  html .state-message[role='status'],
+  html .success-message,
+  html .planning-success,
+  html .favorite-button.active {
+    animation: none !important;
+  }
+  html button:not(:disabled):active,
+  html [role='button']:not([aria-disabled='true']):active {
+    transform: none;
   }
 }

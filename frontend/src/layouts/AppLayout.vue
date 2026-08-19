@@ -206,7 +206,7 @@ onBeforeUnmount(() => {
             </button>
             <div v-if="isUserMenuOpen" id="user-menu" class="popover-menu user-popover" role="menu" aria-label="Menu utilisateur">
               <RouterLink role="menuitem" :to="{ name: 'profile' }" @click="closeUserMenu(false)">Profil</RouterLink>
-              <RouterLink role="menuitem" :to="{ name: 'settings' }" @click="closeUserMenu(false)">Paramètres</RouterLink>
+              <RouterLink role="menuitem" :to="{ name: 'security' }" @click="closeUserMenu(false)">Paramètres</RouterLink>
               <button role="menuitem" type="button" @click="logout"><LogOut :size="17" aria-hidden="true" /><span>Déconnexion</span></button>
             </div>
           </div>

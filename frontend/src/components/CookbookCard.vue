@@ -51,7 +51,7 @@ const description = computed(() => {
 .cookbook-card-owner > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cookbook-card-role { color: var(--color-primary); font-size: .75rem; font-weight: 700; text-transform: capitalize; max-width:fit-content; padding-inline: .25rem .5rem; border-radius: var(--radius-sm); background: var(--color-primary-subtle); }
 .cookbook-card h3 { margin: .15rem 0 0; color: var(--color-text); font-size: 1.15rem; line-height: 1.2; }
-.cookbook-card-description { display: -webkit-box; margin: 0; overflow: hidden; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+.cookbook-card-description { display: -webkit-box; margin: 0; overflow: hidden; color: var(--color-text-secondary); font-size: .875rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; }
 .cookbook-card-members { display: flex; flex-wrap: wrap; max-height: 3.5rem; gap: .25rem; margin-top: auto; overflow: hidden; padding-top: .35rem; }
 .cookbook-member-avatar { display: inline-flex; border: 2px solid var(--color-surface); border-radius: 50%; }
 .cookbook-member-avatar + .cookbook-member-avatar { margin-left: -.35rem; }
