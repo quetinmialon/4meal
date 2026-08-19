@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Cookbook;
 use App\Models\Recipe;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,6 +20,10 @@ class RecipeResource extends JsonResource
     {
         /** @var Recipe $recipe */
         $recipe = $this->resource;
+        /** @var Cookbook|null $cookbook */
+        $cookbook = $recipe->relationLoaded('cookbook')
+            ? $recipe->getRelation('cookbook')
+            : null;
 
         return [
             'id' => $recipe->public_id,
@@ -38,6 +43,10 @@ class RecipeResource extends JsonResource
             'difficulty' => $recipe->difficulty,
             'notes' => $recipe->notes,
             'source' => $recipe->source,
+            'cookbook_id' => $this->whenLoaded(
+                'cookbook',
+                fn (): ?string => $cookbook?->public_id,
+            ),
             'is_favorite' => (bool) ($recipe->getAttribute('is_favorite') ?? false),
             'personal_rating' => $recipe->getAttribute('personal_rating') === null
                 ? null

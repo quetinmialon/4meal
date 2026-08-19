@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import EmptyState from '@/components/EmptyState.vue';
@@ -8,12 +8,14 @@ import CookbookMessageComposer from '@/components/CookbookMessageComposer.vue';
 import CookbookMessageItem from '@/components/CookbookMessageItem.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRealtimeStore } from '@/stores/realtime';
 import { fetchCookbook, fetchCookbookMessages, type Cookbook, type CookbookMessage, type CursorPagination } from '@/utils/cookbooks';
 
 const route = useRoute();
 const authStore = useAuthStore();
+const realtimeStore = useRealtimeStore();
 const cookbook = ref<Cookbook | null>(null);
-const messages = ref<CookbookMessage[]>([]);
+const messages = computed(() => realtimeStore.messagesByCookbook[String(route.params.id)] ?? []);
 const pagination = ref<CursorPagination | null>(null);
 const errorMessage = ref('');
 const loading = ref(true);
@@ -23,7 +25,7 @@ async function loadMessages(cursor: string | null = null): Promise<void> {
   errorMessage.value = '';
   const result = await fetchCookbookMessages(String(route.params.id), authStore.tokenType, authStore.accessToken, cursor);
   if (result.ok) {
-    messages.value = result.messages;
+    realtimeStore.setMessages(String(route.params.id), result.messages);
     pagination.value = result.pagination;
   } else {
     errorMessage.value = result.message;
@@ -49,11 +51,10 @@ function retry(): void {
 }
 
 function replaceMessage(message: CookbookMessage): void {
-  const index = messages.value.findIndex((item) => item.id === message.id);
-  if (index !== -1) messages.value[index] = message;
+  realtimeStore.upsertMessage(String(route.params.id), message);
 }
 
-onMounted(() => { void loadPage(); });
+watch(() => String(route.params.id), () => { void loadPage(); }, { immediate: true });
 </script>
 
 <template>

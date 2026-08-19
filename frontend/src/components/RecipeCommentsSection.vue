@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { addRecipeCommentReaction, createRecipeComment, deleteRecipeComment, fetchRecipeComments, removeRecipeCommentReaction, updateRecipeComment, type RecipeComment, type RecipeCommentReaction, type RecipePagination } from '@/utils/recipes';
+import { pinia } from '@/pinia';
+import { useRealtimeStore } from '@/stores/realtime';
 
 const props = withDefaults(defineProps<{ recipeId: string; tokenType: string; accessToken: string; currentUserId?: number | null }>(), {
   currentUserId: null,
 });
+const realtimeStore = useRealtimeStore(pinia);
 const comments = ref<RecipeComment[]>([]);
 const pagination = ref<RecipePagination | null>(null);
 const content = ref('');
@@ -52,6 +55,7 @@ async function loadComments(page = 1): Promise<void> {
   const result = await fetchRecipeComments(props.recipeId, props.tokenType, props.accessToken, page);
   if (result.ok) {
     comments.value = result.comments;
+    realtimeStore.setComments(props.recipeId, result.comments);
     pagination.value = result.pagination;
   } else {
     errorMessage.value = result.message;
@@ -153,6 +157,7 @@ async function saveEdit(comment: RecipeComment): Promise<void> {
   if (result.ok) {
     const index = comments.value.findIndex((item) => item.id === comment.id);
     if (index !== -1) comments.value[index] = result.comment;
+    realtimeStore.setComments(props.recipeId, comments.value);
     cancelEditing();
   } else {
     editingError.value = result.fieldError ?? result.message;
@@ -178,6 +183,7 @@ async function confirmDelete(comment: RecipeComment): Promise<void> {
   const result = await deleteRecipeComment(props.recipeId, comment.id, props.tokenType, props.accessToken);
   if (result.ok) {
     comments.value = comments.value.filter((item) => item.id !== comment.id);
+    realtimeStore.setComments(props.recipeId, comments.value);
     deletingId.value = null;
     if (pagination.value) pagination.value = { ...pagination.value, total: Math.max(0, pagination.value.total - 1) };
   } else {
@@ -211,6 +217,13 @@ async function toggleReaction(comment: RecipeComment, emoji: string): Promise<vo
   }
   reactingKey.value = null;
 }
+
+watch(
+  () => realtimeStore.commentsByRecipe[props.recipeId],
+  (nextComments) => {
+    if (nextComments !== undefined) comments.value = nextComments;
+  },
+);
 
 onMounted(() => { void loadComments(); });
 </script>

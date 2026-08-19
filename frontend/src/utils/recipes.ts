@@ -59,6 +59,7 @@ export type RecipeTag = {
 
 export type Recipe = {
   id: string;
+  cookbook_id?: string | null;
   title: string;
   name?: string;
   slug: string | null;

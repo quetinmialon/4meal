@@ -19,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(
         __DIR__.'/../routes/channels.php',
-        ['middleware' => [AuthenticateWithJwt::class]],
+        [
+            'prefix' => 'api',
+            'middleware' => [AuthenticateWithJwt::class],
+        ],
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AssignCorrelationId::class);
