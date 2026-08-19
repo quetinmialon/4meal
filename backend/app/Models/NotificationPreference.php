@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\NotificationChannel;
 use App\Enums\NotificationType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class NotificationPreference extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['user_id', 'type', 'channel'];
 
     protected function casts(): array

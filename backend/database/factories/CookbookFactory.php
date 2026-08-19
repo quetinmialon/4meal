@@ -21,4 +21,9 @@ class CookbookFactory extends Factory
             'description' => $this->faker->optional()->paragraph(),
         ];
     }
+
+    public function withOwner(User $owner): static
+    {
+        return $this->state(['owner_id' => $owner->getKey()]);
+    }
 }
