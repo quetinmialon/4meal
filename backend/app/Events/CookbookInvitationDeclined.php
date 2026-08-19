@@ -47,7 +47,15 @@ final class CookbookInvitationDeclined implements ShouldBroadcast, ShouldDispatc
     /** @return array{invitation: array<string, mixed>} */
     public function broadcastWith(): array
     {
+        return ['invitation' => $this->notificationData()['invitation']];
+    }
+
+    /** @return array{type: string, status: string, invitation: array<string, mixed>} */
+    public function notificationData(): array
+    {
         return [
+            'type' => 'cookbook_invitation',
+            'status' => 'declined',
             'invitation' => [
                 'id' => $this->invitationId,
                 'status' => 'declined',
