@@ -13,7 +13,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
 
-final class RecipeCommentCreated implements ShouldBroadcast, ShouldDispatchAfterCommit
+final class RecipeCommentUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, SerializesModels;
 
@@ -47,7 +47,7 @@ final class RecipeCommentCreated implements ShouldBroadcast, ShouldDispatchAfter
 
     public function broadcastAs(): string
     {
-        return 'recipe.comment.created';
+        return 'recipe.comment.updated';
     }
 
     /** @return array{recipe: array{id: string}, comment: array<string, mixed>} */

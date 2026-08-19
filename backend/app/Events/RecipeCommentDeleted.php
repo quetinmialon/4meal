@@ -2,7 +2,6 @@
 
 namespace App\Events;
 
-use App\Http\Resources\RecipeCommentResource;
 use App\Models\Cookbook;
 use App\Models\Recipe;
 use App\Models\RecipeComment;
@@ -10,26 +9,15 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Http\Request;
 use Illuminate\Queue\SerializesModels;
 
-final class RecipeCommentCreated implements ShouldBroadcast, ShouldDispatchAfterCommit
+final class RecipeCommentDeleted implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
     use Dispatchable, SerializesModels;
 
-    /** @var array<string, mixed>|null */
-    private readonly ?array $payload;
-
     public function __construct(public readonly RecipeComment $comment)
     {
-        $comment->loadMissing('recipe.cookbook', 'user', 'parent', 'reactions');
-        /** @var Recipe $recipe */
-        $recipe = $comment->recipe;
-        /** @var Cookbook|null $cookbook */
-        $cookbook = $recipe->cookbook;
-        $this->payload = $cookbook === null
-            ? null
-            : RecipeCommentResource::make($comment)->resolve(Request::create('/'));
+        $comment->loadMissing('recipe.cookbook');
     }
 
     /** @return list<PrivateChannel> */
@@ -47,10 +35,10 @@ final class RecipeCommentCreated implements ShouldBroadcast, ShouldDispatchAfter
 
     public function broadcastAs(): string
     {
-        return 'recipe.comment.created';
+        return 'recipe.comment.deleted';
     }
 
-    /** @return array{recipe: array{id: string}, comment: array<string, mixed>} */
+    /** @return array{recipe: array{id: string}, comment: array{id: string}} */
     public function broadcastWith(): array
     {
         /** @var Recipe $recipe */
@@ -58,7 +46,7 @@ final class RecipeCommentCreated implements ShouldBroadcast, ShouldDispatchAfter
 
         return [
             'recipe' => ['id' => $recipe->public_id],
-            'comment' => $this->payload ?? [],
+            'comment' => ['id' => $this->comment->public_id],
         ];
     }
 }
