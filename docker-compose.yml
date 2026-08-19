@@ -28,6 +28,14 @@ services:
       SESSION_DRIVER: ${BACKEND_SESSION_DRIVER:-file}
       CACHE_STORE: ${BACKEND_CACHE_STORE:-file}
       QUEUE_CONNECTION: ${BACKEND_QUEUE_CONNECTION:-sync}
+      BROADCAST_CONNECTION: ${BACKEND_BROADCAST_CONNECTION:-reverb}
+      REVERB_APP_ID: ${REVERB_APP_ID:-4meal-local}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-4meal-local-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: ${REVERB_HOST:-reverb}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REVERB_ALLOWED_ORIGINS: ${REVERB_ALLOWED_ORIGINS:-http://localhost:8080}
       MAIL_MAILER: smtp
       MAIL_SCHEME: ""
       MAIL_HOST: mailpit
@@ -51,6 +59,37 @@ services:
       - backend_vendor:/var/www/html/vendor
       - backend_storage:/var/www/html/storage
       - cookbook_images:/var/www/html/storage/app/public/cookbooks
+    restart: unless-stopped
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    environment:
+      APP_NAME: ${BACKEND_APP_NAME:-4meal Backend}
+      APP_ENV: ${BACKEND_APP_ENV:-local}
+      APP_KEY: ${BACKEND_APP_KEY:-base64:8CIYh4owmlLz9EJfpbkoC15zHfMkgfSr2FX2Dh6OW40=}
+      APP_DEBUG: ${BACKEND_APP_DEBUG:-true}
+      BROADCAST_CONNECTION: ${BACKEND_BROADCAST_CONNECTION:-reverb}
+      REVERB_APP_ID: ${REVERB_APP_ID:-4meal-local}
+      REVERB_APP_KEY: ${REVERB_APP_KEY:-4meal-local-key}
+      REVERB_APP_SECRET: ${REVERB_APP_SECRET:-}
+      REVERB_HOST: ${REVERB_HOST:-reverb}
+      REVERB_PORT: ${REVERB_PORT:-8080}
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REVERB_SERVER_HOST: ${REVERB_SERVER_HOST:-0.0.0.0}
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8080}
+      REVERB_ALLOWED_ORIGINS: ${REVERB_ALLOWED_ORIGINS:-http://localhost:8080}
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "8080"
+    volumes:
+      - ./backend:/var/www/html
+      - ./.env:/var/www/html/.env:ro
+      - backend_vendor:/var/www/html/vendor
     restart: unless-stopped
 
   mailpit:

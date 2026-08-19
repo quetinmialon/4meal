@@ -19,6 +19,7 @@ RUN apt-get update \
         libpq-dev \
         unzip \
     && docker-php-ext-install \
+        pcntl \
         pdo_pgsql \
     && rm -rf /var/lib/apt/lists/*
 
