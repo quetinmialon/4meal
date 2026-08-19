@@ -73,7 +73,12 @@ Le fichier `docker-compose.yml` lit les variables racine depuis un `.env` à la 
 | `BACKEND_QUEUE_CONNECTION` | driver de queue backend | `sync` |
 | `BACKEND_LOG_CHANNEL` | canal de logs Laravel | `stack` |
 | `BACKEND_LOG_LEVEL` | niveau de logs Laravel | `debug` |
+| `BACKEND_BROADCAST_CONNECTION` | connexion Laravel Broadcasting | `reverb` |
+| `REVERB_APP_ID` / `REVERB_APP_KEY` | identifiants publics de l'application Reverb | valeurs locales de l'exemple |
+| `REVERB_APP_SECRET` | secret partagé entre Laravel et Reverb | requis, sans valeur par défaut |
+| `REVERB_ALLOWED_ORIGINS` | origines navigateur autorisées par Reverb | `localhost,127.0.0.1` |
 | `FRONTEND_API_BASE_URL` | base URL API côté frontend | `/api` |
+| `FRONTEND_REVERB_HOST` / `FRONTEND_REVERB_PORT` | adresse WebSocket vue par le navigateur | `localhost` / `8080` |
 | `POSTGRES_PORT` | port PostgreSQL exposé vers l'hôte | `5434` |
 | `POSTGRES_DB` | base PostgreSQL | `4meal` |
 | `POSTGRES_USER` | utilisateur PostgreSQL | `4meal` |
@@ -127,8 +132,13 @@ npm run dev
 
 ```bash
 cp .env.docker.example .env
+# Renseigner REVERB_APP_SECRET avec une valeur aléatoire propre à l'environnement :
+php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
 docker compose up -d
 ```
+
+Copiez la valeur générée dans `REVERB_APP_SECRET` avant le démarrage. Le backend
+refuse volontairement de démarrer avec une configuration Reverb incomplète.
 
 `docker compose up` réutilise les images et les conteneurs existants. Les dépendances
 ne sont réinstallées que si `composer.lock` ou `package-lock.json` a changé.
