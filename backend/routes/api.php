@@ -57,6 +57,7 @@ use App\Http\Controllers\Import\PreviewImportController;
 use App\Http\Controllers\Import\PreviewMealieImportController;
 use App\Http\Controllers\Notification\ListNotificationPreferencesController;
 use App\Http\Controllers\Notification\ListNotificationsController;
+use App\Http\Controllers\Notification\MarkAllNotificationsAsReadController;
 use App\Http\Controllers\Notification\MarkNotificationAsReadController;
 use App\Http\Controllers\Notification\UpdateNotificationPreferencesController;
 use App\Http\Controllers\Planning\CreatePlannedMealController;
@@ -169,6 +170,9 @@ Route::middleware([AuthenticateWithJwt::class, RequireVerifiedEmail::class])
 
         Route::get('notifications/preferences', ListNotificationPreferencesController::class)
             ->name('notifications.preferences.index');
+
+        Route::patch('notifications/read-all', MarkAllNotificationsAsReadController::class)
+            ->name('notifications.read-all');
 
         Route::put('notifications/preferences', UpdateNotificationPreferencesController::class)
             ->name('notifications.preferences.update');

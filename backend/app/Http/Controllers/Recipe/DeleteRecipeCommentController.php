@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Recipe;
 
+use App\Events\RecipeCommentDeleted;
 use App\Http\Controllers\Controller;
 use App\Models\Recipe;
 use App\Models\RecipeComment;
@@ -20,6 +21,7 @@ class DeleteRecipeCommentController extends Controller
         $user = $request->user();
         Gate::forUser($user)->authorize('delete', $comment);
         $comment->delete();
+        event(new RecipeCommentDeleted($comment));
 
         return response()->noContent();
     }

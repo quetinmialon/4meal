@@ -96,7 +96,9 @@ it('paginates accessible recipes', function (): void {
 
 it('returns a recipe detail with all requested relations and its author', function (): void {
     $user = User::factory()->create(['password' => 'password123']);
-    $recipe = Recipe::factory()->create(['user_id' => $user->id, 'author_id' => $user->id]);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $user->id]);
+    $cookbook->members()->attach($user, ['role' => 'owner']);
+    $recipe = Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $user->id]);
     $recipe->ingredients()->create(['position' => 1, 'name' => 'Farine']);
     $recipe->steps()->create(['position' => 1, 'instruction' => 'Mélanger.']);
     $tag = $user->tags()->create(['name' => 'Dessert', 'slug' => 'dessert']);
@@ -106,6 +108,7 @@ it('returns a recipe detail with all requested relations and its author', functi
         ->getJson('/api/recipes/'.$recipe->public_id)
         ->assertOk()
         ->assertJsonPath('data.id', $recipe->public_id)
+        ->assertJsonPath('data.cookbook_id', $cookbook->public_id)
         ->assertJsonPath('data.author.id', $user->id)
         ->assertJsonCount(1, 'data.ingredients')
         ->assertJsonCount(1, 'data.steps')

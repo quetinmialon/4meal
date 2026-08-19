@@ -135,6 +135,11 @@ class User extends Authenticatable
         return $this->hasMany(NotificationPreference::class);
     }
 
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'user.'.(string) $this->getKey();
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(

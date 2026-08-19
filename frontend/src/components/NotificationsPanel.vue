@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { Bell } from '@lucide/vue';
 
-import { fetchNotifications, markNotificationAsRead, type AppNotification } from '@/utils/notifications';
+import { fetchNotifications, markAllNotificationsAsRead, markNotificationAsRead, type AppNotification } from '@/utils/notifications';
+import { pinia } from '@/pinia';
+import { useRealtimeStore } from '@/stores/realtime';
 
 const props = defineProps<{
   tokenType: string;
@@ -12,8 +14,9 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const notifications = ref<AppNotification[]>([]);
-const unreadCount = ref(0);
+const realtimeStore = useRealtimeStore(pinia);
+const notifications = computed(() => realtimeStore.notifications);
+const unreadCount = computed(() => realtimeStore.unreadCount);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const markingId = ref<string | null>(null);
@@ -26,8 +29,7 @@ async function loadNotifications(): Promise<void> {
   errorMessage.value = '';
   const result = await fetchNotifications(props.tokenType, props.accessToken);
   if (result.ok) {
-    notifications.value = result.notifications;
-    unreadCount.value = result.unreadCount;
+    realtimeStore.setNotifications(result.notifications, result.unreadCount);
   } else {
     errorMessage.value = result.message;
   }
@@ -35,6 +37,7 @@ async function loadNotifications(): Promise<void> {
 }
 
 function notificationTitle(notification: AppNotification): string {
+  if (notification.type === 'cookbook_invitation') return notification.data.status === 'pending' ? 'Nouvelle invitation à un cookbook' : `Invitation ${notification.data.status === 'accepted' ? 'acceptée' : 'refusée'}`;
   if (notification.type === 'cookbook_message') return `${notification.data.sender.name} a envoyé un message`;
   return notification.type === 'recipe_comment_reply'
     ? `${notification.data.sender.name} a répondu à votre commentaire`
@@ -42,12 +45,14 @@ function notificationTitle(notification: AppNotification): string {
 }
 
 function notificationContext(notification: AppNotification): string {
+  if (notification.type === 'cookbook_invitation') return notification.data.invitation.cookbook.name;
   return notification.type === 'cookbook_message'
     ? `${notification.data.cookbook.name} · ${notification.data.message.preview}`
     : `${notification.data.recipe.title} · ${notification.data.comment.preview}`;
 }
 
 function notificationTypeLabel(notification: AppNotification): string {
+  if (notification.type === 'cookbook_invitation') return 'Invitation cookbook';
   if (notification.type === 'cookbook_message') return 'Message de cookbook';
   return notification.type === 'recipe_comment_reply' ? 'Réponse à un commentaire' : 'Commentaire sur une recette';
 }
@@ -72,7 +77,8 @@ function handleKeydown(event: KeyboardEvent): void {
   if (props.compact && event.key === 'Escape' && isPopoverOpen.value) closePopover();
 }
 
-function notificationTarget(notification: AppNotification): { name: string; params: { id: string } } {
+function notificationTarget(notification: AppNotification): { name: string; params?: { id: string } } {
+  if (notification.type === 'cookbook_invitation') return { name: 'dashboard' };
   return notification.type === 'cookbook_message'
     ? { name: 'cookbook-messages', params: { id: notification.data.cookbook.id } }
     : { name: 'recipe-detail', params: { id: notification.data.recipe.id } };
@@ -83,14 +89,28 @@ async function openNotification(notification: AppNotification): Promise<void> {
     markingId.value = notification.id;
     const result = await markNotificationAsRead(notification.id, props.tokenType, props.accessToken);
     if (result.ok) {
-      notification.read_at = result.notification.read_at;
-      unreadCount.value = Math.max(0, unreadCount.value - 1);
+      realtimeStore.upsertNotification({ ...notification, read_at: result.notification.read_at });
     }
     markingId.value = null;
   }
 
   closePopover();
   await router.push(notificationTarget(notification));
+}
+
+async function markAllAsRead(): Promise<void> {
+  if (unreadCount.value === 0) return;
+  markingId.value = 'all';
+  const result = await markAllNotificationsAsRead(props.tokenType, props.accessToken);
+  if (result.ok) {
+    realtimeStore.setNotifications(
+      notifications.value.map((notification) => ({ ...notification, read_at: notification.read_at ?? result.readAt })),
+      0,
+    );
+  } else {
+    errorMessage.value = result.message;
+  }
+  markingId.value = null;
 }
 
 function refreshOnVisibility(): void {
@@ -122,6 +142,7 @@ onBeforeUnmount(() => {
       <span v-if="unreadCount > 0" class="notification-badge" aria-label="notifications non lues">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
     </button>
     <div v-if="isPopoverOpen" id="notifications-popover" class="notification-popover-panel" role="dialog" aria-labelledby="notifications-popover-title">
+      <button v-if="unreadCount > 0" type="button" class="mark-all-button" :disabled="markingId === 'all'" @click="markAllAsRead">Tout lire</button>
       <div class="popover-heading"><div><p class="kicker">Activité</p><h3 id="notifications-popover-title">Notifications</h3></div><span v-if="unreadCount > 0" class="popover-unread-count">{{ unreadCount }} non lue<span v-if="unreadCount > 1">s</span></span></div>
       <p v-if="isLoading" class="loading" role="status">Chargement des notifications...</p>
       <p v-else-if="errorMessage" class="error-summary" role="alert">{{ errorMessage }}</p>
@@ -136,6 +157,7 @@ onBeforeUnmount(() => {
   </div>
   <section v-else class="notifications-section" aria-labelledby="notifications-title">
     <div class="section-heading">
+      <button v-if="unreadCount > 0" type="button" class="mark-all-button" :disabled="markingId === 'all'" @click="markAllAsRead">Tout marquer comme lu</button>
       <div>
         <p class="kicker">Activite</p>
         <h3 id="notifications-title">Notifications</h3>
@@ -186,6 +208,9 @@ h3 { margin: 0; font-size: 1.5rem; }
 .notification-item small, .notification-item time { margin-top: .25rem; color: #50634d; }
 .notification-copy { min-width: 0; }.notification-copy strong, .notification-copy small { overflow: hidden; text-overflow: ellipsis; }.notification-type { color: #395330 !important; font-size: .78rem; font-weight: 700; }.notification-copy time { font-size: .8rem; }
 .notification-item time { font-size: .8rem; }
+.mark-all-button { padding: .35rem .55rem; border: 1px solid var(--app-border, rgba(86,112,79,.3)); border-radius: .45rem; background: transparent; color: var(--app-text, #243127); font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.mark-all-button:hover, .mark-all-button:focus-visible { background: var(--app-surface-subtle, #edf4e8); }
+.mark-all-button:disabled { cursor: wait; opacity: .55; }
 .unread-label { flex: 0 0 auto; color: #395330; font-size: .8rem; font-weight: 700; }
 .loading, .error-summary, .empty-state { margin-top: 1rem; }
 .error-summary { color: #8f1e1e; }

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 
 import { apiFetch } from '@/utils/api';
+import { useRealtimeStore } from '@/stores/realtime';
 import { applyUserTheme, type ThemeMode, type ThemePreference } from '@/utils/theme';
 
 const AUTH_STORAGE_KEY = '4meal.auth.session';
@@ -346,6 +347,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     clearSession(): void {
+      useRealtimeStore().disconnect();
       this.accessToken = '';
       this.tokenType = '';
       this.expiresIn = 0;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import AddToPlanningModal from '@/components/AddToPlanningModal.vue';
@@ -8,12 +8,14 @@ import RecipeCommentsSection from '@/components/RecipeCommentsSection.vue';
 import RecipeFavoriteButton from '@/components/RecipeFavoriteButton.vue';
 import RecipeRating from '@/components/RecipeRating.vue';
 import { useAuthStore } from '@/stores/auth';
+import { useRealtimeStore } from '@/stores/realtime';
 import { addRecipeToCookbook, fetchCookbooks, type Cookbook } from '@/utils/cookbooks';
 import { deleteRecipe, duplicateRecipe, fetchRecipe, type Recipe } from '@/utils/recipes';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const realtimeStore = useRealtimeStore();
 const recipe = ref<Recipe | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -33,6 +35,7 @@ const isDuplicating = ref(false);
 const duplicateError = ref('');
 const isPlanningModalVisible = ref(false);
 const planningSuccessMessage = ref('');
+let subscribedRecipeCookbookId: string | null = null;
 const isAuthor = computed(() => recipe.value?.author?.id === authStore.user?.id);
 const editableCookbooks = computed(() => cookbooks.value.filter((item) => item.member_role === 'owner' || item.member_role === 'editor'));
 const secondaryActions = ref<HTMLDetailsElement | null>(null);
@@ -114,8 +117,17 @@ async function loadRecipe(): Promise<void> {
   isLoading.value = true;
   errorMessage.value = '';
   const result = await fetchRecipe(String(route.params.id), authStore.tokenType, authStore.accessToken);
-  if (result.ok) recipe.value = result.recipe;
-  else errorMessage.value = result.message;
+  if (result.ok) {
+    recipe.value = result.recipe;
+    const nextCookbookId = result.recipe.cookbook_id ?? null;
+    if (subscribedRecipeCookbookId !== null && subscribedRecipeCookbookId !== nextCookbookId) {
+      realtimeStore.unsubscribeCookbook(subscribedRecipeCookbookId);
+    }
+    subscribedRecipeCookbookId = nextCookbookId;
+    if (nextCookbookId !== null) realtimeStore.subscribeCookbook(nextCookbookId);
+  } else {
+    errorMessage.value = result.message;
+  }
   isLoading.value = false;
 }
 
@@ -139,7 +151,10 @@ async function confirmDelete(): Promise<void> {
   isDeleting.value = false;
 }
 
-onMounted(() => { void loadRecipe(); });
+watch(() => String(route.params.id), () => { void loadRecipe(); }, { immediate: true });
+onBeforeUnmount(() => {
+  if (subscribedRecipeCookbookId !== null) realtimeStore.unsubscribeCookbook(subscribedRecipeCookbookId);
+});
 </script>
 
 <template>

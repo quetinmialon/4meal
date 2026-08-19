@@ -26,7 +26,24 @@ export type RecipeCommentNotification = BaseNotification & {
   };
 };
 
-export type AppNotification = MessageNotification | RecipeCommentNotification;
+export type CookbookInvitationNotification = BaseNotification & {
+  type: 'cookbook_invitation';
+  data: {
+    type: 'cookbook_invitation';
+    status: 'pending' | 'accepted' | 'declined';
+    invitation: {
+      id: number;
+      role?: string;
+      expires_at?: string;
+      cookbook: { id: string; name: string };
+      inviter?: { id: number; name: string };
+      member?: { id: number; role: string };
+      declined_by?: { id: number; name: string };
+    };
+  };
+};
+
+export type AppNotification = MessageNotification | RecipeCommentNotification | CookbookInvitationNotification;
 
 type NotificationsPayload = {
   success: true;
@@ -47,6 +64,10 @@ export type MarkNotificationResult =
   | { ok: true; notification: AppNotification }
   | { ok: false; message: string };
 
+export type MarkAllNotificationsResult =
+  | { ok: true; markedCount: number; readAt: string | null }
+  | { ok: false; message: string };
+
 function authHeaders(tokenType: string, accessToken: string): HeadersInit {
   return { Accept: 'application/json', Authorization: `${tokenType} ${accessToken}` };
 }
@@ -58,7 +79,8 @@ function errorMessage(payload: ApiErrorPayload | null, fallback: string): string
 function isSupportedNotification(notification: AppNotification): boolean {
   return notification.type === 'cookbook_message'
     || notification.type === 'recipe_comment'
-    || notification.type === 'recipe_comment_reply';
+    || notification.type === 'recipe_comment_reply'
+    || notification.type === 'cookbook_invitation';
 }
 
 export async function fetchNotifications(tokenType: string, accessToken: string): Promise<NotificationsResult> {
@@ -95,6 +117,34 @@ export async function markNotificationAsRead(
     if (response.ok && payload?.success === true) return { ok: true, notification: payload.data };
 
     return { ok: false, message: errorMessage(payload?.success === false ? payload : null, 'Impossible de marquer la notification comme lue.') };
+  } catch {
+    return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
+  }
+}
+
+export async function markAllNotificationsAsRead(
+  tokenType: string,
+  accessToken: string,
+): Promise<MarkAllNotificationsResult> {
+  try {
+    const response = await apiFetch('/api/notifications/read-all', {
+      method: 'PATCH',
+      headers: authHeaders(tokenType, accessToken),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { success: true; data?: { marked_count?: number; read_at?: string | null } }
+      | ApiErrorPayload
+      | null;
+
+    if (response.ok && payload?.success === true) {
+      return {
+        ok: true,
+        markedCount: payload.data?.marked_count ?? 0,
+        readAt: payload.data?.read_at ?? new Date().toISOString(),
+      };
+    }
+
+    return { ok: false, message: errorMessage(payload?.success === false ? payload : null, 'Impossible de marquer les notifications comme lues.') };
   } catch {
     return { ok: false, message: 'Impossible de joindre le serveur. Reessayez dans un instant.' };
   }

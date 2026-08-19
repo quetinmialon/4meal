@@ -13,7 +13,8 @@ const app = createApp(App);
 
 app.use(pinia);
 
-await useAuthStore(pinia).restoreSession();
+const authStore = useAuthStore(pinia);
+await authStore.restoreSession();
 
 app.use(router);
 await router.isReady();

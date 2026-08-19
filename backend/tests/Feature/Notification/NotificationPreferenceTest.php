@@ -29,7 +29,7 @@ it('lists both-channel defaults and updates notification preferences by type', f
         ->getJson('/api/notifications/preferences')
         ->assertOk()
         ->assertJsonPath('data.0.channel', 'both')
-        ->assertJsonCount(3, 'data');
+        ->assertJsonCount(4, 'data');
 
     $this->withToken($token)
         ->putJson('/api/notifications/preferences', [

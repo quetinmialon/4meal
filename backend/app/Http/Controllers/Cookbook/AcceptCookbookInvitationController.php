@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Cookbook;
 
+use App\Events\CookbookInvitationAccepted;
 use App\Models\Cookbook;
 use App\Services\Cookbook\CookbookInvitationService;
 use App\Support\ApiResponse;
@@ -14,6 +15,7 @@ class AcceptCookbookInvitationController
     public function __invoke(Request $request, string $token, CookbookInvitationService $service): JsonResponse
     {
         $invitation = $service->accept($token, $request->user());
+        event(new CookbookInvitationAccepted($invitation));
         /** @var CarbonInterface|null $acceptedAt */
         $acceptedAt = $invitation->getAttribute('accepted_at');
         /** @var Cookbook $cookbook */

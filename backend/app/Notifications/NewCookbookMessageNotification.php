@@ -7,6 +7,7 @@ use App\Models\Cookbook;
 use App\Models\CookbookMessage;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -53,6 +54,17 @@ final class NewCookbookMessageNotification extends Notification
 
     /** @return array<string, mixed> */
     public function toDatabase(object $notifiable): array
+    {
+        return $this->notificationData();
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->notificationData());
+    }
+
+    /** @return array<string, mixed> */
+    private function notificationData(): array
     {
         $this->message->loadMissing('cookbook', 'user');
         /** @var Cookbook $cookbook */

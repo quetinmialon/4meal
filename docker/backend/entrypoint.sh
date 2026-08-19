@@ -38,8 +38,15 @@ if [ -z "${JWT_SECRET:-}" ]; then
   export JWT_SECRET="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
 fi
 
+if [ "${BROADCAST_CONNECTION:-null}" = "reverb" ]; then
+  if [ -z "${REVERB_APP_ID:-}" ] || [ -z "${REVERB_APP_KEY:-}" ] || [ -z "${REVERB_APP_SECRET:-}" ]; then
+    echo "REVERB_APP_ID, REVERB_APP_KEY and REVERB_APP_SECRET must be set when BROADCAST_CONNECTION=reverb." >&2
+    exit 1
+  fi
+fi
+
 if [ "${BACKEND_CONFIG_CACHE:-false}" = "true" ]; then
   php artisan config:cache --no-interaction
 fi
 
-exec php artisan serve --host=0.0.0.0 --port=8000
+exec php artisan serve --no-reload --host=0.0.0.0 --port=8000

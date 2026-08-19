@@ -28,7 +28,7 @@ class ShowRecipeController extends Controller
         );
         $recipe->setAttribute('average_rating', $recipe->ratings()->avg('rating') ?? 0);
         $recipe->setAttribute('rating_count', $recipe->ratings()->count());
-        $recipe->load(['ingredients', 'steps', 'tags', 'author']);
+        $recipe->load(['ingredients', 'steps', 'tags', 'author', 'cookbook']);
 
         return ApiResponse::success(
             $request,

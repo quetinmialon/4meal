@@ -94,3 +94,28 @@ it('returns not found when marking another user notification as read', function 
         ->patchJson('/api/notifications/'.$notification->id.'/read')
         ->assertNotFound();
 });
+
+it('marks all notifications as read and resets the unread counter', function (): void {
+    $owner = User::factory()->create(['password' => 'password123']);
+    $member = User::factory()->create(['password' => 'password123']);
+    $cookbook = Cookbook::factory()->create(['owner_id' => $owner->id]);
+    $cookbook->members()->attach($owner, ['role' => 'owner']);
+    $cookbook->members()->attach($member, ['role' => 'commenter']);
+
+    $this->withToken(notificationToken($owner))
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages', ['content' => 'Un'])
+        ->assertCreated();
+    $this->withToken(notificationToken($owner))
+        ->postJson('/api/cookbooks/'.$cookbook->public_id.'/messages', ['content' => 'Deux'])
+        ->assertCreated();
+
+    expect($member->fresh()->unreadNotifications)->toHaveCount(2);
+
+    $this->withToken(notificationToken($member))
+        ->patchJson('/api/notifications/read-all')
+        ->assertOk()
+        ->assertJsonPath('data.marked_count', 2)
+        ->assertJsonPath('data.unread_count', 0);
+
+    expect($member->fresh()->unreadNotifications)->toHaveCount(0);
+});

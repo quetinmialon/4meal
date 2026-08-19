@@ -14,9 +14,9 @@ enum NotificationChannel: string
     {
         return match ($this) {
             self::None => [],
-            self::Web => ['database'],
+            self::Web => ['database', 'broadcast'],
             self::Mail => ['mail'],
-            self::Both => ['database', 'mail'],
+            self::Both => ['database', 'broadcast', 'mail'],
         };
     }
 }

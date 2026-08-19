@@ -7,6 +7,7 @@ use App\Models\Recipe;
 use App\Models\RecipeComment;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -57,6 +58,17 @@ final class RecipeCommentNotification extends Notification
 
     /** @return array<string, mixed> */
     public function toDatabase(object $notifiable): array
+    {
+        return $this->notificationData();
+    }
+
+    public function toBroadcast(object $notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage($this->notificationData());
+    }
+
+    /** @return array<string, mixed> */
+    private function notificationData(): array
     {
         $this->comment->loadMissing('recipe', 'user');
         /** @var Recipe $recipe */
