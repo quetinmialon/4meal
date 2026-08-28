@@ -9,6 +9,91 @@ Structure du monorepo :
 
 Les parcours critiques E2E et leur exécution locale/CI sont documentés dans [`docs/e2e.md`](./docs/e2e.md).
 
+## Workflow migration et demonstration
+
+Le workflow recommande pour obtenir une instance locale fonctionnelle est le
+suivant :
+
+```bash
+cp .env.docker.example .env
+make init
+
+make migrate
+
+make seed
+```
+
+`make migrate` est la commande a utiliser lorsque la base contient deja des
+donnees : elle applique uniquement les migrations qui n'ont pas encore ete
+executees. `make seed` appelle le `DatabaseSeeder`, qui delegue au
+[`DemoSeeder`](./backend/database/seeders/DemoSeeder.php).
+
+Pour repartir d'une base de demonstration propre, utiliser explicitement :
+
+```bash
+make fresh-seed
+```
+
+Cette commande est equivalente a `php artisan migrate:fresh --seed --force` et
+supprime toutes les tables avant de les recreer. Elle est reservee au
+developpement et aux environnements de demonstration ; ne pas l'executer sur
+une base contenant des donnees a conserver.
+
+### Comptes de demonstration
+
+`DemoSeeder` cree notamment les comptes suivants. Ils utilisent tous le mot de
+passe `supmeal-demo-only-change-me` par defaut. Pour le remplacer, definir
+`SUPMEAL_DEMO_PASSWORD` dans `backend/.env` avant le seed. Ces identifiants sont
+strictement reserves au local et ne doivent jamais etre utilises en production.
+
+| Compte | Email | Role principal dans la demonstration |
+| --- | --- | --- |
+| Demo Owner | `demo.owner@supmeal.test` | proprietaire des carnets actifs |
+| Demo Editor | `demo.editor@supmeal.test` | editeur d'un carnet partage |
+| Demo Commenter | `demo.commenter@supmeal.test` | commentaires et reactions |
+| Demo Reader | `demo.reader@supmeal.test` | lecture seule |
+| Demo Empty | `demo.empty@supmeal.test` | utilisateur sans activite, utile pour tester les etats vides |
+
+Le seeder ajoute aussi quinze utilisateurs secondaires, des carnets, recettes,
+tags, favoris, notes, commentaires avec reponses, recherches sauvegardees,
+invitations acceptees/refusees/en attente, comptes OAuth simules,
+notifications, preferences, historique des recettes et repas planifies
+(dont des recurrences).
+
+### Scenario de demonstration
+
+Apres `make fresh-seed`, ouvrir `http://localhost:8080/` et suivre ce parcours
+avec `demo.owner@supmeal.test` :
+
+1. Se connecter et parcourir le tableau de bord, les recettes et la recherche.
+   Tester les filtres par tags, les recettes publiques/privees, les favoris,
+   les notes et l'ouverture d'une recette.
+2. Ouvrir le carnet **Le carnet de Demo Owner**. Parcourir ses recettes, les
+   membres, les messages en temps reel et l'historique d'une recette.
+3. Depuis les membres, consulter les differents roles, puis creer une
+   invitation. La liste des invitations contient deja des invitations en
+   attente, acceptees et refusees.
+4. Ouvrir une recette, ajouter un commentaire puis une reponse, ajouter une
+   reaction, modifier la recette et verifier son historique. Tester aussi le
+   favori et la note.
+5. Aller dans **Planning**, ajouter ou modifier un repas, puis ouvrir la
+   **liste de courses**. Verifier egalement les repas recurrents et le planning
+   du carnet.
+6. Creer une recherche sauvegardee et l'executer depuis **Recherche**. Tester
+   ensuite l'import/export depuis **Donnees** ou les ecrans dedies ; les
+   exemples de contrats sont disponibles dans [`docs/supmeal/examples`](./docs/supmeal/examples).
+7. Ouvrir le panneau de notifications, marquer une notification comme lue,
+   marquer tout comme lu et modifier les preferences.
+8. Dans **Profil**, tester les preferences alimentaires et d'utilisation, le
+   theme, le changement de mot de passe et la gestion des comptes OAuth simules.
+9. Se deconnecter puis se reconnecter avec `demo.editor@supmeal.test`,
+   `demo.commenter@supmeal.test` et `demo.reader@supmeal.test` pour observer
+   respectivement les droits d'edition, de commentaire et de lecture. Enfin,
+   utiliser `demo.empty@supmeal.test` pour verifier les etats vides.
+
+Pour consulter les messages envoyes par les scenarios de verification email ou
+de recuperation de mot de passe, ouvrir Mailpit a `http://localhost:8025/`.
+
 ## CI
 
 Le workflow GitHub Actions est défini dans [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
