@@ -235,3 +235,9 @@ Points d'entrée HTTP :
 - `http://localhost:8080/` : frontend via reverse proxy
 - `http://localhost:8080/api/` : API Laravel via reverse proxy
 - `http://localhost:8080/storage/` : fichiers publics backend
+
+
+### Github
+
+le projet est disponnible au répo suivant : https://github.com/quetinmialon/4meal
+
