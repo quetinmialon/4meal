@@ -17,9 +17,12 @@ use App\Models\SavedSearch;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\File as LocalFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -41,6 +44,9 @@ class DemoSeeder extends Seeder
 
     /** @var Collection<int, User> */
     private Collection $activeUsers;
+
+    /** @var Collection<int, \SplFileInfo>|null */
+    private ?Collection $demoImageFiles = null;
 
     public function run(): void
     {
@@ -104,6 +110,7 @@ class DemoSeeder extends Seeder
             'owner_id' => $data['owner']->id,
             'name' => $data['name'],
             'description' => $data['description'],
+            'image_path' => $this->storeDemoImage('cookbooks'),
             'created_at' => now()->subMonths(random_int(2, 8)),
         ]));
 
@@ -132,6 +139,11 @@ class DemoSeeder extends Seeder
             return $cookbook;
         });
 
+        foreach ($extra as $cookbook) {
+            $cookbook->image_path = $this->storeDemoImage('cookbooks');
+            $cookbook->save();
+        }
+
         return $cookbooks->merge($extra);
     }
 
@@ -156,7 +168,7 @@ class DemoSeeder extends Seeder
         foreach ($this->cookbooks as $cookbookIndex => $cookbook) {
             for ($index = 0; $index < $counts[$cookbookIndex]; $index++) {
                 $author = $cookbook->members->random();
-                $recipe = Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $author->id, 'visibility' => $index % 4 === 0 ? 'public' : 'cookbook', 'created_at' => now()->subDays(random_int(5, 210))]);
+                $recipe = Recipe::factory()->inCookbook($cookbook)->create(['author_id' => $author->id, 'image_path' => $this->storeDemoImage('recipes'), 'visibility' => $index % 4 === 0 ? 'public' : 'cookbook', 'created_at' => now()->subDays(random_int(5, 210))]);
                 $this->addRecipeContent($recipe);
                 $recipe->tags()->attach($tags->random(random_int(2, 5))->pluck('id'));
                 $recipes->push($recipe);
@@ -164,7 +176,7 @@ class DemoSeeder extends Seeder
         }
         for ($index = 0; $index < 20; $index++) {
             $owner = $this->activeUsers->random();
-            $recipe = Recipe::factory()->create(['user_id' => $owner->id, 'author_id' => $owner->id, 'visibility' => $index % 3 === 0 ? 'public' : 'private', 'created_at' => now()->subDays(random_int(5, 180))]);
+            $recipe = Recipe::factory()->create(['user_id' => $owner->id, 'author_id' => $owner->id, 'image_path' => $this->storeDemoImage('recipes'), 'visibility' => $index % 3 === 0 ? 'public' : 'private', 'created_at' => now()->subDays(random_int(5, 180))]);
             $this->addRecipeContent($recipe);
             $recipe->tags()->attach($tags->random(random_int(1, 4))->pluck('id'));
             $recipes->push($recipe);
@@ -181,6 +193,44 @@ class DemoSeeder extends Seeder
         for ($position = 1; $position <= random_int(3, 6); $position++) {
             RecipeStep::factory()->atPosition($position)->create(['recipe_id' => $recipe->id]);
         }
+    }
+
+    private function storeDemoImage(string $directory): ?string
+    {
+        $images = $this->demoImages();
+        if ($images->isEmpty()) {
+            return null;
+        }
+
+        $source = $images->random();
+        $extension = strtolower($source->getExtension());
+        $filename = 'demo-'.Str::uuid().'.'.$extension;
+        $path = Storage::disk('public')->putFileAs($directory, new LocalFile($source->getPathname()), $filename);
+
+        return is_string($path) ? $path : null;
+    }
+
+    /** @return Collection<int, \SplFileInfo> */
+    private function demoImages(): Collection
+    {
+        if ($this->demoImageFiles !== null) {
+            return $this->demoImageFiles;
+        }
+
+        $directories = [
+            storage_path('demo-assets'),
+        ];
+        $files = collect();
+
+        foreach ($directories as $directory) {
+            if (! File::isDirectory($directory)) {
+                continue;
+            }
+
+            $files = $files->merge(collect(File::files($directory))->filter(fn (\SplFileInfo $file): bool => in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'webp'], true)));
+        }
+
+        return $this->demoImageFiles = $files->values();
     }
 
     private function createInvitations(): void
