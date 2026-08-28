@@ -62,15 +62,14 @@ env: ## Vérifie la présence des fichiers d'environnement locaux
 
 backend-env: env ## Alias pour initialiser l'environnement backend
 
-init: env up wait-backend migrate ## Initialise l'environnement Docker et applique les migrations
+init: 
+	$(COMPOSE) up --build -d
 
 build: ## Build les images Docker
 	$(COMPOSE) build
 
 up: ## Démarre toute la stack Docker en arrière-plan
 	$(COMPOSE) up -d
-
-start: up ## Alias de up
 
 stop: ## Stoppe les conteneurs sans supprimer les volumes
 	$(COMPOSE) stop
